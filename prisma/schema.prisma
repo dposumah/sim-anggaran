@@ -1,0 +1,191 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model TahunAnggaran {
+  id        Int       @id @default(autoincrement())
+  tahun     Int       @unique
+  isActive  Boolean   @default(false)
+  
+  skpds     Skpd[]
+  sshSbus   SshSbu[]
+  pagus     PaguCeiling[]
+}
+
+model Urusan {
+  id    Int    @id @default(autoincrement())
+  kode  String @unique
+  nama  String
+  
+  skpds Skpd[]
+}
+
+model Skpd {
+  id            Int    @id @default(autoincrement())
+  kode          String
+  nama          String
+  kodeSubUnit   String
+  namaSubUnit   String
+  
+  urusanId      Int
+  urusan        Urusan @relation(fields: [urusanId], references: [id])
+  
+  tahunId       Int
+  tahun         TahunAnggaran @relation(fields: [tahunId], references: [id])
+  
+  programs      Program[]
+  pagus         PaguCeiling[]
+  users         User[]
+
+  @@unique([kode, kodeSubUnit, tahunId])
+}
+
+model Program {
+  id                Int    @id @default(autoincrement())
+  kode              String
+  nama              String
+  kodeBidangUrusan  String
+  namaBidangUrusan  String
+  
+  skpdId            Int
+  skpd              Skpd @relation(fields: [skpdId], references: [id])
+  
+  kegiatans         Kegiatan[]
+
+  @@unique([kode, skpdId])
+}
+
+model Kegiatan {
+  id        Int    @id @default(autoincrement())
+  kode      String
+  nama      String
+  
+  programId Int
+  program   Program @relation(fields: [programId], references: [id])
+  
+  subKegiatans SubKegiatan[]
+
+  @@unique([kode, programId])
+}
+
+model SubKegiatan {
+  id         Int    @id @default(autoincrement())
+  kode       String
+  nama       String
+  
+  kegiatanId Int
+  kegiatan   Kegiatan @relation(fields: [kegiatanId], references: [id])
+  
+  rincianBelanjas       RincianBelanja[]
+  subKegiatanSumberDanas SubKegiatanSumberDana[]
+
+  @@unique([kode, kegiatanId])
+}
+
+model SumberDana {
+  id    Int    @id @default(autoincrement())
+  kode  String @unique
+  nama  String
+  
+  rincianBelanjas       RincianBelanja[]
+  subKegiatanSumberDanas SubKegiatanSumberDana[]
+}
+
+model SubKegiatanSumberDana {
+  id             Int     @id @default(autoincrement())
+  subKegiatanId  Int
+  subKegiatan    SubKegiatan @relation(fields: [subKegiatanId], references: [id], onDelete: Cascade)
+  
+  sumberDanaId   Int
+  sumberDana     SumberDana @relation(fields: [sumberDanaId], references: [id], onDelete: Cascade)
+  
+  isLocked       Boolean @default(false)
+  lockedAmount   Decimal @db.Decimal(15, 2) @default(0)
+
+  @@unique([subKegiatanId, sumberDanaId])
+}
+
+model Rekening {
+  id    Int    @id @default(autoincrement())
+  kode  String @unique
+  nama  String
+  
+  rincianBelanjas RincianBelanja[]
+}
+
+model RincianBelanja {
+  id              Int     @id @default(autoincrement())
+  
+  subKegiatanId   Int
+  subKegiatan     SubKegiatan @relation(fields: [subKegiatanId], references: [id], onDelete: Cascade)
+  
+  sumberDanaId    Int
+  sumberDana      SumberDana @relation(fields: [sumberDanaId], references: [id])
+  
+  rekeningId      Int
+  rekening        Rekening @relation(fields: [rekeningId], references: [id])
+  
+  sshSbuId        Int?
+  sshSbu          SshSbu? @relation(fields: [sshSbuId], references: [id])
+  
+  tipePaket       String
+  namaPaket       String
+  pagu            Decimal @db.Decimal(15, 2)
+  volume          Int     @default(1)
+  hargaSatuan     Decimal @db.Decimal(15, 2)
+}
+
+model SshSbu {
+  id               Int     @id @default(autoincrement())
+  tipe             String  // "SSH" or "SBU"
+  kodeKelompok     String?
+  uraianKelompok   String?
+  idStandarHarga   String?
+  kodeBarang       String?
+  uraianBarang     String
+  spesifikasi      String?
+  satuan           String
+  hargaSatuan      Decimal @db.Decimal(15, 2)
+  kodeRekening     String?
+  
+  tahunId          Int
+  tahun            TahunAnggaran @relation(fields: [tahunId], references: [id])
+  
+  rincianBelanjas  RincianBelanja[]
+}
+
+model PaguCeiling {
+  id             Int     @id @default(autoincrement())
+  ceilingAmount  Decimal @db.Decimal(15, 2)
+  
+  skpdId         Int
+  skpd           Skpd @relation(fields: [skpdId], references: [id])
+  
+  tahunId        Int
+  tahun          TahunAnggaran @relation(fields: [tahunId], references: [id])
+
+  @@unique([skpdId, tahunId])
+}
+
+model User {
+  id             Int     @id @default(autoincrement())
+  email          String  @unique // Matches auth.users in Supabase
+  username       String  @unique
+  namaLengkap    String
+  role           String  // "ADMIN", "KEPALA_DINAS", "STAF"
+  isActive       Boolean @default(true)
+  
+  skpdId         Int?    // Null for ADMIN
+  skpd           Skpd?   @relation(fields: [skpdId], references: [id])
+  
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
