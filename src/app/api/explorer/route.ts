@@ -29,15 +29,24 @@ export async function GET(request: Request) {
           }
         });
 
-        // Aggregate totalPagu for SKPDs
-        const rincianSkpd = await prisma.rincianBelanja.findMany({
-          where: { subKegiatan: { kegiatan: { program: { skpdId: { in: skpds.map(s => s.id) } } } } },
-          select: { pagu: true, subKegiatan: { select: { kegiatan: { select: { program: { select: { skpdId: true } } } } } } }
+        // Aggregate totalPagu for SKPDs optimally
+        const subKegiatansSkpd = await prisma.subKegiatan.findMany({
+          where: { kegiatan: { program: { skpdId: { in: skpds.map(s => s.id) } } } },
+          select: { id: true, kegiatan: { select: { program: { select: { skpdId: true } } } } }
         });
+        
+        const paguPerSubSkpd = await prisma.rincianBelanja.groupBy({
+          by: ['subKegiatanId'],
+          where: { subKegiatanId: { in: subKegiatansSkpd.map(s => s.id) } },
+          _sum: { pagu: true }
+        });
+
         const paguBySkpd: Record<number, number> = {};
-        rincianSkpd.forEach(r => {
-          const sid = r.subKegiatan.kegiatan.program.skpdId;
-          paguBySkpd[sid] = (paguBySkpd[sid] || 0) + Number(r.pagu);
+        const subPaguMapSkpd = new Map(paguPerSubSkpd.map(p => [p.subKegiatanId, p._sum.pagu || 0]));
+
+        subKegiatansSkpd.forEach(sub => {
+          const sid = sub.kegiatan.program.skpdId;
+          paguBySkpd[sid] = (paguBySkpd[sid] || 0) + Number(subPaguMapSkpd.get(sub.id) || 0);
         });
 
         const enhancedSkpds = skpds.map(s => ({
@@ -56,14 +65,23 @@ export async function GET(request: Request) {
           orderBy: { kode: 'asc' }
         });
 
-        const rincianProg = await prisma.rincianBelanja.findMany({
-          where: { subKegiatan: { kegiatan: { program: { skpdId: parseInt(skpdId, 10) } } } },
-          select: { pagu: true, subKegiatan: { select: { kegiatan: { select: { programId: true } } } } }
+        const subKegiatansProg = await prisma.subKegiatan.findMany({
+          where: { kegiatan: { program: { skpdId: parseInt(skpdId, 10) } } },
+          select: { id: true, kegiatan: { select: { programId: true } } }
         });
+
+        const paguPerSubProg = await prisma.rincianBelanja.groupBy({
+          by: ['subKegiatanId'],
+          where: { subKegiatanId: { in: subKegiatansProg.map(s => s.id) } },
+          _sum: { pagu: true }
+        });
+
         const paguByProg: Record<number, number> = {};
-        rincianProg.forEach(r => {
-          const pid = r.subKegiatan.kegiatan.programId;
-          paguByProg[pid] = (paguByProg[pid] || 0) + Number(r.pagu);
+        const subPaguMapProg = new Map(paguPerSubProg.map(p => [p.subKegiatanId, p._sum.pagu || 0]));
+
+        subKegiatansProg.forEach(sub => {
+          const pid = sub.kegiatan.programId;
+          paguByProg[pid] = (paguByProg[pid] || 0) + Number(subPaguMapProg.get(sub.id) || 0);
         });
 
         return NextResponse.json(programs.map(p => ({ ...p, totalPagu: paguByProg[p.id] || 0 })));
@@ -77,14 +95,23 @@ export async function GET(request: Request) {
           orderBy: { kode: 'asc' }
         });
 
-        const rincianKeg = await prisma.rincianBelanja.findMany({
-          where: { subKegiatan: { kegiatan: { programId: parseInt(programId, 10) } } },
-          select: { pagu: true, subKegiatan: { select: { kegiatanId: true } } }
+        const subKegiatansKeg = await prisma.subKegiatan.findMany({
+          where: { kegiatan: { programId: parseInt(programId, 10) } },
+          select: { id: true, kegiatanId: true }
         });
+
+        const paguPerSubKeg = await prisma.rincianBelanja.groupBy({
+          by: ['subKegiatanId'],
+          where: { subKegiatanId: { in: subKegiatansKeg.map(s => s.id) } },
+          _sum: { pagu: true }
+        });
+
         const paguByKeg: Record<number, number> = {};
-        rincianKeg.forEach(r => {
-          const kid = r.subKegiatan.kegiatanId;
-          paguByKeg[kid] = (paguByKeg[kid] || 0) + Number(r.pagu);
+        const subPaguMapKeg = new Map(paguPerSubKeg.map(p => [p.subKegiatanId, p._sum.pagu || 0]));
+
+        subKegiatansKeg.forEach(sub => {
+          const kid = sub.kegiatanId;
+          paguByKeg[kid] = (paguByKeg[kid] || 0) + Number(subPaguMapKeg.get(sub.id) || 0);
         });
 
         return NextResponse.json(kegiatans.map(k => ({ ...k, totalPagu: paguByKeg[k.id] || 0 })));
@@ -105,14 +132,15 @@ export async function GET(request: Request) {
           }
         });
 
-        const rincianSub = await prisma.rincianBelanja.findMany({
-          where: { subKegiatan: { kegiatanId: parseInt(kegiatanId, 10) } },
-          select: { pagu: true, subKegiatanId: true }
+        const paguPerSubSub = await prisma.rincianBelanja.groupBy({
+          by: ['subKegiatanId'],
+          where: { subKegiatanId: { in: subkegiatans.map(s => s.id) } },
+          _sum: { pagu: true }
         });
+
         const paguBySub: Record<number, number> = {};
-        rincianSub.forEach(r => {
-          const sid = r.subKegiatanId;
-          paguBySub[sid] = (paguBySub[sid] || 0) + Number(r.pagu);
+        paguPerSubSub.forEach(p => {
+          paguBySub[p.subKegiatanId] = Number(p._sum.pagu || 0);
         });
 
         return NextResponse.json(subkegiatans.map(s => ({ ...s, totalPagu: paguBySub[s.id] || 0 })));
