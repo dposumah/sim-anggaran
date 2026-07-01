@@ -13,45 +13,46 @@ import {
 import RincianTable from '@/components/RincianTable';
 
 export default function ExplorerPage() {
-  const [skpds, setSkpds] = useState<any[]>([]);
+  const [treeData, setTreeData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [expanded, setExpanded] = useState<Record<string, any>>({}); // key = type_id, value = children data
+  const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
+  const [rincianData, setRincianData] = useState<Record<string, any[]>>({});
 
   useEffect(() => {
-    fetch('/api/explorer?level=skpd')
+    fetch('/api/explorer/tree')
       .then(res => res.json())
       .then(data => {
-        setSkpds(data);
+        setTreeData(data);
+        setLoading(false);
+      })
+      .catch(e => {
+        console.error(e);
         setLoading(false);
       });
   }, []);
 
-  const toggleExpand = async (type: string, id: number, parentKey: string) => {
+  const toggleNode = async (type: string, id: number) => {
     const key = `${type}_${id}`;
+    const newExpanded = new Set(expandedNodes);
     
-    // If already expanded, collapse it
-    if (expanded[key]) {
-      const newExpanded = { ...expanded };
-      delete newExpanded[key];
-      setExpanded(newExpanded);
+    if (newExpanded.has(key)) {
+      newExpanded.delete(key);
+      setExpandedNodes(newExpanded);
       return;
     }
 
-    // Fetch children
-    let url = '';
-    if (type === 'skpd') url = `/api/explorer?level=program&skpdId=${id}`;
-    if (type === 'program') url = `/api/explorer?level=kegiatan&programId=${id}`;
-    if (type === 'kegiatan') url = `/api/explorer?level=subkegiatan&kegiatanId=${id}`;
-    if (type === 'subkegiatan') url = `/api/explorer?level=rincian&subKegiatanId=${id}`;
+    newExpanded.add(key);
+    setExpandedNodes(newExpanded);
 
-    if (!url) return;
-
-    try {
-      const res = await fetch(url);
-      const data = await res.json();
-      setExpanded(prev => ({ ...prev, [key]: data }));
-    } catch (e) {
-      console.error(e);
+    // If it's a subkegiatan, we need to fetch the Rincian (lazy load)
+    if (type === 'subkegiatan' && !rincianData[key]) {
+      try {
+        const res = await fetch(`/api/explorer?level=rincian&subKegiatanId=${id}`);
+        const data = await res.json();
+        setRincianData(prev => ({ ...prev, [key]: data }));
+      } catch (e) {
+        console.error(e);
+      }
     }
   };
 
@@ -59,56 +60,48 @@ export default function ExplorerPage() {
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(number);
   };
 
-  const renderRincian = (rincianList: any[], subKegiatanId: number) => {
-    return <RincianTable 
-      rincianList={rincianList} 
-      subKegiatanId={subKegiatanId} 
-      onRefresh={() => toggleExpand('subkegiatan', subKegiatanId, `subkegiatan_${subKegiatanId}`)} 
-    />;
-  };
-
-  const renderNode = (item: any, type: string, paddingLeft: number, icon: any) => {
+  const renderRow = (item: any, type: string, depth: number) => {
     const key = `${type}_${item.id}`;
-    const isExpanded = !!expanded[key];
-    const children = expanded[key];
+    const isExpanded = expandedNodes.has(key);
+    
+    let Icon = Building;
+    if (type === 'program') Icon = Folder;
+    if (type === 'kegiatan') Icon = FileText;
+    if (type === 'subkegiatan') Icon = FileJson;
+    
+    let code = item.kode;
+    if (type === 'skpd') code = item.kodeSubUnit;
 
-    let nextType = '';
-    let nextIcon = null;
-    if (type === 'skpd') { nextType = 'program'; nextIcon = Folder; }
-    if (type === 'program') { nextType = 'kegiatan'; nextIcon = FileText; }
-    if (type === 'kegiatan') { nextType = 'subkegiatan'; nextIcon = FileJson; }
-    if (type === 'subkegiatan') { nextType = 'rincian'; nextIcon = Banknote; }
-
-    const Icon = icon;
+    let name = item.nama;
+    if (type === 'skpd' && item.nama !== item.namaSubUnit) {
+      name = `${item.nama} - ${item.namaSubUnit}`;
+    }
 
     return (
-      <div key={key} className="border-b border-gray-100 last:border-0">
+      <div key={key}>
         <div 
-          className="flex items-center py-3 px-4 hover:bg-blue-50/50 cursor-pointer transition-colors"
-          style={{ paddingLeft: `${paddingLeft}rem` }}
-          onClick={() => toggleExpand(type, item.id, key)}
+          className={`flex items-center p-3 border-b border-gray-100 hover:bg-blue-50/50 cursor-pointer transition-colors ${depth === 0 ? 'bg-gray-50/50' : ''}`}
+          style={{ paddingLeft: `${depth * 1.5 + 1}rem` }}
+          onClick={() => toggleNode(type, item.id)}
         >
-          <div className="mr-2 text-gray-400">
-            {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+          <div className="w-6 flex justify-center mr-2">
+            {isExpanded ? (
+              <ChevronDown className="w-4 h-4 text-gray-500" />
+            ) : (
+              <ChevronRight className="w-4 h-4 text-gray-500" />
+            )}
           </div>
-          <Icon className="mr-3 h-5 w-5 text-primary/70" />
+          <Icon className={`w-5 h-5 mr-3 ${depth === 0 ? 'text-blue-600' : 'text-gray-400'}`} />
+          
           <div className="flex-1">
-            <span className="font-medium text-gray-700 mr-2">
-              {type === 'skpd' ? item.kodeSubUnit : item.kode}
-            </span>
-            <span className="text-gray-900 font-medium">
-              {type === 'skpd' 
-                ? (item.nama === item.namaSubUnit ? item.nama : `${item.nama} - ${item.namaSubUnit}`)
-                : item.nama}
-            </span>
+            <span className="font-medium text-gray-700 mr-2">{code}</span>
+            <span className={`text-gray-900 ${depth === 0 ? 'font-semibold' : ''}`}>{name}</span>
           </div>
           
           <div className="text-right">
-            {item.totalPagu !== undefined && (
-              <span className="text-sm font-semibold text-gray-800 bg-gray-100 px-2 py-1 rounded">
-                {formatRupiah(item.totalPagu)}
-              </span>
-            )}
+            <span className="text-sm font-semibold text-gray-800 bg-gray-100 px-2 py-1 rounded">
+              {formatRupiah(item.totalPagu)}
+            </span>
           </div>
 
           {type === 'subkegiatan' && item.is_locked && (
@@ -117,16 +110,29 @@ export default function ExplorerPage() {
             </span>
           )}
         </div>
-        
-        {isExpanded && children && (
-          <div className="bg-gray-50/30">
-            {type === 'subkegiatan' 
-              ? renderRincian(children, item.id) 
-              : children.map((child: any) => renderNode(child, nextType, paddingLeft + 1.5, nextIcon))
-            }
-            {children.length === 0 && type !== 'subkegiatan' && (
-              <div className="py-2 text-sm text-gray-500" style={{ paddingLeft: `${paddingLeft + 3.5}rem` }}>
-                Tidak ada data.
+
+        {isExpanded && (
+          <div>
+            {type === 'skpd' && item.programs?.map((p: any) => renderRow(p, 'program', depth + 1))}
+            {type === 'program' && item.kegiatans?.map((k: any) => renderRow(k, 'kegiatan', depth + 1))}
+            {type === 'kegiatan' && item.subKegiatans?.map((s: any) => renderRow(s, 'subkegiatan', depth + 1))}
+            {type === 'subkegiatan' && (
+              <div className="bg-gray-50 border-b border-gray-200">
+                {!rincianData[key] ? (
+                  <div className="p-4 text-center text-sm text-gray-500">Memuat rincian...</div>
+                ) : (
+                  <RincianTable 
+                    rincianList={rincianData[key]} 
+                    subKegiatanId={item.id}
+                    isLocked={item.is_locked}
+                    onUpdate={() => {
+                      // Trigger a re-fetch of rincian only
+                      fetch(`/api/explorer?level=rincian&subKegiatanId=${item.id}`)
+                        .then(res => res.json())
+                        .then(data => setRincianData(prev => ({ ...prev, [key]: data })));
+                    }}
+                  />
+                )}
               </div>
             )}
           </div>
@@ -138,18 +144,23 @@ export default function ExplorerPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-foreground">Budget Explorer</h1>
-        <p className="text-sm text-secondary">Telusuri rincian anggaran dari tingkat SKPD hingga Rincian Belanja.</p>
+        <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
+          <Folder className="w-6 h-6 text-primary" /> Budget Explorer
+        </h1>
+        <p className="text-sm text-secondary">Telusuri hierarki anggaran mulai dari SKPD hingga rincian belanja.</p>
       </div>
 
-      <div className="rounded-xl border border-border bg-surface shadow-sm overflow-hidden">
+      <div className="bg-white rounded-xl shadow-sm border border-border overflow-hidden">
         {loading ? (
-          <div className="p-8 text-center text-secondary">Memuat data SKPD...</div>
+          <div className="p-12 text-center text-gray-500 flex flex-col items-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-4"></div>
+            Memuat seluruh hierarki anggaran...
+          </div>
         ) : (
-          <div className="divide-y divide-gray-100">
-            {skpds.map(skpd => renderNode(skpd, 'skpd', 1, Building))}
-            {skpds.length === 0 && (
-              <div className="p-8 text-center text-secondary">Data kosong. Pastikan import data telah selesai.</div>
+          <div className="min-w-full">
+            {treeData.map(skpd => renderRow(skpd, 'skpd', 0))}
+            {treeData.length === 0 && (
+              <div className="p-12 text-center text-gray-500">Tidak ada data SKPD.</div>
             )}
           </div>
         )}
