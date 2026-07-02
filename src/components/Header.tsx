@@ -3,8 +3,11 @@
 import { Bell, User } from 'lucide-react'
 import Image from 'next/image'
 import LogoutButton from './LogoutButton'
+import { useYear } from '@/contexts/YearContext'
 
 export default function Header() {
+  const { tahun, setTahun } = useYear();
+
   return (
     <header className="flex h-16 shrink-0 items-center justify-between border-b border-border bg-surface px-6 shadow-sm">
       <div className="flex items-center gap-4">
@@ -25,9 +28,13 @@ export default function Header() {
         </div>
       </div>
       <div className="flex items-center gap-4">
-        <select className="rounded-md border border-border bg-surface px-3 py-1.5 text-sm text-foreground shadow-sm focus:border-primary focus:outline-none">
-          <option value="2026">TA 2026</option>
-          <option value="2025">TA 2025</option>
+        <select 
+          value={tahun}
+          onChange={(e) => setTahun(Number(e.target.value))}
+          className="rounded-md border border-border bg-surface px-3 py-1.5 text-sm text-foreground shadow-sm focus:border-primary focus:outline-none"
+        >
+          <option value={2026}>TA 2026</option>
+          <option value={2025}>TA 2025</option>
         </select>
         <button className="rounded-full p-1 text-secondary hover:bg-gray-100 hover:text-foreground">
           <Bell className="h-5 w-5" />

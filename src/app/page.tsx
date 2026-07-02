@@ -17,13 +17,16 @@ import {
   Target,
   ShieldAlert
 } from 'lucide-react';
+import { useYear } from '@/contexts/YearContext';
 
 export default function Dashboard() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const { tahun } = useYear();
 
   useEffect(() => {
-    fetch('/api/dashboard?tahun=2026')
+    setLoading(true);
+    fetch(`/api/dashboard?tahun=${tahun}`)
       .then(res => res.json())
       .then(resData => {
         setData(resData);
@@ -33,7 +36,7 @@ export default function Dashboard() {
         console.error('Error fetching dashboard data:', err);
         setLoading(false);
       });
-  }, []);
+  }, [tahun]);
 
   if (loading) {
     return (
@@ -64,7 +67,7 @@ export default function Dashboard() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-foreground">Dashboard Anggaran</h1>
-        <p className="text-sm text-secondary">Ringkasan alokasi APBD Kota Tomohon TA 2026</p>
+        <p className="text-sm text-secondary">Ringkasan alokasi APBD Kota Tomohon TA {tahun}</p>
       </div>
 
       {/* Summary Cards */}

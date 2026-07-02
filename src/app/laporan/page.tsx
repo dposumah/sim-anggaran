@@ -3,13 +3,15 @@
 import { useState, useEffect } from 'react';
 import { Download, FileSpreadsheet } from 'lucide-react';
 import * as XLSX from 'xlsx';
+import { useYear } from '@/contexts/YearContext';
 
 export default function LaporanPage() {
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const { tahun } = useYear();
 
   useEffect(() => {
-    fetch('/api/laporan')
+    fetch(`/api/laporan?tahun=${tahun}`)
       .then(res => res.json())
       .then(resData => {
         setData(resData);
@@ -19,7 +21,7 @@ export default function LaporanPage() {
         console.error(err);
         setLoading(false);
       });
-  }, []);
+  }, [tahun]);
 
   const formatRupiah = (number: number) => {
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(number);

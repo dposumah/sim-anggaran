@@ -1,29 +1,31 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Pencil, ShieldAlert } from 'lucide-react';
+import { useYear } from '@/contexts/YearContext';
 
 export default function PaguPage() {
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState({ skpdId: 0, ceilingAmount: 0, skpdName: '' });
   const [showModal, setShowModal] = useState(false);
+  const { tahun } = useYear();
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/pagu');
+      const res = await fetch(`/api/pagu?tahun=${tahun}`);
       setData(await res.json());
     } catch (e) {
       console.error(e);
     } finally {
       setLoading(false);
     }
-  };
+  }, [tahun]);
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [fetchData]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,7 +35,8 @@ export default function PaguPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           skpdId: form.skpdId,
-          ceilingAmount: form.ceilingAmount
+          ceilingAmount: form.ceilingAmount,
+          tahun: tahun
         })
       });
       setShowModal(false);

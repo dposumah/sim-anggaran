@@ -11,15 +11,18 @@ import {
   Banknote
 } from 'lucide-react';
 import RincianTable from '@/components/RincianTable';
+import { useYear } from '@/contexts/YearContext';
 
 export default function ExplorerPage() {
   const [treeData, setTreeData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
   const [rincianData, setRincianData] = useState<Record<string, any[]>>({});
+  const { tahun } = useYear();
 
   useEffect(() => {
-    fetch('/api/explorer/tree')
+    setLoading(true);
+    fetch(`/api/explorer/tree?tahun=${tahun}`)
       .then(res => res.json())
       .then(data => {
         setTreeData(data);
@@ -29,7 +32,7 @@ export default function ExplorerPage() {
         console.error(e);
         setLoading(false);
       });
-  }, []);
+  }, [tahun]);
 
   const toggleNode = async (type: string, id: number) => {
     const key = `${type}_${id}`;
