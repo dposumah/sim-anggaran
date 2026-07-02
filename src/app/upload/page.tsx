@@ -7,6 +7,7 @@ export default function UploadPage() {
   const [file, setFile] = useState<File | null>(null);
   const [type, setType] = useState('rekap');
   const [tahun, setTahun] = useState<number>(2026);
+  const [isPerubahan, setIsPerubahan] = useState(false);
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [message, setMessage] = useState('');
@@ -41,6 +42,7 @@ export default function UploadPage() {
     formData.append('file', file);
     formData.append('type', type);
     formData.append('tahun', tahun.toString());
+    formData.append('isPerubahan', isPerubahan.toString());
 
     try {
       const res = await fetch('/api/upload', {
@@ -116,6 +118,21 @@ export default function UploadPage() {
             </div>
           </div>
           </div>
+
+          {type === 'rekap' && (
+            <div className="flex items-center gap-2">
+              <input 
+                type="checkbox" 
+                id="isPerubahan"
+                checked={isPerubahan}
+                onChange={(e) => setIsPerubahan(e.target.checked)}
+                className="w-4 h-4 text-primary rounded border-gray-300 focus:ring-primary"
+              />
+              <label htmlFor="isPerubahan" className="text-sm font-medium text-gray-700">
+                Tandai sebagai Data Perubahan APBD
+              </label>
+            </div>
+          )}
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">File Excel (.xlsx)</label>

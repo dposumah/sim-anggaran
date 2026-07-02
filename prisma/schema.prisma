@@ -141,6 +141,10 @@ model RincianBelanja {
   pagu            Decimal @db.Decimal(15, 2)
   volume          Int     @default(1)
   hargaSatuan     Decimal @db.Decimal(15, 2)
+  
+  volumePerubahan      Int?
+  hargaSatuanPerubahan Decimal? @db.Decimal(15, 2)
+  paguPerubahan        Decimal? @db.Decimal(15, 2)
 }
 
 model SshSbu {

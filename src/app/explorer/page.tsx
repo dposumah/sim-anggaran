@@ -18,7 +18,7 @@ export default function ExplorerPage() {
   const [treeData, setTreeData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
-  const [modalSdData, setModalSdData] = useState<{ title: string, sumberDanas: Record<string, number> } | null>(null);
+  const [modalSdData, setModalSdData] = useState<{ title: string, sumberDanas: Record<string, { pagu: number, paguPerubahan: number | null }> } | null>(null);
   const [rincianData, setRincianData] = useState<Record<string, any[]>>({});
   const { tahun } = useYear();
 
@@ -109,9 +109,20 @@ export default function ExplorerPage() {
           </div>
           
           <div className="flex flex-col items-end gap-1">
-            <span className="text-sm font-semibold text-gray-800 bg-gray-100 px-2 py-1 rounded">
-              {formatRupiah(item.totalPagu)}
-            </span>
+            {item.totalPaguPerubahan !== undefined && item.totalPaguPerubahan !== null ? (
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold text-gray-500 bg-gray-50 px-2 py-1 rounded border border-gray-200 line-through" title="Pagu Induk">
+                  {formatRupiah(item.totalPagu)}
+                </span>
+                <span className="text-sm font-bold text-blue-700 bg-blue-50 px-2 py-1 rounded border border-blue-200 shadow-sm" title="Pagu Perubahan">
+                  {formatRupiah(item.totalPaguPerubahan)}
+                </span>
+              </div>
+            ) : (
+              <span className="text-sm font-semibold text-gray-800 bg-gray-100 px-2 py-1 rounded">
+                {formatRupiah(item.totalPagu)}
+              </span>
+            )}
             {item.sumberDanas && Object.entries(item.sumberDanas).length > 0 && (
               <button 
                 onClick={(e) => {
@@ -202,10 +213,17 @@ export default function ExplorerPage() {
             </div>
             <div className="p-4 max-h-[60vh] overflow-y-auto">
               <div className="space-y-3">
-                {Object.entries(modalSdData.sumberDanas).map(([sd, pagu]) => (
+                {Object.entries(modalSdData.sumberDanas).map(([sd, data]) => (
                   <div key={sd} className="flex justify-between items-center p-3 bg-blue-50/50 border border-blue-100 rounded-lg">
                     <span className="text-sm font-medium text-blue-900">{sd}</span>
-                    <span className="text-sm font-bold text-blue-700">{formatRupiah(pagu as number)}</span>
+                    {data.paguPerubahan !== null ? (
+                      <div className="flex flex-col items-end">
+                        <span className="text-[10px] font-semibold text-gray-500 line-through">{formatRupiah(data.pagu)}</span>
+                        <span className="text-sm font-bold text-blue-700">{formatRupiah(data.paguPerubahan)}</span>
+                      </div>
+                    ) : (
+                      <span className="text-sm font-bold text-blue-700">{formatRupiah(data.pagu)}</span>
+                    )}
                   </div>
                 ))}
               </div>

@@ -54,73 +54,130 @@ export async function GET(request: Request) {
     const paguPerSubSkpdAndSd = await prisma.rincianBelanja.groupBy({
       by: ['subKegiatanId', 'sumberDanaId'],
       where: { subKegiatanId: { in: subKegiatansSkpd.map(s => s.id) } },
-      _sum: { pagu: true }
+      _sum: { pagu: true, paguPerubahan: true }
     });
 
     const sds = await prisma.sumberDana.findMany();
     const sdNameMap = new Map(sds.map(s => [s.id, s.nama]));
 
-    const subPaguSdMap = new Map<number, { [key: string]: number }>();
-    const allSubTotalMap = new Map<number, number>();
+    const subPaguSdMap = new Map<number, { [key: string]: { pagu: number, paguPerubahan: number | null } }>();
+    const allSubTotalMap = new Map<number, { pagu: number, paguPerubahan: number | null }>();
 
     for (const p of paguPerSubSkpdAndSd) {
       const sId = p.subKegiatanId;
       const sdNama = sdNameMap.get(p.sumberDanaId) || 'Unknown';
       const pagu = Number(p._sum.pagu || 0);
+      const paguPerubahan = p._sum.paguPerubahan !== null ? Number(p._sum.paguPerubahan) : null;
 
       if (!subPaguSdMap.has(sId)) subPaguSdMap.set(sId, {});
       const sdObj = subPaguSdMap.get(sId)!;
-      sdObj[sdNama] = (sdObj[sdNama] || 0) + pagu;
+      
+      const currSd = sdObj[sdNama] || { pagu: 0, paguPerubahan: null };
+      sdObj[sdNama] = {
+        pagu: currSd.pagu + pagu,
+        paguPerubahan: (currSd.paguPerubahan !== null || paguPerubahan !== null) 
+          ? (currSd.paguPerubahan || 0) + (paguPerubahan || 0) 
+          : null
+      };
 
-      allSubTotalMap.set(sId, (allSubTotalMap.get(sId) || 0) + pagu);
+      const currTotal = allSubTotalMap.get(sId) || { pagu: 0, paguPerubahan: null };
+      allSubTotalMap.set(sId, {
+        pagu: currTotal.pagu + pagu,
+        paguPerubahan: (currTotal.paguPerubahan !== null || paguPerubahan !== null)
+          ? (currTotal.paguPerubahan || 0) + (paguPerubahan || 0)
+          : null
+      });
     }
 
     // 3. Mutate the tree with totalPagu and sumberDanas
     const result = skpds.map(skpd => {
-      let skpdTotal = 0;
-      let skpdSdMap: { [key: string]: number } = {};
+      let skpdTotal = { pagu: 0, paguPerubahan: null as number | null };
+      let skpdSdMap: { [key: string]: { pagu: number, paguPerubahan: number | null } } = {};
 
       const programs = skpd.programs.map(prog => {
-        let progTotal = 0;
-        let progSdMap: { [key: string]: number } = {};
+        let progTotal = { pagu: 0, paguPerubahan: null as number | null };
+        let progSdMap: { [key: string]: { pagu: number, paguPerubahan: number | null } } = {};
 
         const kegiatans = prog.kegiatans.map(keg => {
-          let kegTotal = 0;
-          let kegSdMap: { [key: string]: number } = {};
+          let kegTotal = { pagu: 0, paguPerubahan: null as number | null };
+          let kegSdMap: { [key: string]: { pagu: number, paguPerubahan: number | null } } = {};
 
           const subKegiatans = keg.subKegiatans.map(sub => {
-            const subTotal = allSubTotalMap.get(sub.id) || 0;
+            const subTotal = allSubTotalMap.get(sub.id) || { pagu: 0, paguPerubahan: null };
             const subSds = subPaguSdMap.get(sub.id) || {};
             
-            kegTotal += subTotal;
-            for (const [sd, pagu] of Object.entries(subSds)) {
-              kegSdMap[sd] = (kegSdMap[sd] || 0) + pagu;
+            kegTotal.pagu += subTotal.pagu;
+            if (subTotal.paguPerubahan !== null) {
+               kegTotal.paguPerubahan = (kegTotal.paguPerubahan || 0) + subTotal.paguPerubahan;
+            }
+
+            for (const [sd, vals] of Object.entries(subSds)) {
+              if (!kegSdMap[sd]) kegSdMap[sd] = { pagu: 0, paguPerubahan: null };
+              kegSdMap[sd].pagu += vals.pagu;
+              if (vals.paguPerubahan !== null) {
+                kegSdMap[sd].paguPerubahan = (kegSdMap[sd].paguPerubahan || 0) + vals.paguPerubahan;
+              }
             }
 
             return {
               ...sub,
-              totalPagu: subTotal,
+              totalPagu: subTotal.pagu,
+              totalPaguPerubahan: subTotal.paguPerubahan,
               sumberDanas: subSds,
               is_locked: sub.subKegiatanSumberDanas.some(sd => sd.isLocked)
             };
           });
 
-          progTotal += kegTotal;
-          for (const [sd, pagu] of Object.entries(kegSdMap)) {
-            progSdMap[sd] = (progSdMap[sd] || 0) + pagu;
+          progTotal.pagu += kegTotal.pagu;
+          if (kegTotal.paguPerubahan !== null) {
+             progTotal.paguPerubahan = (progTotal.paguPerubahan || 0) + kegTotal.paguPerubahan;
+          }
+          
+          for (const [sd, vals] of Object.entries(kegSdMap)) {
+            if (!progSdMap[sd]) progSdMap[sd] = { pagu: 0, paguPerubahan: null };
+            progSdMap[sd].pagu += vals.pagu;
+            if (vals.paguPerubahan !== null) {
+              progSdMap[sd].paguPerubahan = (progSdMap[sd].paguPerubahan || 0) + vals.paguPerubahan;
+            }
           }
 
-          return { ...keg, subKegiatans, totalPagu: kegTotal, sumberDanas: kegSdMap };
+          return { 
+            ...keg, 
+            subKegiatans, 
+            totalPagu: kegTotal.pagu, 
+            totalPaguPerubahan: kegTotal.paguPerubahan, 
+            sumberDanas: kegSdMap 
+          };
         });
 
-        skpdTotal += progTotal;
-        for (const [sd, pagu] of Object.entries(progSdMap)) {
-          skpdSdMap[sd] = (skpdSdMap[sd] || 0) + pagu;
+        skpdTotal.pagu += progTotal.pagu;
+        if (progTotal.paguPerubahan !== null) {
+           skpdTotal.paguPerubahan = (skpdTotal.paguPerubahan || 0) + progTotal.paguPerubahan;
         }
 
-        return { ...prog, kegiatans, totalPagu: progTotal, sumberDanas: progSdMap };
+        for (const [sd, vals] of Object.entries(progSdMap)) {
+          if (!skpdSdMap[sd]) skpdSdMap[sd] = { pagu: 0, paguPerubahan: null };
+          skpdSdMap[sd].pagu += vals.pagu;
+          if (vals.paguPerubahan !== null) {
+            skpdSdMap[sd].paguPerubahan = (skpdSdMap[sd].paguPerubahan || 0) + vals.paguPerubahan;
+          }
+        }
+
+        return { 
+          ...prog, 
+          kegiatans, 
+          totalPagu: progTotal.pagu, 
+          totalPaguPerubahan: progTotal.paguPerubahan, 
+          sumberDanas: progSdMap 
+        };
       });
-      return { ...skpd, programs, totalPagu: skpdTotal, sumberDanas: skpdSdMap };
+      return { 
+        ...skpd, 
+        programs, 
+        totalPagu: skpdTotal.pagu, 
+        totalPaguPerubahan: skpdTotal.paguPerubahan, 
+        sumberDanas: skpdSdMap 
+      };
     });
 
     return NextResponse.json(result);

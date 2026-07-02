@@ -9,6 +9,7 @@ export async function POST(request: Request) {
     const file = formData.get('file') as File;
     const type = formData.get('type') as string;
     const tahunStr = formData.get('tahun') as string;
+    const isPerubahan = formData.get('isPerubahan') === 'true';
     const tahun = parseInt(tahunStr || '2026', 10);
 
     if (!file) {
@@ -206,15 +207,79 @@ export async function POST(request: Request) {
       }
     });
 
-    // We can't guarantee rincian duplicates uniquely without a dedicated unique field, 
-    // so for "import" we typically just create all if they don't exist.
-    // For safety and speed in this prototype, we'll delete existing rincian for these subkegiatans first.
     if (rincianList.length > 0) {
       const skIdsInUpload = Array.from(new Set(rincianList.map(r => r.subKegiatanId)));
-      await prisma.rincianBelanja.deleteMany({
-        where: { subKegiatanId: { in: skIdsInUpload } }
-      });
-      await prisma.rincianBelanja.createMany({ data: rincianList });
+      
+      if (isPerubahan) {
+        const existingRincian = await prisma.rincianBelanja.findMany({
+          where: { subKegiatanId: { in: skIdsInUpload as number[] } }
+        });
+        
+        const existingMap = new Map();
+        existingRincian.forEach(r => {
+          existingMap.set(`${r.subKegiatanId}_${r.sumberDanaId}_${r.rekeningId}_${r.tipePaket}_${r.namaPaket}`, r);
+        });
+
+        const mergedRincian: any[] = [];
+        
+        for (const item of rincianList) {
+          const key = `${item.subKegiatanId}_${item.sumberDanaId}_${item.rekeningId}_${item.tipePaket}_${item.namaPaket}`;
+          const exist = existingMap.get(key);
+          
+          if (exist) {
+            const { id, ...rest } = exist;
+            mergedRincian.push({
+              ...rest,
+              volumePerubahan: item.volume,
+              hargaSatuanPerubahan: item.hargaSatuan,
+              paguPerubahan: item.pagu
+            });
+            existingMap.delete(key);
+          } else {
+            mergedRincian.push({
+              ...item,
+              pagu: 0,
+              volume: 1,
+              hargaSatuan: 0,
+              volumePerubahan: item.volume,
+              hargaSatuanPerubahan: item.hargaSatuan,
+              paguPerubahan: item.pagu
+            });
+          }
+        }
+        
+        for (const exist of existingMap.values()) {
+          const { id, ...rest } = exist;
+          mergedRincian.push({
+            ...rest,
+            volumePerubahan: 0,
+            hargaSatuanPerubahan: 0,
+            paguPerubahan: 0
+          });
+        }
+        
+        await prisma.rincianBelanja.deleteMany({
+          where: { subKegiatanId: { in: skIdsInUpload as number[] } }
+        });
+        
+        const chunkSize = 500;
+        for (let i = 0; i < mergedRincian.length; i += chunkSize) {
+          await prisma.rincianBelanja.createMany({
+            data: mergedRincian.slice(i, i + chunkSize)
+          });
+        }
+      } else {
+        await prisma.rincianBelanja.deleteMany({
+          where: { subKegiatanId: { in: skIdsInUpload as number[] } }
+        });
+        
+        const chunkSize = 500;
+        for (let i = 0; i < rincianList.length; i += chunkSize) {
+          await prisma.rincianBelanja.createMany({
+            data: rincianList.slice(i, i + chunkSize)
+          });
+        }
+      }
     }
 
     return NextResponse.json({ 
