@@ -101,18 +101,26 @@ export async function GET(request: Request) {
 
     // 2. Top 10 Rekening Chart (Bar Chart)
     const rekeningAgg = await prisma.rincianBelanja.groupBy({
-      by: ['kodeRekening', 'namaRekening'],
+      by: ['rekeningId'],
       where: { subKegiatan: { kegiatan: { program: { skpdId: { in: skpdIdList } } } } },
       _sum: { pagu: true },
       orderBy: { _sum: { pagu: 'desc' } },
       take: 10
     });
 
-    const topRekeningChart = rekeningAgg.map(agg => ({
-      kode: agg.kodeRekening,
-      nama: agg.namaRekening,
-      value: Number(agg._sum.pagu || 0)
-    }));
+    const rekenings = await prisma.rekening.findMany({
+      where: { id: { in: rekeningAgg.map(r => r.rekeningId) } }
+    });
+    const rekMap = new Map(rekenings.map(r => [r.id, r]));
+
+    const topRekeningChart = rekeningAgg.map(agg => {
+      const rek = rekMap.get(agg.rekeningId);
+      return {
+        kode: rek?.kode || 'Unknown',
+        nama: rek?.nama || 'Unknown',
+        value: Number(agg._sum.pagu || 0)
+      };
+    });
 
     return NextResponse.json({
       summary: {
