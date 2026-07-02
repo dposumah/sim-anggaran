@@ -31,6 +31,30 @@ export async function GET(request: Request) {
         } 
       }
     });
+    
+    const kegiatanCount = await prisma.kegiatan.count({
+      where: { 
+        program: {
+          skpd: { 
+            tahunId: tahunData.id,
+            nama: { contains: 'PENDIDIKAN', mode: 'insensitive' }
+          }
+        }
+      }
+    });
+
+    const subKegiatanCount = await prisma.subKegiatan.count({
+      where: { 
+        kegiatan: {
+          program: {
+            skpd: { 
+              tahunId: tahunData.id,
+              nama: { contains: 'PENDIDIKAN', mode: 'insensitive' }
+            }
+          }
+        }
+      }
+    });
 
     const skpds = await prisma.skpd.findMany({
       where: { 
@@ -126,7 +150,9 @@ export async function GET(request: Request) {
       summary: {
         totalPagu,
         skpdCount,
-        programCount
+        programCount,
+        kegiatanCount,
+        subKegiatanCount
       },
       skpdData: top10Skpd,
       sumberDanaChart,

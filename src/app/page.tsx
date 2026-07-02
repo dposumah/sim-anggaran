@@ -15,7 +15,9 @@ import {
   Building2, 
   Wallet, 
   Target,
-  ShieldAlert
+  ShieldAlert,
+  FileText,
+  FileJson
 } from 'lucide-react';
 import { useYear } from '@/contexts/YearContext';
 
@@ -80,14 +82,14 @@ export default function Dashboard() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-5">
         <div className="flex items-center rounded-xl bg-surface p-6 shadow-sm border border-border">
           <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10 text-primary">
             <Wallet className="h-6 w-6" />
           </div>
           <div className="ml-4">
-            <h3 className="text-sm font-medium text-secondary">Total Pagu APBD</h3>
-            <p className="text-2xl font-bold text-foreground">{formatRupiah(data.summary.totalPagu)}</p>
+            <h3 className="text-sm font-medium text-secondary">Total Pagu</h3>
+            <p className="text-xl font-bold text-foreground">{formatRupiah(data.summary.totalPagu)}</p>
           </div>
         </div>
         
@@ -96,8 +98,8 @@ export default function Dashboard() {
             <Building2 className="h-6 w-6" />
           </div>
           <div className="ml-4">
-            <h3 className="text-sm font-medium text-secondary">Jumlah SKPD</h3>
-            <p className="text-2xl font-bold text-foreground">{data.summary.skpdCount} SKPD</p>
+            <h3 className="text-sm font-medium text-secondary">SKPD</h3>
+            <p className="text-xl font-bold text-foreground">{data.summary.skpdCount}</p>
           </div>
         </div>
         
@@ -106,8 +108,28 @@ export default function Dashboard() {
             <Target className="h-6 w-6" />
           </div>
           <div className="ml-4">
-            <h3 className="text-sm font-medium text-secondary">Jumlah Program</h3>
-            <p className="text-2xl font-bold text-foreground">{data.summary.programCount} Program</p>
+            <h3 className="text-sm font-medium text-secondary">Program</h3>
+            <p className="text-xl font-bold text-foreground">{data.summary.programCount}</p>
+          </div>
+        </div>
+
+        <div className="flex items-center rounded-xl bg-surface p-6 shadow-sm border border-border">
+          <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-amber-500/10 text-amber-600">
+            <FileText className="h-6 w-6" />
+          </div>
+          <div className="ml-4">
+            <h3 className="text-sm font-medium text-secondary">Kegiatan</h3>
+            <p className="text-xl font-bold text-foreground">{data.summary.kegiatanCount}</p>
+          </div>
+        </div>
+
+        <div className="flex items-center rounded-xl bg-surface p-6 shadow-sm border border-border">
+          <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-purple-500/10 text-purple-600">
+            <FileJson className="h-6 w-6" />
+          </div>
+          <div className="ml-4">
+            <h3 className="text-sm font-medium text-secondary">Sub Kegiatan</h3>
+            <p className="text-xl font-bold text-foreground">{data.summary.subKegiatanCount}</p>
           </div>
         </div>
       </div>
