@@ -17,6 +17,7 @@ export default function ExplorerPage() {
   const [treeData, setTreeData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
+  const [expandedSdNodes, setExpandedSdNodes] = useState<Set<string>>(new Set());
   const [rincianData, setRincianData] = useState<Record<string, any[]>>({});
   const { tahun } = useYear();
 
@@ -62,6 +63,16 @@ export default function ExplorerPage() {
         console.error(e);
       }
     }
+  };
+
+  const toggleSdNode = (e: React.MouseEvent, key: string) => {
+    e.stopPropagation();
+    setExpandedSdNodes(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
   };
 
   const formatRupiah = (number: number) => {
@@ -111,13 +122,23 @@ export default function ExplorerPage() {
               {formatRupiah(item.totalPagu)}
             </span>
             {item.sumberDanas && Object.entries(item.sumberDanas).length > 0 && (
-              <div className="flex gap-1 flex-wrap justify-end w-64">
-                {Object.entries(item.sumberDanas).map(([sd, pagu]) => (
-                  <span key={sd} className="text-[10px] bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded border border-blue-100 truncate" title={sd}>
-                    {sd}: {formatRupiah(pagu as number)}
-                  </span>
-                ))}
-              </div>
+              <>
+                <button 
+                  onClick={(e) => toggleSdNode(e, key)}
+                  className="text-[10px] font-medium text-blue-600 hover:text-blue-800 hover:bg-blue-50 px-2 py-0.5 rounded transition-colors"
+                >
+                  {expandedSdNodes.has(key) ? 'Tutup Rekap SD' : 'Lihat Rekap SD'}
+                </button>
+                {expandedSdNodes.has(key) && (
+                  <div className="flex gap-1 flex-wrap justify-end w-64 mt-1">
+                    {Object.entries(item.sumberDanas).map(([sd, pagu]) => (
+                      <span key={sd} className="text-[10px] bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded border border-blue-100 truncate" title={sd}>
+                        {sd}: {formatRupiah(pagu as number)}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </>
             )}
           </div>
 
