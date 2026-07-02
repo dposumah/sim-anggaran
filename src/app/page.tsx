@@ -9,9 +9,6 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
   Legend
 } from 'recharts';
 import { 
@@ -62,7 +59,6 @@ export default function Dashboard() {
     return 'Rp ' + number.toLocaleString('id-ID');
   };
 
-  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D'];
 
   return (
     <div className="space-y-6">
@@ -106,29 +102,42 @@ export default function Dashboard() {
 
       {/* Charts */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        {/* Chart 1: Sumber Dana */}
+        {/* Tabel Sumber Dana */}
         <div className="rounded-xl bg-surface p-6 shadow-sm border border-border">
           <h3 className="text-lg font-semibold text-foreground mb-4">Rekapitulasi per Sumber Dana</h3>
-          <div className="h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={data.sumberDanaChart}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ name, percent }) => `${name} (${((percent || 0) * 100).toFixed(0)}%)`}
-                  outerRadius={100}
-                  fill="#8884d8"
-                  dataKey="value"
-                >
-                  {data.sumberDanaChart?.map((entry: any, index: number) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip formatter={(value: any) => formatRupiah(value)} />
-              </PieChart>
-            </ResponsiveContainer>
+          <div className="overflow-x-auto h-80">
+            <table className="w-full text-left text-sm text-gray-700">
+              <thead className="bg-gray-50 border-b sticky top-0">
+                <tr>
+                  <th className="px-4 py-3 font-semibold text-gray-900">Sumber Dana</th>
+                  <th className="px-4 py-3 font-semibold text-gray-900 text-right">Total Pagu (Rp)</th>
+                  <th className="px-4 py-3 font-semibold text-gray-900 text-right">%</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {data.sumberDanaChart?.map((item: any, index: number) => {
+                  const percentage = ((item.value / data.summary.totalPagu) * 100).toFixed(1);
+                  return (
+                    <tr key={index} className="hover:bg-gray-50/50">
+                      <td className="px-4 py-3 font-medium text-gray-800">{item.name}</td>
+                      <td className="px-4 py-3 text-right text-gray-900">{formatRupiah(item.value)}</td>
+                      <td className="px-4 py-3 text-right">
+                        <span className="inline-block bg-blue-50 text-blue-700 px-2 py-0.5 rounded text-xs font-medium">
+                          {percentage}%
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+                {(!data.sumberDanaChart || data.sumberDanaChart.length === 0) && (
+                  <tr>
+                    <td colSpan={3} className="px-4 py-8 text-center text-gray-500">
+                      Tidak ada data sumber dana.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
           </div>
         </div>
 
