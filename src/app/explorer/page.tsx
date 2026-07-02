@@ -125,7 +125,7 @@ export default function ExplorerPage() {
                     rincianList={rincianData[key]} 
                     subKegiatanId={item.id}
                     isLocked={item.is_locked}
-                    onUpdate={() => {
+                    onRefresh={() => {
                       // Trigger a re-fetch of rincian only
                       fetch(`/api/explorer?level=rincian&subKegiatanId=${item.id}`)
                         .then(res => res.json())

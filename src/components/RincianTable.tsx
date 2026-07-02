@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Pencil, Trash2, Plus, Lock, Unlock } from 'lucide-react';
 
-export default function RincianTable({ rincianList, subKegiatanId, onRefresh }: { rincianList: any[], subKegiatanId: number, onRefresh: () => void }) {
+export default function RincianTable({ rincianList, subKegiatanId, onRefresh, isLocked }: { rincianList: any[], subKegiatanId: number, onRefresh: () => void, isLocked?: boolean }) {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
