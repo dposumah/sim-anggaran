@@ -68,6 +68,34 @@ export default function MasterGajiPage() {
     }
   };
 
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || !e.target.files[0]) return;
+    const file = e.target.files[0];
+    
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    setLoading(true);
+    try {
+      const res = await fetch('/api/master-gaji/upload', {
+        method: 'POST',
+        body: formData
+      });
+      const data = await res.json();
+      if (res.ok) {
+        alert(data.message);
+        fetchData();
+      } else {
+        alert(data.error);
+      }
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setLoading(false);
+      if (e.target) e.target.value = ''; // Reset input
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -77,12 +105,18 @@ export default function MasterGajiPage() {
           </h1>
           <p className="text-sm text-secondary">Kelola daftar standar Gaji Pokok PNS dan PPPK</p>
         </div>
-        <button 
-          onClick={() => setIsAdding(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-hover shadow-sm transition-colors"
-        >
-          <Plus className="w-4 h-4" /> Tambah Gaji
-        </button>
+        <div className="flex gap-2">
+          <label className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 shadow-sm transition-colors cursor-pointer">
+            <input type="file" accept=".xlsx,.xls" className="hidden" onChange={handleUpload} />
+            <Database className="w-4 h-4" /> Upload Excel
+          </label>
+          <button 
+            onClick={() => setIsAdding(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-hover shadow-sm transition-colors"
+          >
+            <Plus className="w-4 h-4" /> Tambah Gaji
+          </button>
+        </div>
       </div>
 
       {error && <div className="p-4 bg-red-50 text-red-600 rounded-lg border border-red-200">{error}</div>}

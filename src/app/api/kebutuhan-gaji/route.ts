@@ -11,8 +11,12 @@ export async function GET(request: Request) {
     const tahunData = await prisma.tahunAnggaran.findUnique({ where: { tahun } });
     if (!tahunData) return NextResponse.json({ error: 'Tahun tidak ditemukan' }, { status: 404 });
 
+    // HANYA KHUSUS DINAS PENDIDIKAN
     const skpds = await prisma.skpd.findMany({
-      where: { tahunId: tahunData.id },
+      where: { 
+        tahunId: tahunData.id,
+        nama: { contains: 'PENDIDIKAN', mode: 'insensitive' }
+      },
       include: {
         pegawais: {
           include: {
@@ -39,22 +43,20 @@ export async function GET(request: Request) {
     const TUNJ_BERAS_PER_JIWA = 72420;
 
     const result = skpds.map(skpd => {
-      let sumGapok = 0;
-      let sumTunjKeluarga = 0;
-      let sumTunjBeras = 0;
-      let sumBpjsKes = 0;
-      let sumJkk = 0;
-      let sumJkm = 0;
-      let sumTpp = 0;
-      
-      let countPns = 0;
-      let countPppk = 0;
-      let countHonorer = 0;
+      const getInitialBudget = () => ({
+        gapok: 0, tunjKeluarga: 0, tunjBeras: 0, bpjsKes: 0, jkk: 0, jkm: 0, tpp: 0, total: 0, count: 0
+      });
+
+      const pns = getInitialBudget();
+      const pppk = getInitialBudget();
+      const honorer = getInitialBudget();
 
       skpd.pegawais.forEach(p => {
-        if (p.statusPegawai === 'PNS') countPns++;
-        else if (p.statusPegawai === 'PPPK') countPppk++;
-        else countHonorer++;
+        let b = honorer;
+        if (p.statusPegawai === 'PNS') b = pns;
+        else if (p.statusPegawai === 'PPPK') b = pppk;
+
+        b.count++;
 
         const gapok = getGajiPokok(p.statusPegawai, p.golongan, p.masaKerja);
         
@@ -89,48 +91,31 @@ export async function GET(request: Request) {
         }
 
         // Per Bulan
-        sumGapok += gapok;
-        sumTunjKeluarga += tunjKeluarga;
-        sumTunjBeras += tunjBeras;
-        sumBpjsKes += bpjsKes;
-        sumJkk += jkk;
-        sumJkm += jkm;
-        sumTpp += tpp;
+        b.gapok += gapok;
+        b.tunjKeluarga += tunjKeluarga;
+        b.tunjBeras += tunjBeras;
+        b.bpjsKes += bpjsKes;
+        b.jkk += jkk;
+        b.jkm += jkm;
+        b.tpp += tpp;
       });
 
-      // Kebutuhan Per Tahun (14 Bulan untuk Gaji, 12 Bulan untuk TPP & BPJS)
-      // Asumsi THR dan Gaji 13 tidak ada Tunj Beras/BPJS (biasanya hanya Gapok + Tunj Keluarga + Jabatan)
-      // Disini disederhanakan: Gapok+Keluarga * 14. Beras, BPJS, JKK, JKM * 12. TPP * 12.
-      const tahunGapok = sumGapok * 14;
-      const tahunKeluarga = sumTunjKeluarga * 14;
-      const tahunBeras = sumTunjBeras * 12;
-      const tahunBpjs = sumBpjsKes * 12;
-      const tahunJkk = sumJkk * 12;
-      const tahunJkm = sumJkm * 12;
-      const tahunTpp = sumTpp * 12;
+      const calcTahun = (b: any) => {
+        return (b.gapok * 14) + (b.tunjKeluarga * 14) + (b.tunjBeras * 12) + (b.bpjsKes * 12) + (b.jkk * 12) + (b.jkm * 12) + (b.tpp * 12);
+      };
 
-      const totalKebutuhan = tahunGapok + tahunKeluarga + tahunBeras + tahunBpjs + tahunJkk + tahunJkm + tahunTpp;
+      pns.total = calcTahun(pns);
+      pppk.total = calcTahun(pppk);
+      honorer.total = calcTahun(honorer);
 
       return {
         id: skpd.id,
         kode: skpd.kode,
         nama: skpd.nama,
-        countPns,
-        countPppk,
-        countHonorer,
-        perBulan: {
-          gapok: sumGapok,
-          tunjKeluarga: sumTunjKeluarga,
-          tunjBeras: sumTunjBeras,
-          bpjsKes: sumBpjsKes,
-          jkk: sumJkk,
-          jkm: sumJkm,
-          tpp: sumTpp,
-          total: sumGapok + sumTunjKeluarga + sumTunjBeras + sumBpjsKes + sumJkk + sumJkm + sumTpp
-        },
-        perTahun: {
-          total: totalKebutuhan
-        }
+        pns,
+        pppk,
+        honorer,
+        grandTotal: pns.total + pppk.total + honorer.total
       };
     });
 

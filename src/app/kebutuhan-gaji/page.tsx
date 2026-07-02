@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Users, Calculator, Download } from 'lucide-react';
+import { Users, Calculator, Download, Building } from 'lucide-react';
 import { useYear } from '@/contexts/YearContext';
 
 export default function KebutuhanGajiPage() {
@@ -16,9 +16,7 @@ export default function KebutuhanGajiPage() {
       .then(res => res.json())
       .then(d => {
         if (Array.isArray(d)) {
-          // Urutkan yang ada pegawai duluan
-          const sorted = d.sort((a,b) => (b.countPns + b.countPppk + b.countHonorer) - (a.countPns + a.countPppk + a.countHonorer));
-          setData(sorted);
+          setData(d);
         } else {
           setError(d.error);
         }
@@ -34,6 +32,10 @@ export default function KebutuhanGajiPage() {
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(number);
   };
 
+  const totalPns = data.reduce((acc, curr) => acc + curr.pns.count, 0);
+  const totalPppk = data.reduce((acc, curr) => acc + curr.pppk.count, 0);
+  const totalHonorer = data.reduce((acc, curr) => acc + curr.honorer.count, 0);
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -42,7 +44,7 @@ export default function KebutuhanGajiPage() {
             <Calculator className="w-6 h-6 text-primary" /> Kebutuhan Gaji & TPP
           </h1>
           <p className="text-sm text-secondary">
-            Estimasi proyeksi belanja pegawai (Gaji, Tunjangan, BPJS, JKK, JKM, dan TPP) per SKPD
+            Estimasi proyeksi belanja pegawai khusus Dinas Pendidikan
           </p>
         </div>
         <button 
@@ -61,9 +63,7 @@ export default function KebutuhanGajiPage() {
           </div>
           <div>
             <p className="text-sm text-gray-500 font-medium">Total PNS</p>
-            <h3 className="text-2xl font-bold text-gray-900">
-              {data.reduce((acc, curr) => acc + curr.countPns, 0)}
-            </h3>
+            <h3 className="text-2xl font-bold text-gray-900">{totalPns}</h3>
           </div>
         </div>
         <div className="bg-white p-5 rounded-xl shadow-sm border border-border flex items-center">
@@ -72,9 +72,7 @@ export default function KebutuhanGajiPage() {
           </div>
           <div>
             <p className="text-sm text-gray-500 font-medium">Total PPPK</p>
-            <h3 className="text-2xl font-bold text-gray-900">
-              {data.reduce((acc, curr) => acc + curr.countPppk, 0)}
-            </h3>
+            <h3 className="text-2xl font-bold text-gray-900">{totalPppk}</h3>
           </div>
         </div>
         <div className="bg-white p-5 rounded-xl shadow-sm border border-border flex items-center">
@@ -83,71 +81,86 @@ export default function KebutuhanGajiPage() {
           </div>
           <div>
             <p className="text-sm text-gray-500 font-medium">Total Honorer</p>
-            <h3 className="text-2xl font-bold text-gray-900">
-              {data.reduce((acc, curr) => acc + curr.countHonorer, 0)}
-            </h3>
+            <h3 className="text-2xl font-bold text-gray-900">{totalHonorer}</h3>
           </div>
         </div>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-border overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th rowSpan={2} className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase align-middle border-b">SKPD</th>
-                <th colSpan={3} className="px-4 py-2 text-center text-xs font-bold text-gray-700 uppercase border-b border-l border-gray-200">Jumlah Pegawai</th>
-                <th colSpan={5} className="px-4 py-2 text-center text-xs font-bold text-gray-700 uppercase border-b border-l border-gray-200">Kebutuhan Per Bulan</th>
-                <th rowSpan={2} className="px-4 py-3 text-right text-xs font-bold text-primary uppercase align-middle border-b border-l border-gray-200 bg-blue-50/50">Total Kebutuhan Setahun</th>
-              </tr>
-              <tr>
-                <th className="px-2 py-2 text-center text-xs font-medium text-gray-500 border-b border-l border-gray-200">PNS</th>
-                <th className="px-2 py-2 text-center text-xs font-medium text-gray-500 border-b">PPPK</th>
-                <th className="px-2 py-2 text-center text-xs font-medium text-gray-500 border-b">HNR</th>
-                
-                <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 border-b border-l border-gray-200">Gaji Pokok & Kel.</th>
-                <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 border-b">Beras</th>
-                <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 border-b">BPJS/JKK/JKM</th>
-                <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 border-b">TPP</th>
-                <th className="px-4 py-2 text-right text-xs font-bold text-gray-700 border-b bg-gray-50">Total Bulan</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {loading ? (
-                <tr><td colSpan={10} className="px-6 py-12 text-center text-gray-500">Menghitung formulasi gaji...</td></tr>
-              ) : data.length === 0 ? (
-                <tr><td colSpan={10} className="px-6 py-12 text-center text-gray-500 italic">Data SKPD tidak ditemukan.</td></tr>
-              ) : (
-                data.map(skpd => {
-                  const perBulan = skpd.perBulan;
-                  const totalAsuransi = perBulan.bpjsKes + perBulan.jkk + perBulan.jkm;
-                  const totalGapokKel = perBulan.gapok + perBulan.tunjKeluarga;
-                  
-                  return (
-                    <tr key={skpd.id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3">
-                        <div className="font-medium text-sm text-gray-900">{skpd.nama}</div>
-                        <div className="text-xs text-gray-500">{skpd.kode}</div>
-                      </td>
-                      <td className="px-2 py-3 text-center text-sm text-gray-700 border-l border-gray-100">{skpd.countPns}</td>
-                      <td className="px-2 py-3 text-center text-sm text-gray-700">{skpd.countPppk}</td>
-                      <td className="px-2 py-3 text-center text-sm text-gray-700">{skpd.countHonorer}</td>
-                      
-                      <td className="px-4 py-3 text-right text-sm text-gray-700 border-l border-gray-100">{formatRupiah(totalGapokKel)}</td>
-                      <td className="px-4 py-3 text-right text-sm text-gray-700">{formatRupiah(perBulan.tunjBeras)}</td>
-                      <td className="px-4 py-3 text-right text-sm text-gray-700">{formatRupiah(totalAsuransi)}</td>
-                      <td className="px-4 py-3 text-right text-sm text-gray-700">{formatRupiah(perBulan.tpp)}</td>
-                      <td className="px-4 py-3 text-right text-sm font-semibold text-gray-800 bg-gray-50">{formatRupiah(perBulan.total)}</td>
-                      
-                      <td className="px-4 py-3 text-right text-sm font-bold text-primary bg-blue-50/30 border-l border-gray-100">{formatRupiah(skpd.perTahun.total)}</td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
+      {loading ? (
+        <div className="p-12 text-center text-gray-500 bg-white rounded-xl shadow-sm border border-border">
+          Menghitung formulasi gaji...
         </div>
-      </div>
+      ) : data.length === 0 ? (
+        <div className="p-12 text-center text-gray-500 italic bg-white rounded-xl shadow-sm border border-border">
+          Data SKPD Pendidikan tidak ditemukan.
+        </div>
+      ) : (
+        <div className="space-y-8">
+          {data.map(skpd => (
+            <div key={skpd.id} className="bg-white rounded-xl shadow-sm border border-border overflow-hidden">
+              <div className="bg-gray-50 p-4 border-b border-gray-200 flex items-center gap-3">
+                <Building className="w-5 h-5 text-gray-500" />
+                <div>
+                  <h3 className="font-bold text-gray-900">{skpd.nama}</h3>
+                  <p className="text-xs text-gray-500">{skpd.kode}</p>
+                </div>
+                <div className="ml-auto text-right">
+                  <p className="text-xs text-gray-500 uppercase font-semibold">Total Kebutuhan Setahun</p>
+                  <p className="text-lg font-bold text-primary">{formatRupiah(skpd.grandTotal)}</p>
+                </div>
+              </div>
+              
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-white">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Kategori</th>
+                      <th className="px-6 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">Jumlah Pegawai</th>
+                      <th className="px-6 py-3 text-right text-xs font-bold text-gray-700 uppercase tracking-wider">Gaji Pokok & Kel (Bulan)</th>
+                      <th className="px-6 py-3 text-right text-xs font-bold text-gray-700 uppercase tracking-wider">Tunj. Beras (Bulan)</th>
+                      <th className="px-6 py-3 text-right text-xs font-bold text-gray-700 uppercase tracking-wider">Asuransi/BPJS (Bulan)</th>
+                      <th className="px-6 py-3 text-right text-xs font-bold text-gray-700 uppercase tracking-wider">TPP (Bulan)</th>
+                      <th className="px-6 py-3 text-right text-xs font-bold text-gray-900 uppercase tracking-wider bg-gray-50">Total Setahun</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-100">
+                    {/* PNS Row */}
+                    <tr className="hover:bg-blue-50/20">
+                      <td className="px-6 py-4 font-semibold text-gray-900">PNS</td>
+                      <td className="px-6 py-4 text-center text-gray-700">{skpd.pns.count}</td>
+                      <td className="px-6 py-4 text-right text-gray-700">{formatRupiah(skpd.pns.gapok + skpd.pns.tunjKeluarga)}</td>
+                      <td className="px-6 py-4 text-right text-gray-700">{formatRupiah(skpd.pns.tunjBeras)}</td>
+                      <td className="px-6 py-4 text-right text-gray-700">{formatRupiah(skpd.pns.bpjsKes + skpd.pns.jkk + skpd.pns.jkm)}</td>
+                      <td className="px-6 py-4 text-right text-gray-700">{formatRupiah(skpd.pns.tpp)}</td>
+                      <td className="px-6 py-4 text-right font-bold text-primary bg-gray-50">{formatRupiah(skpd.pns.total)}</td>
+                    </tr>
+                    {/* PPPK Row */}
+                    <tr className="hover:bg-indigo-50/20">
+                      <td className="px-6 py-4 font-semibold text-gray-900">PPPK</td>
+                      <td className="px-6 py-4 text-center text-gray-700">{skpd.pppk.count}</td>
+                      <td className="px-6 py-4 text-right text-gray-700">{formatRupiah(skpd.pppk.gapok + skpd.pppk.tunjKeluarga)}</td>
+                      <td className="px-6 py-4 text-right text-gray-700">{formatRupiah(skpd.pppk.tunjBeras)}</td>
+                      <td className="px-6 py-4 text-right text-gray-700">{formatRupiah(skpd.pppk.bpjsKes + skpd.pppk.jkk + skpd.pppk.jkm)}</td>
+                      <td className="px-6 py-4 text-right text-gray-700">{formatRupiah(skpd.pppk.tpp)}</td>
+                      <td className="px-6 py-4 text-right font-bold text-indigo-700 bg-gray-50">{formatRupiah(skpd.pppk.total)}</td>
+                    </tr>
+                    {/* HONORER Row */}
+                    <tr className="hover:bg-amber-50/20">
+                      <td className="px-6 py-4 font-semibold text-gray-900">HONORER</td>
+                      <td className="px-6 py-4 text-center text-gray-700">{skpd.honorer.count}</td>
+                      <td className="px-6 py-4 text-right text-gray-700">{formatRupiah(skpd.honorer.gapok + skpd.honorer.tunjKeluarga)}</td>
+                      <td className="px-6 py-4 text-right text-gray-700">{formatRupiah(skpd.honorer.tunjBeras)}</td>
+                      <td className="px-6 py-4 text-right text-gray-700">{formatRupiah(skpd.honorer.bpjsKes + skpd.honorer.jkk + skpd.honorer.jkm)}</td>
+                      <td className="px-6 py-4 text-right text-gray-700">{formatRupiah(skpd.honorer.tpp)}</td>
+                      <td className="px-6 py-4 text-right font-bold text-amber-700 bg-gray-50">{formatRupiah(skpd.honorer.total)}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
