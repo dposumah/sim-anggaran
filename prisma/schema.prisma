@@ -225,6 +225,15 @@ model Pegawai {
   jumlahIstriSuami Int     @default(0)
   jumlahAnak       Int     @default(0)
 
+  // Field Integrasi SIMGAJI
+  gajiPokok               Decimal? @db.Decimal(15, 2)
+  tunjanganJabatan        Decimal? @db.Decimal(15, 2)
+  tunjanganFungsional     Decimal? @db.Decimal(15, 2)
+  tunjanganFungsionalUmum Decimal? @db.Decimal(15, 2)
+  tunjanganBeras          Decimal? @db.Decimal(15, 2)
+  tunjanganPph            Decimal? @db.Decimal(15, 2)
+  pembulatan              Int?     @default(0)
+
   jabatanId        Int?
   jabatan          Jabatan? @relation(fields: [jabatanId], references: [id])
 

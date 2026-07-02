@@ -114,45 +114,50 @@ export default function KebutuhanGajiPage() {
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-white">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Kategori</th>
-                      <th className="px-6 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">Jumlah Pegawai</th>
-                      <th className="px-6 py-3 text-right text-xs font-bold text-gray-700 uppercase tracking-wider">Gaji Pokok & Kel (Bulan)</th>
-                      <th className="px-6 py-3 text-right text-xs font-bold text-gray-700 uppercase tracking-wider">Tunj. Beras (Bulan)</th>
-                      <th className="px-6 py-3 text-right text-xs font-bold text-gray-700 uppercase tracking-wider">Asuransi/BPJS (Bulan)</th>
-                      <th className="px-6 py-3 text-right text-xs font-bold text-gray-700 uppercase tracking-wider">TPP (Bulan)</th>
-                      <th className="px-6 py-3 text-right text-xs font-bold text-gray-900 uppercase tracking-wider bg-gray-50">Total Setahun</th>
+                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Kategori</th>
+                      <th className="px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">Jml Pegawai</th>
+                      <th className="px-4 py-3 text-right text-xs font-bold text-gray-700 uppercase tracking-wider">Gaji Pokok & Kel</th>
+                      <th className="px-4 py-3 text-right text-xs font-bold text-gray-700 uppercase tracking-wider">Tunj. Jabatan</th>
+                      <th className="px-4 py-3 text-right text-xs font-bold text-gray-700 uppercase tracking-wider">Beras</th>
+                      <th className="px-4 py-3 text-right text-xs font-bold text-gray-700 uppercase tracking-wider">PPh & Pemb.</th>
+                      <th className="px-4 py-3 text-right text-xs font-bold text-gray-700 uppercase tracking-wider">Asuransi</th>
+                      <th className="px-4 py-3 text-right text-xs font-bold text-gray-700 uppercase tracking-wider">TPP</th>
+                      <th className="px-4 py-3 text-right text-xs font-bold text-gray-900 uppercase tracking-wider bg-gray-50">Total Setahun</th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-100">
-                    {/* PNS Row */}
                     <tr className="hover:bg-blue-50/20">
-                      <td className="px-6 py-4 font-semibold text-gray-900">PNS</td>
-                      <td className="px-6 py-4 text-center text-gray-700">{skpd.pns.count}</td>
-                      <td className="px-6 py-4 text-right text-gray-700">{formatRupiah(skpd.pns.gapok + skpd.pns.tunjKeluarga)}</td>
-                      <td className="px-6 py-4 text-right text-gray-700">{formatRupiah(skpd.pns.tunjBeras)}</td>
-                      <td className="px-6 py-4 text-right text-gray-700">{formatRupiah(skpd.pns.bpjsKes + skpd.pns.jkk + skpd.pns.jkm)}</td>
-                      <td className="px-6 py-4 text-right text-gray-700">{formatRupiah(skpd.pns.tpp)}</td>
-                      <td className="px-6 py-4 text-right font-bold text-primary bg-gray-50">{formatRupiah(skpd.pns.total)}</td>
+                      <td className="px-4 py-4 font-semibold text-gray-900">PNS</td>
+                      <td className="px-4 py-4 text-center text-gray-700">{skpd.pns.count}</td>
+                      <td className="px-4 py-4 text-right text-gray-700">{formatRupiah(skpd.pns.gapok + skpd.pns.tunjKeluarga)}</td>
+                      <td className="px-4 py-4 text-right text-gray-700">{formatRupiah(skpd.pns.tunjJabatanUmum)}</td>
+                      <td className="px-4 py-4 text-right text-gray-700">{formatRupiah(skpd.pns.tunjBeras)}</td>
+                      <td className="px-4 py-4 text-right text-gray-700">{formatRupiah(skpd.pns.tunjPphPembulatan)}</td>
+                      <td className="px-4 py-4 text-right text-gray-700">{formatRupiah(skpd.pns.bpjsKes + skpd.pns.jkk + skpd.pns.jkm)}</td>
+                      <td className="px-4 py-4 text-right text-gray-700">{formatRupiah(skpd.pns.tpp)}</td>
+                      <td className="px-4 py-4 text-right font-bold text-primary bg-gray-50">{formatRupiah(skpd.pns.total)}</td>
                     </tr>
-                    {/* PPPK Row */}
                     <tr className="hover:bg-indigo-50/20">
-                      <td className="px-6 py-4 font-semibold text-gray-900">PPPK</td>
-                      <td className="px-6 py-4 text-center text-gray-700">{skpd.pppk.count}</td>
-                      <td className="px-6 py-4 text-right text-gray-700">{formatRupiah(skpd.pppk.gapok + skpd.pppk.tunjKeluarga)}</td>
-                      <td className="px-6 py-4 text-right text-gray-700">{formatRupiah(skpd.pppk.tunjBeras)}</td>
-                      <td className="px-6 py-4 text-right text-gray-700">{formatRupiah(skpd.pppk.bpjsKes + skpd.pppk.jkk + skpd.pppk.jkm)}</td>
-                      <td className="px-6 py-4 text-right text-gray-700">{formatRupiah(skpd.pppk.tpp)}</td>
-                      <td className="px-6 py-4 text-right font-bold text-indigo-700 bg-gray-50">{formatRupiah(skpd.pppk.total)}</td>
+                      <td className="px-4 py-4 font-semibold text-gray-900">PPPK</td>
+                      <td className="px-4 py-4 text-center text-gray-700">{skpd.pppk.count}</td>
+                      <td className="px-4 py-4 text-right text-gray-700">{formatRupiah(skpd.pppk.gapok + skpd.pppk.tunjKeluarga)}</td>
+                      <td className="px-4 py-4 text-right text-gray-700">{formatRupiah(skpd.pppk.tunjJabatanUmum)}</td>
+                      <td className="px-4 py-4 text-right text-gray-700">{formatRupiah(skpd.pppk.tunjBeras)}</td>
+                      <td className="px-4 py-4 text-right text-gray-700">{formatRupiah(skpd.pppk.tunjPphPembulatan)}</td>
+                      <td className="px-4 py-4 text-right text-gray-700">{formatRupiah(skpd.pppk.bpjsKes + skpd.pppk.jkk + skpd.pppk.jkm)}</td>
+                      <td className="px-4 py-4 text-right text-gray-700">{formatRupiah(skpd.pppk.tpp)}</td>
+                      <td className="px-4 py-4 text-right font-bold text-indigo-700 bg-gray-50">{formatRupiah(skpd.pppk.total)}</td>
                     </tr>
-                    {/* HONORER Row */}
                     <tr className="hover:bg-amber-50/20">
-                      <td className="px-6 py-4 font-semibold text-gray-900">HONORER</td>
-                      <td className="px-6 py-4 text-center text-gray-700">{skpd.honorer.count}</td>
-                      <td className="px-6 py-4 text-right text-gray-700">{formatRupiah(skpd.honorer.gapok + skpd.honorer.tunjKeluarga)}</td>
-                      <td className="px-6 py-4 text-right text-gray-700">{formatRupiah(skpd.honorer.tunjBeras)}</td>
-                      <td className="px-6 py-4 text-right text-gray-700">{formatRupiah(skpd.honorer.bpjsKes + skpd.honorer.jkk + skpd.honorer.jkm)}</td>
-                      <td className="px-6 py-4 text-right text-gray-700">{formatRupiah(skpd.honorer.tpp)}</td>
-                      <td className="px-6 py-4 text-right font-bold text-amber-700 bg-gray-50">{formatRupiah(skpd.honorer.total)}</td>
+                      <td className="px-4 py-4 font-semibold text-gray-900">HONORER</td>
+                      <td className="px-4 py-4 text-center text-gray-700">{skpd.honorer.count}</td>
+                      <td className="px-4 py-4 text-right text-gray-700">{formatRupiah(skpd.honorer.gapok + skpd.honorer.tunjKeluarga)}</td>
+                      <td className="px-4 py-4 text-right text-gray-700">{formatRupiah(skpd.honorer.tunjJabatanUmum)}</td>
+                      <td className="px-4 py-4 text-right text-gray-700">{formatRupiah(skpd.honorer.tunjBeras)}</td>
+                      <td className="px-4 py-4 text-right text-gray-700">{formatRupiah(skpd.honorer.tunjPphPembulatan)}</td>
+                      <td className="px-4 py-4 text-right text-gray-700">{formatRupiah(skpd.honorer.bpjsKes + skpd.honorer.jkk + skpd.honorer.jkm)}</td>
+                      <td className="px-4 py-4 text-right text-gray-700">{formatRupiah(skpd.honorer.tpp)}</td>
+                      <td className="px-4 py-4 text-right font-bold text-amber-700 bg-gray-50">{formatRupiah(skpd.honorer.total)}</td>
                     </tr>
                   </tbody>
                 </table>

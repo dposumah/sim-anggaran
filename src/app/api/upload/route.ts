@@ -36,25 +36,36 @@ export async function POST(request: Request) {
     const tahunId = tahunData.id;
 
     if (type === 'pegawai') {
-      // Pegawai Excel
-      const rawRows = data.slice(1).filter(r => r[2]); // Nama harus ada
-      const rows = rawRows.filter(r => String(r[0]).toUpperCase().includes('PENDIDIKAN'));
+      // Pegawai Excel (Format SIMGAJI)
+      const rawRows = data.slice(1).filter(r => r[1]); // Nama Pegawai harus ada di index 1
       
-      if (rows.length === 0) {
-        return NextResponse.json({ success: false, error: 'Tidak ada data pegawai SKPD Pendidikan.' }, { status: 400 });
-      }
-
       const skpd = await prisma.skpd.findFirst({
          where: { tahunId, nama: { contains: 'PENDIDIKAN', mode: 'insensitive' } }
       });
-      if (!skpd) return NextResponse.json({ success: false, error: 'Data SKPD Pendidikan belum ada di sistem, harap upload Anggaran SIPD dulu.' }, { status: 400 });
+      if (!skpd) return NextResponse.json({ success: false, error: 'Data SKPD Pendidikan belum ada di sistem.' }, { status: 400 });
 
       const jabatans = await prisma.jabatan.findMany();
       const jabatanMap = new Map(jabatans.map(j => [j.nama.toLowerCase(), j.id]));
 
       const pegawaiData = [];
-      for (const r of rows) {
-         const namaJabatan = String(r[6]).trim();
+      for (const r of rawRows) {
+         const nip = String(r[0] || '').trim();
+         const nama = String(r[1] || '').trim();
+         const namaJabatan = String(r[6] || '').trim();
+         const statusPegawai = String(r[8] || '').trim().toUpperCase() || 'PNS';
+         const golongan = r[9] ? String(r[9]).trim() : null;
+         const masaKerja = r[10] ? parseInt(String(r[10]), 10) : 0;
+         const jumlahIstriSuami = r[13] ? parseInt(String(r[13]), 10) : 0;
+         const jumlahAnak = r[14] ? parseInt(String(r[14]), 10) : 0;
+
+         const gajiPokok = r[16] ? parseFloat(String(r[16])) : 0;
+         const tunjanganJabatan = r[20] ? parseFloat(String(r[20])) : 0;
+         const tunjanganFungsional = r[21] ? parseFloat(String(r[21])) : 0;
+         const tunjanganFungsionalUmum = r[22] ? parseFloat(String(r[22])) : 0;
+         const tunjanganBeras = r[23] ? parseFloat(String(r[23])) : 0;
+         const tunjanganPph = r[24] ? parseFloat(String(r[24])) : 0;
+         const pembulatan = r[25] ? parseInt(String(r[25]), 10) : 0;
+
          let jabatanId = null;
          if (namaJabatan) {
            if (!jabatanMap.has(namaJabatan.toLowerCase())) {
@@ -69,14 +80,21 @@ export async function POST(request: Request) {
          pegawaiData.push({
            skpdId: skpd.id,
            tahunId,
-           nip: String(r[1]).trim() || null,
-           nama: String(r[2]).trim(),
-           statusPegawai: String(r[3]).trim().toUpperCase() || 'PNS',
-           golongan: r[4] ? String(r[4]).trim() : null,
-           masaKerja: r[5] ? parseInt(String(r[5]), 10) : 0,
+           nip,
+           nama,
+           statusPegawai,
+           golongan,
+           masaKerja,
            jabatanId,
-           jumlahIstriSuami: r[7] ? parseInt(String(r[7]), 10) : 0,
-           jumlahAnak: r[8] ? parseInt(String(r[8]), 10) : 0
+           jumlahIstriSuami,
+           jumlahAnak,
+           gajiPokok,
+           tunjanganJabatan,
+           tunjanganFungsional,
+           tunjanganFungsionalUmum,
+           tunjanganBeras,
+           tunjanganPph,
+           pembulatan
          });
       }
 
