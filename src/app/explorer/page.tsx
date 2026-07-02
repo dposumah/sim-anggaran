@@ -8,7 +8,8 @@ import {
   Folder, 
   FileText, 
   FileJson,
-  Banknote
+  Banknote,
+  X
 } from 'lucide-react';
 import RincianTable from '@/components/RincianTable';
 import { useYear } from '@/contexts/YearContext';
@@ -17,7 +18,7 @@ export default function ExplorerPage() {
   const [treeData, setTreeData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
-  const [expandedSdNodes, setExpandedSdNodes] = useState<Set<string>>(new Set());
+  const [modalSdData, setModalSdData] = useState<{ title: string, sumberDanas: Record<string, number> } | null>(null);
   const [rincianData, setRincianData] = useState<Record<string, any[]>>({});
   const { tahun } = useYear();
 
@@ -63,16 +64,6 @@ export default function ExplorerPage() {
         console.error(e);
       }
     }
-  };
-
-  const toggleSdNode = (e: React.MouseEvent, key: string) => {
-    e.stopPropagation();
-    setExpandedSdNodes(prev => {
-      const next = new Set(prev);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
-      return next;
-    });
   };
 
   const formatRupiah = (number: number) => {
@@ -122,23 +113,15 @@ export default function ExplorerPage() {
               {formatRupiah(item.totalPagu)}
             </span>
             {item.sumberDanas && Object.entries(item.sumberDanas).length > 0 && (
-              <>
-                <button 
-                  onClick={(e) => toggleSdNode(e, key)}
-                  className="text-[10px] font-medium text-blue-600 hover:text-blue-800 hover:bg-blue-50 px-2 py-0.5 rounded transition-colors"
-                >
-                  {expandedSdNodes.has(key) ? 'Tutup Rekap SD' : 'Lihat Rekap SD'}
-                </button>
-                {expandedSdNodes.has(key) && (
-                  <div className="flex gap-1 flex-wrap justify-end w-64 mt-1">
-                    {Object.entries(item.sumberDanas).map(([sd, pagu]) => (
-                      <span key={sd} className="text-[10px] bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded border border-blue-100 truncate" title={sd}>
-                        {sd}: {formatRupiah(pagu as number)}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </>
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setModalSdData({ title: `Rekap SD - ${name}`, sumberDanas: item.sumberDanas });
+                }}
+                className="text-[10px] font-medium text-blue-600 hover:text-blue-800 hover:bg-blue-50 px-2 py-0.5 rounded transition-colors"
+              >
+                Lihat Rekap SD
+              </button>
             )}
           </div>
 
@@ -203,6 +186,41 @@ export default function ExplorerPage() {
           </div>
         )}
       </div>
+
+      {/* Modal Rekap Sumber Dana */}
+      {modalSdData && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
+            <div className="flex items-center justify-between p-4 border-b border-gray-100 bg-gray-50/50">
+              <h3 className="font-semibold text-gray-900 truncate pr-4">{modalSdData.title}</h3>
+              <button 
+                onClick={() => setModalSdData(null)}
+                className="text-gray-400 hover:text-gray-600 hover:bg-gray-100 p-1 rounded-full transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-4 max-h-[60vh] overflow-y-auto">
+              <div className="space-y-3">
+                {Object.entries(modalSdData.sumberDanas).map(([sd, pagu]) => (
+                  <div key={sd} className="flex justify-between items-center p-3 bg-blue-50/50 border border-blue-100 rounded-lg">
+                    <span className="text-sm font-medium text-blue-900">{sd}</span>
+                    <span className="text-sm font-bold text-blue-700">{formatRupiah(pagu as number)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="p-4 border-t border-gray-100 bg-gray-50 flex justify-end">
+              <button 
+                onClick={() => setModalSdData(null)}
+                className="px-4 py-2 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+              >
+                Tutup
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
