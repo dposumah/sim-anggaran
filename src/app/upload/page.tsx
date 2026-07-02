@@ -6,6 +6,7 @@ import { UploadCloud, FileSpreadsheet, CheckCircle2 } from 'lucide-react';
 export default function UploadPage() {
   const [file, setFile] = useState<File | null>(null);
   const [type, setType] = useState('rekap');
+  const [tahun, setTahun] = useState<number>(2026);
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [message, setMessage] = useState('');
@@ -39,6 +40,7 @@ export default function UploadPage() {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('type', type);
+    formData.append('tahun', tahun.toString());
 
     try {
       const res = await fetch('/api/upload', {
@@ -76,8 +78,20 @@ export default function UploadPage() {
 
       <div className="bg-white rounded-xl shadow-sm border border-border p-6">
         <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Jenis Data</label>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Tahun Anggaran</label>
+              <input 
+                type="number"
+                value={tahun}
+                onChange={(e) => setTahun(Number(e.target.value))}
+                className="w-full rounded-md border border-border bg-surface px-4 py-2 text-sm text-foreground shadow-sm focus:border-primary focus:outline-none"
+                required
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Jenis Data</label>
             <div className="flex gap-4">
               <label className="flex items-center gap-2">
                 <input 
@@ -100,6 +114,7 @@ export default function UploadPage() {
                 <span className="text-sm">Master Standar Harga (SSH/SBU)</span>
               </label>
             </div>
+          </div>
           </div>
 
           <div>
