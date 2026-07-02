@@ -86,9 +86,17 @@ export async function POST(request: Request) {
     rows.forEach(r => {
       const sId = sIdMap.get(`${String(r[4]).trim()}_${String(r[6]).trim()}`);
       if (!sId) return;
-      const kode = String(r[8]).trim();
+      const kode = String(r[10]).trim();
       const key = `${kode}_${sId}`;
-      if (!progMap.has(key)) progMap.set(key, { kode, nama: String(r[9]).trim(), skpdId: sId });
+      if (!progMap.has(key)) {
+        progMap.set(key, { 
+          kode, 
+          nama: String(r[11]).trim(), 
+          kodeBidangUrusan: String(r[8]).trim(),
+          namaBidangUrusan: String(r[9]).trim(),
+          skpdId: sId 
+        });
+      }
     });
     await prisma.program.createMany({ data: Array.from(progMap.values()), skipDuplicates: true });
     const programs = await prisma.program.findMany({ where: { skpdId: { in: Array.from(sIdMap.values()) } } });
@@ -99,11 +107,11 @@ export async function POST(request: Request) {
     const kegMap = new Map();
     rows.forEach(r => {
       const sId = sIdMap.get(`${String(r[4]).trim()}_${String(r[6]).trim()}`);
-      const pId = pIdMap.get(`${String(r[8]).trim()}_${sId}`);
+      const pId = pIdMap.get(`${String(r[10]).trim()}_${sId}`);
       if (!pId) return;
-      const kode = String(r[10]).trim();
+      const kode = String(r[12]).trim();
       const key = `${kode}_${pId}`;
-      if (!kegMap.has(key)) kegMap.set(key, { kode, nama: String(r[11]).trim(), programId: pId });
+      if (!kegMap.has(key)) kegMap.set(key, { kode, nama: String(r[13]).trim(), programId: pId });
     });
     await prisma.kegiatan.createMany({ data: Array.from(kegMap.values()), skipDuplicates: true });
     const kegiatans = await prisma.kegiatan.findMany({ where: { programId: { in: Array.from(pIdMap.values()) } } });
@@ -114,12 +122,12 @@ export async function POST(request: Request) {
     const subMap = new Map();
     rows.forEach(r => {
       const sId = sIdMap.get(`${String(r[4]).trim()}_${String(r[6]).trim()}`);
-      const pId = pIdMap.get(`${String(r[8]).trim()}_${sId}`);
-      const kId = kIdMap.get(`${String(r[10]).trim()}_${pId}`);
+      const pId = pIdMap.get(`${String(r[10]).trim()}_${sId}`);
+      const kId = kIdMap.get(`${String(r[12]).trim()}_${pId}`);
       if (!kId) return;
-      const kode = String(r[12]).trim();
+      const kode = String(r[14]).trim();
       const key = `${kode}_${kId}`;
-      if (!subMap.has(key)) subMap.set(key, { kode, nama: String(r[13]).trim(), kegiatanId: kId });
+      if (!subMap.has(key)) subMap.set(key, { kode, nama: String(r[15]).trim(), kegiatanId: kId });
     });
     await prisma.subKegiatan.createMany({ data: Array.from(subMap.values()), skipDuplicates: true });
     const subkegs = await prisma.subKegiatan.findMany({ where: { kegiatanId: { in: Array.from(kIdMap.values()) } } });
@@ -130,8 +138,8 @@ export async function POST(request: Request) {
     const sumberDanaMap = new Map();
     const rekeningMap = new Map();
     rows.forEach(r => {
-      sumberDanaMap.set(String(r[14]).trim(), String(r[15]).trim());
-      rekeningMap.set(String(r[1]).trim(), String(r[16]).trim());
+      sumberDanaMap.set(String(r[16]).trim(), String(r[17]).trim());
+      rekeningMap.set(String(r[18]).trim(), String(r[19]).trim());
     });
     
     await prisma.sumberDana.createMany({
@@ -153,10 +161,10 @@ export async function POST(request: Request) {
     const rels: any[] = [];
     rows.forEach(r => {
       const sId = sIdMap.get(`${String(r[4]).trim()}_${String(r[6]).trim()}`);
-      const pId = pIdMap.get(`${String(r[8]).trim()}_${sId}`);
-      const kId = kIdMap.get(`${String(r[10]).trim()}_${pId}`);
-      const skId = skIdMap.get(`${String(r[12]).trim()}_${kId}`);
-      const sdId = sdMap.get(String(r[14]).trim());
+      const pId = pIdMap.get(`${String(r[10]).trim()}_${sId}`);
+      const kId = kIdMap.get(`${String(r[12]).trim()}_${pId}`);
+      const skId = skIdMap.get(`${String(r[14]).trim()}_${kId}`);
+      const sdId = sdMap.get(String(r[16]).trim());
       
       if (skId && sdId) {
         const key = `${skId}_${sdId}`;
@@ -172,28 +180,30 @@ export async function POST(request: Request) {
     const rincianList: any[] = [];
     rows.forEach(r => {
       const sId = sIdMap.get(`${String(r[4]).trim()}_${String(r[6]).trim()}`);
-      const pId = pIdMap.get(`${String(r[8]).trim()}_${sId}`);
-      const kId = kIdMap.get(`${String(r[10]).trim()}_${pId}`);
-      const skId = skIdMap.get(`${String(r[12]).trim()}_${kId}`);
-      const sdId = sdMap.get(String(r[14]).trim());
-      const rekId = rMap.get(String(r[1]).trim());
+      const pId = pIdMap.get(`${String(r[10]).trim()}_${sId}`);
+      const kId = kIdMap.get(`${String(r[12]).trim()}_${pId}`);
+      const skId = skIdMap.get(`${String(r[14]).trim()}_${kId}`);
+      const sdId = sdMap.get(String(r[16]).trim());
+      const rekId = rMap.get(String(r[18]).trim());
       
       if (!skId || !sdId || !rekId) return;
 
-      const vol = parseFloat(String(r[19]).replace(/,/g, '')) || 0;
-      const hrg = parseFloat(String(r[20]).replace(/,/g, '')) || 0;
-      const pagu = parseFloat(String(r[21]).replace(/,/g, '')) || 0;
+      const vol = 1;
+      const hrg = parseFloat(String(r[22]).replace(/,/g, '')) || 0;
+      const pagu = parseFloat(String(r[22]).replace(/,/g, '')) || 0;
       
-      rincianList.push({
-        subKegiatanId: skId,
-        sumberDanaId: sdId,
-        rekeningId: rekId,
-        tipePaket: String(r[17]).trim(),
-        namaPaket: String(r[18]).trim(),
-        volumne: vol,
-        hargaSatuan: hrg,
-        pagu: pagu
-      });
+      if (pagu > 0) {
+        rincianList.push({
+          subKegiatanId: skId,
+          sumberDanaId: sdId,
+          rekeningId: rekId,
+          tipePaket: String(r[20]).trim() || '-',
+          namaPaket: String(r[21]).trim() || '-',
+          volume: vol,
+          hargaSatuan: hrg,
+          pagu: pagu
+        });
+      }
     });
 
     // We can't guarantee rincian duplicates uniquely without a dedicated unique field, 
