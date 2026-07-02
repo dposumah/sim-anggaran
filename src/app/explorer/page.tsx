@@ -106,10 +106,19 @@ export default function ExplorerPage() {
             <span className={`text-gray-900 ${depth === 0 ? 'font-semibold' : ''}`}>{name}</span>
           </div>
           
-          <div className="text-right">
+          <div className="flex flex-col items-end gap-1">
             <span className="text-sm font-semibold text-gray-800 bg-gray-100 px-2 py-1 rounded">
               {formatRupiah(item.totalPagu)}
             </span>
+            {item.sumberDanas && Object.entries(item.sumberDanas).length > 0 && (
+              <div className="flex gap-1 flex-wrap justify-end w-64">
+                {Object.entries(item.sumberDanas).map(([sd, pagu]) => (
+                  <span key={sd} className="text-[10px] bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded border border-blue-100 truncate" title={sd}>
+                    {sd}: {formatRupiah(pagu as number)}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
 
           {type === 'subkegiatan' && item.is_locked && (

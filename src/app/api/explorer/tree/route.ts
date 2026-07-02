@@ -51,38 +51,76 @@ export async function GET(request: Request) {
       select: { id: true, kegiatan: { select: { program: { select: { skpdId: true, id: true } }, id: true } } }
     });
     
-    const paguPerSubSkpd = await prisma.rincianBelanja.groupBy({
-      by: ['subKegiatanId'],
+    const paguPerSubSkpdAndSd = await prisma.rincianBelanja.groupBy({
+      by: ['subKegiatanId', 'sumberDanaId'],
       where: { subKegiatanId: { in: subKegiatansSkpd.map(s => s.id) } },
       _sum: { pagu: true }
     });
 
-    // Map the pagu
-    const subPaguMap = new Map(paguPerSubSkpd.map(p => [p.subKegiatanId, p._sum.pagu || 0]));
+    const sds = await prisma.sumberDana.findMany();
+    const sdNameMap = new Map(sds.map(s => [s.id, s.nama]));
 
-    // 3. Mutate the tree with totalPagu
+    const subPaguSdMap = new Map<number, { [key: string]: number }>();
+    const allSubTotalMap = new Map<number, number>();
+
+    for (const p of paguPerSubSkpdAndSd) {
+      const sId = p.subKegiatanId;
+      const sdNama = sdNameMap.get(p.sumberDanaId) || 'Unknown';
+      const pagu = Number(p._sum.pagu || 0);
+
+      if (!subPaguSdMap.has(sId)) subPaguSdMap.set(sId, {});
+      const sdObj = subPaguSdMap.get(sId)!;
+      sdObj[sdNama] = (sdObj[sdNama] || 0) + pagu;
+
+      allSubTotalMap.set(sId, (allSubTotalMap.get(sId) || 0) + pagu);
+    }
+
+    // 3. Mutate the tree with totalPagu and sumberDanas
     const result = skpds.map(skpd => {
       let skpdTotal = 0;
+      let skpdSdMap: { [key: string]: number } = {};
+
       const programs = skpd.programs.map(prog => {
         let progTotal = 0;
+        let progSdMap: { [key: string]: number } = {};
+
         const kegiatans = prog.kegiatans.map(keg => {
           let kegTotal = 0;
+          let kegSdMap: { [key: string]: number } = {};
+
           const subKegiatans = keg.subKegiatans.map(sub => {
-            const subTotal = Number(subPaguMap.get(sub.id) || 0);
+            const subTotal = allSubTotalMap.get(sub.id) || 0;
+            const subSds = subPaguSdMap.get(sub.id) || {};
+            
             kegTotal += subTotal;
+            for (const [sd, pagu] of Object.entries(subSds)) {
+              kegSdMap[sd] = (kegSdMap[sd] || 0) + pagu;
+            }
+
             return {
               ...sub,
               totalPagu: subTotal,
+              sumberDanas: subSds,
               is_locked: sub.subKegiatanSumberDanas.some(sd => sd.isLocked)
             };
           });
+
           progTotal += kegTotal;
-          return { ...keg, subKegiatans, totalPagu: kegTotal };
+          for (const [sd, pagu] of Object.entries(kegSdMap)) {
+            progSdMap[sd] = (progSdMap[sd] || 0) + pagu;
+          }
+
+          return { ...keg, subKegiatans, totalPagu: kegTotal, sumberDanas: kegSdMap };
         });
+
         skpdTotal += progTotal;
-        return { ...prog, kegiatans, totalPagu: progTotal };
+        for (const [sd, pagu] of Object.entries(progSdMap)) {
+          skpdSdMap[sd] = (skpdSdMap[sd] || 0) + pagu;
+        }
+
+        return { ...prog, kegiatans, totalPagu: progTotal, sumberDanas: progSdMap };
       });
-      return { ...skpd, programs, totalPagu: skpdTotal };
+      return { ...skpd, programs, totalPagu: skpdTotal, sumberDanas: skpdSdMap };
     });
 
     return NextResponse.json(result);
