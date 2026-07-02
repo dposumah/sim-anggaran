@@ -25,7 +25,12 @@ export default function ExplorerPage() {
     fetch(`/api/explorer/tree?tahun=${tahun}`)
       .then(res => res.json())
       .then(data => {
-        setTreeData(data);
+        if (Array.isArray(data)) {
+          setTreeData(data);
+        } else {
+          console.error(data.error);
+          setTreeData([]);
+        }
         setLoading(false);
       })
       .catch(e => {

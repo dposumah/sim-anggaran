@@ -29,7 +29,12 @@ export default function Dashboard() {
     fetch(`/api/dashboard?tahun=${tahun}`)
       .then(res => res.json())
       .then(resData => {
-        setData(resData);
+        if (resData.error) {
+          console.error(resData.error);
+          setData(null);
+        } else {
+          setData(resData);
+        }
         setLoading(false);
       })
       .catch(err => {
@@ -46,7 +51,11 @@ export default function Dashboard() {
     );
   }
 
-  if (!data) return <div>Data tidak tersedia</div>;
+  if (!data) return (
+    <div className="flex h-full items-center justify-center">
+      <div className="text-xl font-medium text-secondary">Data untuk Tahun Anggaran {tahun} belum tersedia.</div>
+    </div>
+  );
 
   const formatRupiah = (number: number) => {
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(number);

@@ -15,7 +15,13 @@ export default function PaguPage() {
     setLoading(true);
     try {
       const res = await fetch(`/api/pagu?tahun=${tahun}`);
-      setData(await res.json());
+      const json = await res.json();
+      if (Array.isArray(json)) {
+        setData(json);
+      } else {
+        console.error(json.error);
+        setData([]);
+      }
     } catch (e) {
       console.error(e);
     } finally {

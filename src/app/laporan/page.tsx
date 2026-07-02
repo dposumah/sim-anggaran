@@ -14,7 +14,12 @@ export default function LaporanPage() {
     fetch(`/api/laporan?tahun=${tahun}`)
       .then(res => res.json())
       .then(resData => {
-        setData(resData);
+        if (Array.isArray(resData)) {
+          setData(resData);
+        } else {
+          console.error(resData.error);
+          setData([]);
+        }
         setLoading(false);
       })
       .catch(err => {
