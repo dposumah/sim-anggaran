@@ -17,10 +17,13 @@ import {
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'Budget Explorer', href: '/explorer', icon: FolderTree },
+  { name: 'Kebutuhan Gaji', href: '/kebutuhan-gaji', icon: Users },
   { name: 'Laporan', href: '/laporan', icon: FileText },
   { name: 'Sumber Dana', href: '/sumber-dana', icon: Database },
   { name: 'Kontrol Pagu', href: '/pagu', icon: ShieldAlert },
   { name: 'Standar Harga', href: '/standar-harga', icon: Tags },
+  { name: 'Master Jabatan', href: '/master-jabatan', icon: Users },
+  { name: 'Master Gaji', href: '/master-gaji', icon: Database },
   { name: 'Upload Data', href: '/upload', icon: Upload },
   { name: 'Export Laporan', href: '/export', icon: FileDown },
   { name: 'Manajemen User', href: '/users', icon: Users },

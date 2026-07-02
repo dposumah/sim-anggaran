@@ -18,6 +18,7 @@ model TahunAnggaran {
   skpds     Skpd[]
   sshSbus   SshSbu[]
   pagus     PaguCeiling[]
+  pegawais  Pegawai[]
 }
 
 model Urusan {
@@ -44,6 +45,7 @@ model Skpd {
   programs      Program[]
   pagus         PaguCeiling[]
   users         User[]
+  pegawais      Pegawai[]
 
   @@unique([kode, kodeSubUnit, tahunId])
 }
@@ -192,4 +194,43 @@ model User {
   
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
+}
+
+model Jabatan {
+  id         Int       @id @default(autoincrement())
+  nama       String    @unique
+  besaranTpp Decimal   @db.Decimal(15, 2)
+  
+  pegawais   Pegawai[]
+}
+
+model MasterGaji {
+  id         Int       @id @default(autoincrement())
+  status     String    // "PNS", "PPPK"
+  golongan   String
+  masaKerja  Int
+  gajiPokok  Decimal   @db.Decimal(15, 2)
+
+  @@unique([status, golongan, masaKerja])
+}
+
+model Pegawai {
+  id               Int     @id @default(autoincrement())
+  nip              String? 
+  nama             String
+  statusPegawai    String  // "PNS", "PPPK", "HONORER"
+  golongan         String?
+  masaKerja        Int?
+  
+  jumlahIstriSuami Int     @default(0)
+  jumlahAnak       Int     @default(0)
+
+  jabatanId        Int?
+  jabatan          Jabatan? @relation(fields: [jabatanId], references: [id])
+
+  skpdId           Int
+  skpd             Skpd @relation(fields: [skpdId], references: [id])
+
+  tahunId          Int
+  tahun            TahunAnggaran @relation(fields: [tahunId], references: [id])
 }

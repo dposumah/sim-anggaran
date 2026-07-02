@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { UploadCloud, FileSpreadsheet, CheckCircle2 } from 'lucide-react';
+import { UploadCloud, FileSpreadsheet, CheckCircle2, AlertCircle } from 'lucide-react';
 
 export default function UploadPage() {
   const [file, setFile] = useState<File | null>(null);
@@ -94,29 +94,46 @@ export default function UploadPage() {
             
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Jenis Data</label>
-            <div className="flex gap-4">
-              <label className="flex items-center gap-2">
-                <input 
-                  type="radio" 
-                  value="rekap" 
-                  checked={type === 'rekap'} 
-                  onChange={() => setType('rekap')}
-                  className="text-primary focus:ring-primary"
-                />
-                <span className="text-sm">Rekap SKPD (Anggaran)</span>
-              </label>
-              <label className="flex items-center gap-2">
-                <input 
-                  type="radio" 
-                  value="standar-harga" 
-                  checked={type === 'standar-harga'} 
-                  onChange={() => setType('standar-harga')}
-                  className="text-primary focus:ring-primary"
-                />
-                <span className="text-sm">Master Standar Harga (SSH/SBU)</span>
-              </label>
+              <div className="flex gap-4">
+                <select 
+                  value={type} 
+                  onChange={(e) => setType(e.target.value)}
+                  className="w-full rounded-md border border-border bg-surface px-4 py-2 text-sm text-foreground shadow-sm focus:border-primary focus:outline-none"
+                >
+                  <option value="rekap">Upload Rekap Rincian APBD (SIPD)</option>
+                  <option value="pegawai">Upload Data Pegawai & Jabatan</option>
+                  <option value="ssh" disabled>Upload Master SSH/SBU (Segera Hadir)</option>
+                </select>
+              </div>
             </div>
           </div>
+
+          <div className="mt-4 p-4 bg-yellow-50 rounded-md border border-yellow-100">
+            <h4 className="text-sm font-semibold text-yellow-800 flex items-center mb-2">
+              <AlertCircle className="w-4 h-4 mr-2" /> Format File yang Diterima
+            </h4>
+            {type === 'rekap' ? (
+              <ul className="text-xs text-yellow-700 list-disc pl-5 space-y-1">
+                <li>Kolom A: Tidak dipakai</li>
+                <li>Kolom B: Kode Rekening SKPD (harus terisi)</li>
+                <li>Kolom F: Nama SKPD (wajib mengandung kata PENDIDIKAN)</li>
+                <li>Kolom U: Nama Paket (Opsional)</li>
+                <li>Kolom W: Total Pagu</li>
+                <li>Baris pertama dianggap sebagai Header dan akan diabaikan</li>
+              </ul>
+            ) : (
+              <ul className="text-xs text-yellow-700 list-disc pl-5 space-y-1">
+                <li>Kolom A: Kode/Nama SKPD (wajib mengandung PENDIDIKAN)</li>
+                <li>Kolom B: NIP (opsional untuk Honorer)</li>
+                <li>Kolom C: Nama Lengkap</li>
+                <li>Kolom D: Status Pegawai (PNS / PPPK / HONORER)</li>
+                <li>Kolom E: Golongan (contoh: IIIa, IX)</li>
+                <li>Kolom F: Masa Kerja (angka)</li>
+                <li>Kolom G: Jabatan</li>
+                <li>Kolom H: Jumlah Istri/Suami (angka)</li>
+                <li>Kolom I: Jumlah Anak (angka, max 2)</li>
+              </ul>
+            )}
           </div>
 
           {type === 'rekap' && (

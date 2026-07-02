@@ -16,8 +16,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'File tidak ditemukan' }, { status: 400 });
     }
 
-    if (type !== 'rekap') {
-      return NextResponse.json({ error: 'Upload master standar harga belum didukung via UI saat ini' }, { status: 400 });
+    if (type !== 'rekap' && type !== 'pegawai') {
+      return NextResponse.json({ error: 'Jenis upload tidak didukung' }, { status: 400 });
     }
 
     // 1. Baca File Excel
@@ -27,21 +27,7 @@ export async function POST(request: Request) {
     const ws = wb.Sheets[wb.SheetNames[0]];
     const data = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' }) as any[][];
 
-    // Buang baris header kosong dan pastikan ada kode rekening/skpd di kolom indeks 1
-    const rawRows = data.slice(1).filter(r => r[1]);
-
-    // FILTER: HANYA PROSES DINAS PENDIDIKAN DAN KEBUDAYAAN
-    // Asumsi: Nama SKPD ada di index 5 (G) berdasarkan skema file
-    const rows = rawRows.filter(r => String(r[5]).toUpperCase().includes('PENDIDIKAN'));
-
-    if (rows.length === 0) {
-      return NextResponse.json({ 
-        success: false, 
-        error: `Tidak ada data Dinas Pendidikan yang ditemukan dalam file ${file.name}. (Dilewati: ${rawRows.length} baris)`
-      }, { status: 400 });
-    }
-
-    // 2. Persiapkan Data & Database
+    // 2. Persiapkan Data & Database (Tahun)
     const tahunData = await prisma.tahunAnggaran.upsert({
       where: { tahun },
       update: { isActive: true },
@@ -49,7 +35,70 @@ export async function POST(request: Request) {
     });
     const tahunId = tahunData.id;
 
-    // --- LOGIKA BATCH INSERT ---
+    if (type === 'pegawai') {
+      // Pegawai Excel
+      const rawRows = data.slice(1).filter(r => r[2]); // Nama harus ada
+      const rows = rawRows.filter(r => String(r[0]).toUpperCase().includes('PENDIDIKAN'));
+      
+      if (rows.length === 0) {
+        return NextResponse.json({ success: false, error: 'Tidak ada data pegawai SKPD Pendidikan.' }, { status: 400 });
+      }
+
+      const skpd = await prisma.skpd.findFirst({
+         where: { tahunId, nama: { contains: 'PENDIDIKAN', mode: 'insensitive' } }
+      });
+      if (!skpd) return NextResponse.json({ success: false, error: 'Data SKPD Pendidikan belum ada di sistem, harap upload Anggaran SIPD dulu.' }, { status: 400 });
+
+      const jabatans = await prisma.jabatan.findMany();
+      const jabatanMap = new Map(jabatans.map(j => [j.nama.toLowerCase(), j.id]));
+
+      const pegawaiData = [];
+      for (const r of rows) {
+         const namaJabatan = String(r[6]).trim();
+         let jabatanId = null;
+         if (namaJabatan) {
+           if (!jabatanMap.has(namaJabatan.toLowerCase())) {
+              const newJ = await prisma.jabatan.create({ data: { nama: namaJabatan, besaranTpp: 0 } });
+              jabatanMap.set(namaJabatan.toLowerCase(), newJ.id);
+              jabatanId = newJ.id;
+           } else {
+              jabatanId = jabatanMap.get(namaJabatan.toLowerCase());
+           }
+         }
+
+         pegawaiData.push({
+           skpdId: skpd.id,
+           tahunId,
+           nip: String(r[1]).trim() || null,
+           nama: String(r[2]).trim(),
+           statusPegawai: String(r[3]).trim().toUpperCase() || 'PNS',
+           golongan: r[4] ? String(r[4]).trim() : null,
+           masaKerja: r[5] ? parseInt(String(r[5]), 10) : 0,
+           jabatanId,
+           jumlahIstriSuami: r[7] ? parseInt(String(r[7]), 10) : 0,
+           jumlahAnak: r[8] ? parseInt(String(r[8]), 10) : 0
+         });
+      }
+
+      await prisma.pegawai.deleteMany({ where: { skpdId: skpd.id, tahunId } });
+      await prisma.pegawai.createMany({ data: pegawaiData });
+
+      return NextResponse.json({ success: true, message: `${pegawaiData.length} pegawai berhasil diupload.` });
+    }
+
+    // LOGIK UNTUK type === 'rekap'
+    const rawRows = data.slice(1).filter(r => r[1]);
+    const rows = rawRows.filter(r => String(r[5]).toUpperCase().includes('PENDIDIKAN'));
+
+    if (rows.length === 0) {
+      return NextResponse.json({ 
+        success: false, 
+        error: `Tidak ada data Dinas Pendidikan yang ditemukan dalam file ${file.name}.`
+      }, { status: 400 });
+    }
+
+    // 2. Persiapkan Data & Database
+    // --- LOGIKA BATCH INSERT REKAP ---
 
     // Level 1: Urusan
     const urusanMap = new Map();
