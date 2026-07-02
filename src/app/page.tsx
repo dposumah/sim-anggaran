@@ -8,7 +8,11 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  ResponsiveContainer
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  Legend
 } from 'recharts';
 import { 
   Building2, 
@@ -58,6 +62,8 @@ export default function Dashboard() {
     return 'Rp ' + number.toLocaleString('id-ID');
   };
 
+  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D'];
+
   return (
     <div className="space-y-6">
       <div>
@@ -100,37 +106,55 @@ export default function Dashboard() {
 
       {/* Charts */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        {/* Chart 1: Sumber Dana */}
         <div className="rounded-xl bg-surface p-6 shadow-sm border border-border">
-          <h3 className="text-lg font-semibold text-foreground mb-4">Top 10 SKPD dengan Pagu Terbesar</h3>
+          <h3 className="text-lg font-semibold text-foreground mb-4">Rekapitulasi per Sumber Dana</h3>
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={data.skpdData} layout="vertical" margin={{ top: 5, right: 30, left: 100, bottom: 5 }}>
+              <PieChart>
+                <Pie
+                  data={data.sumberDanaChart}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                  outerRadius={100}
+                  fill="#8884d8"
+                  dataKey="value"
+                >
+                  {data.sumberDanaChart?.map((entry: any, index: number) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip formatter={(value: any) => formatRupiah(value)} />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Chart 2: Top 10 Rekening */}
+        <div className="rounded-xl bg-surface p-6 shadow-sm border border-border">
+          <h3 className="text-lg font-semibold text-foreground mb-4">10 Rekening Belanja Terbesar</h3>
+          <div className="h-80">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={data.topRekeningChart} layout="vertical" margin={{ top: 5, right: 30, left: 100, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#E9ECEF" />
                 <XAxis type="number" tickFormatter={(val) => formatShortRupiah(val)} />
                 <YAxis 
                   dataKey="nama" 
                   type="category" 
-                  width={100} 
+                  width={150} 
                   tick={{ fontSize: 10 }}
-                  tickFormatter={(val) => val.length > 15 ? val.substring(0, 15) + '...' : val}
+                  tickFormatter={(val) => val.length > 25 ? val.substring(0, 25) + '...' : val}
                 />
                 <Tooltip 
                   formatter={(value: any) => [formatRupiah(value), 'Total Pagu']}
                   labelStyle={{ color: '#212529', fontWeight: 'bold' }}
                 />
-                <Bar dataKey="pagu" fill="var(--color-primary)" radius={[0, 4, 4, 0]} />
+                <Bar dataKey="value" fill="#00C49F" radius={[0, 4, 4, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
-        </div>
-
-        <div className="rounded-xl bg-surface p-6 shadow-sm border border-border flex flex-col justify-center items-center text-center">
-          <h3 className="text-lg font-semibold text-foreground mb-2">Pagu vs Ceiling (Batas Maksimal)</h3>
-          <p className="text-sm text-secondary mb-6">Visualisasi ini akan membandingkan pagu aktual yang diinput terhadap batas maksimal yang ditetapkan per SKPD.</p>
-          <div className="rounded-full bg-blue-50 p-4 mb-4">
-            <ShieldAlert className="h-12 w-12 text-primary" />
-          </div>
-          <p className="text-sm text-secondary">Fitur Kontrol Pagu akan segera aktif setelah Administrator menetapkan Ceiling per SKPD.</p>
         </div>
       </div>
     </div>
