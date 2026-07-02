@@ -7,6 +7,7 @@ export default function UploadPage() {
   const [file, setFile] = useState<File | null>(null);
   const [type, setType] = useState('rekap');
   const [loading, setLoading] = useState(false);
+  const [progress, setProgress] = useState(0);
   const [message, setMessage] = useState('');
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -21,7 +22,19 @@ export default function UploadPage() {
     if (!file) return;
 
     setLoading(true);
+    setProgress(0);
     setMessage('');
+
+    // Simulate progress bar
+    const progressInterval = setInterval(() => {
+      setProgress(prev => {
+        if (prev >= 90) {
+          clearInterval(progressInterval);
+          return 90; // hold at 90% until API finishes
+        }
+        return prev + 10;
+      });
+    }, 300);
 
     const formData = new FormData();
     formData.append('file', file);
@@ -43,7 +56,12 @@ export default function UploadPage() {
     } catch (error: any) {
       setMessage(error.message);
     } finally {
-      setLoading(false);
+      clearInterval(progressInterval);
+      setProgress(100);
+      setTimeout(() => {
+        setLoading(false);
+        setProgress(0);
+      }, 500);
     }
   };
 
@@ -108,7 +126,17 @@ export default function UploadPage() {
             )}
           </div>
 
-          {message && (
+          {loading && (
+            <div className="w-full bg-gray-200 rounded-full h-2.5 mt-4">
+              <div 
+                className="bg-primary h-2.5 rounded-full transition-all duration-300 ease-out" 
+                style={{ width: `${progress}%` }}
+              ></div>
+              <p className="text-xs text-gray-500 mt-2 text-center">Sedang memproses dan menyimpan data... {progress}%</p>
+            </div>
+          )}
+
+          {message && !loading && (
             <div className={`p-4 rounded-md text-sm flex items-start gap-2 ${message.includes('berhasil') ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'}`}>
               {message.includes('berhasil') && <CheckCircle2 className="w-5 h-5 shrink-0" />}
               {message}

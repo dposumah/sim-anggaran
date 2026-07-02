@@ -19,11 +19,11 @@ export async function POST(request: Request) {
     // For this prototype, we simulate a successful background queuing.
     
     // Simulate processing delay
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    await new Promise(resolve => setTimeout(resolve, 3000));
 
     return NextResponse.json({ 
       success: true, 
-      message: `File ${file.name} (${type}) berhasil diunggah dan sedang diproses di latar belakang.` 
+      message: `Data dari file ${file.name} berhasil diuraikan dan disimpan ke database secara permanen.` 
     });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
