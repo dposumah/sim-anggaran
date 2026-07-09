@@ -93,7 +93,9 @@ export default function RincianTable({ rincianList, subKegiatanId, onRefresh, is
                 <th className="px-4 py-2.5 text-left font-semibold text-gray-900">Sumber Dana</th>
                 <th className="px-4 py-2.5 text-right font-semibold text-gray-900">Volume</th>
                 <th className="px-4 py-2.5 text-right font-semibold text-gray-900">Harga Satuan</th>
-                <th className="px-4 py-2.5 text-right font-semibold text-gray-900">Total Pagu</th>
+                <th className="px-4 py-2.5 text-right font-semibold text-gray-900">Pagu Sebelum</th>
+                <th className="px-4 py-2.5 text-right font-semibold text-blue-800">Pagu Sesudah</th>
+                <th className="px-4 py-2.5 text-right font-semibold text-gray-900">Selisih</th>
                 <th className="px-4 py-2.5 text-center font-semibold text-gray-900">Aksi</th>
               </tr>
             </thead>
@@ -130,13 +132,14 @@ export default function RincianTable({ rincianList, subKegiatanId, onRefresh, is
                       </div>
                     ) : formatRupiah(Number(r.hargaSatuan))}
                   </td>
-                  <td className="px-4 py-2 text-right font-medium text-gray-900">
-                    {r.paguPerubahan !== null && r.paguPerubahan !== undefined ? (
-                      <div className="flex flex-col items-end">
-                        <span className="text-[10px] text-gray-500 font-medium">Sebelum: <span className="line-through">{formatRupiah(Number(r.pagu))}</span></span>
-                        <span className="text-blue-700 font-bold">Sesudah: {formatRupiah(Number(r.paguPerubahan))}</span>
-                      </div>
-                    ) : formatRupiah(Number(r.pagu))}
+                  <td className="px-4 py-2 text-right text-gray-700">
+                    {formatRupiah(Number(r.pagu))}
+                  </td>
+                  <td className="px-4 py-2 text-right font-bold text-blue-700">
+                    {r.paguPerubahan !== null && r.paguPerubahan !== undefined ? formatRupiah(Number(r.paguPerubahan)) : '-'}
+                  </td>
+                  <td className={`px-4 py-2 text-right font-bold ${r.paguPerubahan !== null && r.paguPerubahan !== undefined ? (Number(r.paguPerubahan) - Number(r.pagu) > 0 ? 'text-green-600' : Number(r.paguPerubahan) - Number(r.pagu) < 0 ? 'text-red-600' : 'text-gray-400') : 'text-gray-400'}`}>
+                    {r.paguPerubahan !== null && r.paguPerubahan !== undefined ? (Number(r.paguPerubahan) - Number(r.pagu) > 0 ? '+' : '') + formatRupiah(Number(r.paguPerubahan) - Number(r.pagu)) : '-'}
                   </td>
                   <td className="px-4 py-2 text-center">
                     <div className="flex justify-center gap-2">

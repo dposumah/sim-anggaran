@@ -310,6 +310,32 @@ export default function ControlSumberDanaPage() {
                   );
                 })}
               </tbody>
+              <tfoot className="bg-blue-50 border-t-2 border-blue-200">
+                {(() => {
+                  const filtered = sumberDanas.filter((sd) => sd.ceilingAmount > 0 || sd.excelAmount > 0);
+                  const totalSistem = filtered.reduce((sum, sd) => sum + sd.ceilingAmount, 0);
+                  const totalExcel = filtered.reduce((sum, sd) => sum + sd.excelAmount, 0);
+                  const totalSelisih = totalSistem - totalExcel;
+                  return (
+                    <tr>
+                      <td className="px-4 py-4 text-sm font-bold text-blue-900 text-right uppercase tracking-wider">Total Keseluruhan</td>
+                      <td className="px-4 py-4 text-sm font-bold text-blue-900">
+                        <div className="text-xs text-blue-600/80 mb-1 font-semibold uppercase">Total Pagu Sistem</div>
+                        {formatCurrency(totalSistem)}
+                      </td>
+                      <td className="px-4 py-4 text-right text-sm font-bold text-blue-900">
+                        <div className="text-xs text-blue-600/80 mb-1 font-semibold uppercase">Total Pagu Excel</div>
+                        {formatCurrency(totalExcel)}
+                      </td>
+                      <td className={`px-4 py-4 text-right text-sm font-bold ${totalSelisih === 0 && totalExcel > 0 ? 'text-green-600' : totalSelisih < 0 ? 'text-red-600' : totalSelisih > 0 ? 'text-orange-600' : 'text-blue-900'}`}>
+                        <div className="text-xs text-blue-600/80 mb-1 font-semibold uppercase">Total Selisih</div>
+                        {totalSelisih > 0 ? '+' : ''}{formatCurrency(totalSelisih)}
+                      </td>
+                      <td className="px-4 py-4 text-center"></td>
+                    </tr>
+                  );
+                })()}
+              </tfoot>
             </table>
           </div>
         </div>
