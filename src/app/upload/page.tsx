@@ -114,12 +114,10 @@ export default function UploadPage() {
             </h4>
             {type === 'rekap' ? (
               <ul className="text-xs text-yellow-700 list-disc pl-5 space-y-1">
-                <li>Kolom A: Tidak dipakai</li>
-                <li>Kolom B: Kode Rekening SKPD (harus terisi)</li>
-                <li>Kolom F: Nama SKPD (wajib mengandung kata PENDIDIKAN)</li>
-                <li>Kolom U: Nama Paket (Opsional)</li>
-                <li>Kolom W: Total Pagu</li>
-                <li>Baris pertama dianggap sebagai Header dan akan diabaikan</li>
+                <li>Sistem membaca berdasarkan <strong>Nama Header</strong> (baris pertama), bukan urutan kolom.</li>
+                <li>Pastikan ada header <strong>NAMA SKPD</strong> (wajib mengandung kata PENDIDIKAN).</li>
+                <li>Pastikan ada header seperti <strong>KODE SUMBER DANA</strong>, <strong>NAMA SUMBER DANA</strong>, dll.</li>
+                <li>Nilai anggaran dibaca dari kolom header bernama <strong>PAGU</strong>.</li>
               </ul>
             ) : (
               <ul className="text-xs text-yellow-700 list-disc pl-5 space-y-1">

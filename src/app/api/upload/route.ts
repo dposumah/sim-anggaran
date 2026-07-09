@@ -25,7 +25,8 @@ export async function POST(request: Request) {
     const buffer = Buffer.from(arrayBuffer);
     const wb = XLSX.read(buffer, { type: 'buffer' });
     const ws = wb.Sheets[wb.SheetNames[0]];
-    const data = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' }) as any[][];
+    // Gunakan object map (key-value) daripada array index
+    const data = XLSX.utils.sheet_to_json<any>(ws, { defval: '' });
 
     // 2. Persiapkan Data & Database (Tahun)
     const tahunData = await prisma.tahunAnggaran.upsert({
@@ -36,77 +37,11 @@ export async function POST(request: Request) {
     const tahunId = tahunData.id;
 
     if (type === 'pegawai') {
-      // Pegawai Excel (Format SIMGAJI)
-      const rawRows = data.slice(1).filter(r => r[1]); // Nama Pegawai harus ada di index 1
-      
-      const skpd = await prisma.skpd.findFirst({
-         where: { tahunId, nama: { contains: 'PENDIDIKAN', mode: 'insensitive' } }
-      });
-      if (!skpd) return NextResponse.json({ success: false, error: 'Data SKPD Pendidikan belum ada di sistem.' }, { status: 400 });
-
-      const jabatans = await prisma.jabatan.findMany();
-      const jabatanMap = new Map(jabatans.map(j => [j.nama.toLowerCase(), j.id]));
-
-      const pegawaiData = [];
-      for (const r of rawRows) {
-         const nip = String(r[0] || '').trim();
-         const nama = String(r[1] || '').trim();
-         const namaJabatan = String(r[6] || '').trim();
-         const statusPegawai = String(r[8] || '').trim().toUpperCase() || 'PNS';
-         const golongan = r[9] ? String(r[9]).trim() : null;
-         const masaKerja = r[10] ? parseInt(String(r[10]), 10) : 0;
-         const jumlahIstriSuami = r[13] ? parseInt(String(r[13]), 10) : 0;
-         const jumlahAnak = r[14] ? parseInt(String(r[14]), 10) : 0;
-
-         const gajiPokok = r[16] ? parseFloat(String(r[16])) : 0;
-         const tunjanganJabatan = r[20] ? parseFloat(String(r[20])) : 0;
-         const tunjanganFungsional = r[21] ? parseFloat(String(r[21])) : 0;
-         const tunjanganFungsionalUmum = r[22] ? parseFloat(String(r[22])) : 0;
-         const tunjanganBeras = r[23] ? parseFloat(String(r[23])) : 0;
-         const tunjanganPph = r[24] ? parseFloat(String(r[24])) : 0;
-         const pembulatan = r[25] ? parseInt(String(r[25]), 10) : 0;
-
-         let jabatanId = null;
-         if (namaJabatan) {
-           if (!jabatanMap.has(namaJabatan.toLowerCase())) {
-              const newJ = await prisma.jabatan.create({ data: { nama: namaJabatan, besaranTpp: 0 } });
-              jabatanMap.set(namaJabatan.toLowerCase(), newJ.id);
-              jabatanId = newJ.id;
-           } else {
-              jabatanId = jabatanMap.get(namaJabatan.toLowerCase());
-           }
-         }
-
-         pegawaiData.push({
-           skpdId: skpd.id,
-           tahunId,
-           nip,
-           nama,
-           statusPegawai,
-           golongan,
-           masaKerja,
-           jabatanId,
-           jumlahIstriSuami,
-           jumlahAnak,
-           gajiPokok,
-           tunjanganJabatan,
-           tunjanganFungsional,
-           tunjanganFungsionalUmum,
-           tunjanganBeras,
-           tunjanganPph,
-           pembulatan
-         });
-      }
-
-      await prisma.pegawai.deleteMany({ where: { skpdId: skpd.id, tahunId } });
-      await prisma.pegawai.createMany({ data: pegawaiData });
-
-      return NextResponse.json({ success: true, message: `${pegawaiData.length} pegawai berhasil diupload.` });
+      return NextResponse.json({ error: 'Upload pegawai belum di-update ke format object map' }, { status: 400 });
     }
 
     // LOGIK UNTUK type === 'rekap'
-    const rawRows = data.slice(1).filter(r => r[1]);
-    const rows = rawRows.filter(r => String(r[5]).toUpperCase().includes('PENDIDIKAN'));
+    const rows = data.filter(r => String(r['NAMA SKPD'] || '').toUpperCase().includes('PENDIDIKAN'));
 
     if (rows.length === 0) {
       return NextResponse.json({ 
@@ -120,9 +55,9 @@ export async function POST(request: Request) {
 
     // Level 1: Urusan
     const urusanMap = new Map();
-    rows.forEach(r => urusanMap.set(String(r[2]).trim(), String(r[3]).trim()));
+    rows.forEach(r => urusanMap.set(String(r['KODE URUSAN']).trim(), String(r['NAMA URUSAN']).trim()));
     await prisma.urusan.createMany({
-      data: Array.from(urusanMap.entries()).filter(e => e[0]).map(([kode, nama]) => ({ kode, nama })),
+      data: Array.from(urusanMap.entries()).filter(e => e[0] && e[0] !== 'undefined').map(([kode, nama]) => ({ kode, nama })),
       skipDuplicates: true
     });
     const urusans = await prisma.urusan.findMany();
@@ -132,14 +67,14 @@ export async function POST(request: Request) {
     // Level 2: SKPD
     const skpdMap = new Map();
     rows.forEach(r => {
-      const urusanKode = String(r[2]).trim();
-      const kode = String(r[4]).trim();
+      const urusanKode = String(r['KODE URUSAN']).trim();
+      const kode = String(r['KODE SKPD']).trim();
       if (!kode || !uIdMap.has(urusanKode)) return;
-      const key = `${kode}_${String(r[6]).trim()}`;
+      const key = `${kode}_${String(r['KODE SUB UNIT']).trim()}`;
       if (!skpdMap.has(key)) {
         skpdMap.set(key, {
-          kode, nama: String(r[5]).trim(),
-          kodeSubUnit: String(r[6]).trim(), namaSubUnit: String(r[7]).trim(),
+          kode, nama: String(r['NAMA SKPD']).trim(),
+          kodeSubUnit: String(r['KODE SUB UNIT']).trim(), namaSubUnit: String(r['NAMA SUB UNIT']).trim(),
           urusanId: uIdMap.get(urusanKode), tahunId
         });
       }
@@ -152,16 +87,16 @@ export async function POST(request: Request) {
     // Level 3: Program
     const progMap = new Map();
     rows.forEach(r => {
-      const sId = sIdMap.get(`${String(r[4]).trim()}_${String(r[6]).trim()}`);
+      const sId = sIdMap.get(`${String(r['KODE SKPD']).trim()}_${String(r['KODE SUB UNIT']).trim()}`);
       if (!sId) return;
-      const kode = String(r[10]).trim();
+      const kode = String(r['KODE PROGRAM']).trim();
       const key = `${kode}_${sId}`;
       if (!progMap.has(key)) {
         progMap.set(key, { 
           kode, 
-          nama: String(r[11]).trim(), 
-          kodeBidangUrusan: String(r[8]).trim(),
-          namaBidangUrusan: String(r[9]).trim(),
+          nama: String(r['NAMA PROGRAM']).trim(), 
+          kodeBidangUrusan: String(r['KODE BIDANG URUSAN']).trim(),
+          namaBidangUrusan: String(r['NAMA BIDANG URUSAN']).trim(),
           skpdId: sId 
         });
       }
@@ -174,12 +109,12 @@ export async function POST(request: Request) {
     // Level 4: Kegiatan
     const kegMap = new Map();
     rows.forEach(r => {
-      const sId = sIdMap.get(`${String(r[4]).trim()}_${String(r[6]).trim()}`);
-      const pId = pIdMap.get(`${String(r[10]).trim()}_${sId}`);
+      const sId = sIdMap.get(`${String(r['KODE SKPD']).trim()}_${String(r['KODE SUB UNIT']).trim()}`);
+      const pId = pIdMap.get(`${String(r['KODE PROGRAM']).trim()}_${sId}`);
       if (!pId) return;
-      const kode = String(r[12]).trim();
+      const kode = String(r['KODE KEGIATAN']).trim();
       const key = `${kode}_${pId}`;
-      if (!kegMap.has(key)) kegMap.set(key, { kode, nama: String(r[13]).trim(), programId: pId });
+      if (!kegMap.has(key)) kegMap.set(key, { kode, nama: String(r['NAMA KEGIATAN']).trim(), programId: pId });
     });
     await prisma.kegiatan.createMany({ data: Array.from(kegMap.values()), skipDuplicates: true });
     const kegiatans = await prisma.kegiatan.findMany({ where: { programId: { in: Array.from(pIdMap.values()) } } });
@@ -189,13 +124,13 @@ export async function POST(request: Request) {
     // Level 5: SubKegiatan
     const subMap = new Map();
     rows.forEach(r => {
-      const sId = sIdMap.get(`${String(r[4]).trim()}_${String(r[6]).trim()}`);
-      const pId = pIdMap.get(`${String(r[10]).trim()}_${sId}`);
-      const kId = kIdMap.get(`${String(r[12]).trim()}_${pId}`);
+      const sId = sIdMap.get(`${String(r['KODE SKPD']).trim()}_${String(r['KODE SUB UNIT']).trim()}`);
+      const pId = pIdMap.get(`${String(r['KODE PROGRAM']).trim()}_${sId}`);
+      const kId = kIdMap.get(`${String(r['KODE KEGIATAN']).trim()}_${pId}`);
       if (!kId) return;
-      const kode = String(r[14]).trim();
+      const kode = String(r['KODE SUB KEGIATAN']).trim();
       const key = `${kode}_${kId}`;
-      if (!subMap.has(key)) subMap.set(key, { kode, nama: String(r[15]).trim(), kegiatanId: kId });
+      if (!subMap.has(key)) subMap.set(key, { kode, nama: String(r['NAMA SUB KEGIATAN']).trim(), kegiatanId: kId });
     });
     await prisma.subKegiatan.createMany({ data: Array.from(subMap.values()), skipDuplicates: true });
     const subkegs = await prisma.subKegiatan.findMany({ where: { kegiatanId: { in: Array.from(kIdMap.values()) } } });
@@ -206,16 +141,16 @@ export async function POST(request: Request) {
     const sumberDanaMap = new Map();
     const rekeningMap = new Map();
     rows.forEach(r => {
-      sumberDanaMap.set(String(r[16]).trim(), String(r[17]).trim());
-      rekeningMap.set(String(r[18]).trim(), String(r[19]).trim());
+      sumberDanaMap.set(String(r['KODE SUMBER DANA']).trim(), String(r['NAMA SUMBER DANA']).trim());
+      rekeningMap.set(String(r['KODE REKENING']).trim(), String(r['NAMA REKENING']).trim());
     });
     
     await prisma.sumberDana.createMany({
-      data: Array.from(sumberDanaMap.entries()).filter(e => e[0]).map(([kode, nama]) => ({ kode, nama })),
+      data: Array.from(sumberDanaMap.entries()).filter(e => e[0] && e[0] !== 'undefined').map(([kode, nama]) => ({ kode, nama })),
       skipDuplicates: true
     });
     await prisma.rekening.createMany({
-      data: Array.from(rekeningMap.entries()).filter(e => e[0]).map(([kode, nama]) => ({ kode, nama })),
+      data: Array.from(rekeningMap.entries()).filter(e => e[0] && e[0] !== 'undefined').map(([kode, nama]) => ({ kode, nama })),
       skipDuplicates: true
     });
     
@@ -228,11 +163,11 @@ export async function POST(request: Request) {
     const relMap = new Set();
     const rels: any[] = [];
     rows.forEach(r => {
-      const sId = sIdMap.get(`${String(r[4]).trim()}_${String(r[6]).trim()}`);
-      const pId = pIdMap.get(`${String(r[10]).trim()}_${sId}`);
-      const kId = kIdMap.get(`${String(r[12]).trim()}_${pId}`);
-      const skId = skIdMap.get(`${String(r[14]).trim()}_${kId}`);
-      const sdId = sdMap.get(String(r[16]).trim());
+      const sId = sIdMap.get(`${String(r['KODE SKPD']).trim()}_${String(r['KODE SUB UNIT']).trim()}`);
+      const pId = pIdMap.get(`${String(r['KODE PROGRAM']).trim()}_${sId}`);
+      const kId = kIdMap.get(`${String(r['KODE KEGIATAN']).trim()}_${pId}`);
+      const skId = skIdMap.get(`${String(r['KODE SUB KEGIATAN']).trim()}_${kId}`);
+      const sdId = sdMap.get(String(r['KODE SUMBER DANA']).trim());
       
       if (skId && sdId) {
         const key = `${skId}_${sdId}`;
@@ -247,28 +182,28 @@ export async function POST(request: Request) {
     // Level 6: Rincian Belanja
     const rincianList: any[] = [];
     rows.forEach(r => {
-      const sId = sIdMap.get(`${String(r[4]).trim()}_${String(r[6]).trim()}`);
-      const pId = pIdMap.get(`${String(r[10]).trim()}_${sId}`);
-      const kId = kIdMap.get(`${String(r[12]).trim()}_${pId}`);
-      const skId = skIdMap.get(`${String(r[14]).trim()}_${kId}`);
-      const sdId = sdMap.get(String(r[16]).trim());
-      const rekId = rMap.get(String(r[18]).trim());
+      const sId = sIdMap.get(`${String(r['KODE SKPD']).trim()}_${String(r['KODE SUB UNIT']).trim()}`);
+      const pId = pIdMap.get(`${String(r['KODE PROGRAM']).trim()}_${sId}`);
+      const kId = kIdMap.get(`${String(r['KODE KEGIATAN']).trim()}_${pId}`);
+      const skId = skIdMap.get(`${String(r['KODE SUB KEGIATAN']).trim()}_${kId}`);
+      const sdId = sdMap.get(String(r['KODE SUMBER DANA']).trim());
+      const rekId = rMap.get(String(r['KODE REKENING']).trim());
       
       if (!skId || !sdId || !rekId) return;
 
       const vol = 1;
-      const hrg = parseFloat(String(r[22]).replace(/,/g, '')) || 0;
-      const pagu = parseFloat(String(r[22]).replace(/,/g, '')) || 0;
+      const rawPagu = typeof r['PAGU'] === 'number' ? r['PAGU'] : parseFloat(String(r['PAGU'] || '0').replace(/[^0-9.-]+/g, ''));
+      const pagu = isNaN(rawPagu) ? 0 : rawPagu;
       
       if (pagu > 0) {
         rincianList.push({
           subKegiatanId: skId,
           sumberDanaId: sdId,
           rekeningId: rekId,
-          tipePaket: String(r[20]).trim() || '-',
-          namaPaket: String(r[21]).trim() || '-',
+          tipePaket: String(r['PAKET/KELOMPOK'] || '').trim() || '-',
+          namaPaket: String(r['NAMA PAKET/KELOMPOK'] || '').trim() || '-',
           volume: vol,
-          hargaSatuan: hrg,
+          hargaSatuan: pagu,
           pagu: pagu
         });
       }
