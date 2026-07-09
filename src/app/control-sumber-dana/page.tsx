@@ -258,11 +258,10 @@ export default function ControlSumberDanaPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200 bg-white">
-                {sumberDanas.map((sd) => {
+                {sumberDanas
+                  .filter((sd) => sd.ceilingAmount > 0 || sd.excelAmount > 0)
+                  .map((sd) => {
                   const variance = sd.ceilingAmount - sd.excelAmount;
-                  
-                  // Hide completely empty rows if Excel is not loaded and system pagu is 0
-                  // But keep them visible if user wants to input data. We should probably show all of them so user can input.
                   
                   return (
                     <tr key={sd.kode} className="hover:bg-gray-50">
