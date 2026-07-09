@@ -1,11 +1,14 @@
 'use client';
 
 import { useState } from 'react';
-import { Pencil, Trash2, Plus, Lock, Unlock } from 'lucide-react';
+import { Pencil, Trash2, Plus, Lock, Check, X } from 'lucide-react';
 
 export default function RincianTable({ rincianList, subKegiatanId, onRefresh, isLocked }: { rincianList: any[], subKegiatanId: number, onRefresh: () => void, isLocked?: boolean }) {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editData, setEditData] = useState<{ volume: number, hargaSatuan: number }>({ volume: 1, hargaSatuan: 0 });
 
   const formatRupiah = (number: number) => {
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(number);
@@ -53,12 +56,50 @@ export default function RincianTable({ rincianList, subKegiatanId, onRefresh, is
     }
   };
 
+  const handleEditClick = (r: any) => {
+    if (isLocked) {
+      alert("Sub kegiatan ini terkunci. Anda tidak dapat mengubah rincian.");
+      return;
+    }
+    setEditingId(r.id);
+    setEditData({
+      volume: r.volumePerubahan !== null && r.volumePerubahan !== undefined ? r.volumePerubahan : r.volume,
+      hargaSatuan: r.hargaSatuanPerubahan !== null && r.hargaSatuanPerubahan !== undefined ? Number(r.hargaSatuanPerubahan) : Number(r.hargaSatuan)
+    });
+  };
+
+  const handleSaveEdit = async () => {
+    setLoading(true);
+    setErrorMsg('');
+    try {
+      const res = await fetch(`/api/rincian`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: editingId,
+          volumePerubahan: editData.volume,
+          hargaSatuanPerubahan: editData.hargaSatuan
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setErrorMsg(data.error || 'Gagal menyimpan');
+      } else {
+        setEditingId(null);
+        onRefresh();
+      }
+    } catch (e: any) {
+      setErrorMsg(e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="pl-12 pr-4 py-4 bg-gray-50/50">
       <div className="flex justify-between items-center mb-3">
         <h4 className="text-sm font-semibold text-gray-700">Daftar Rincian Belanja</h4>
         <div className="flex gap-2">
-          {/* Untuk demonstrasi Kunci Sumber Dana. Di aplikasi nyata, tombol ini per sumber dana */}
           {rincianList.length > 0 && rincianList[0].sumberDanaId && (
              <button 
                 onClick={() => toggleLock(rincianList[0].sumberDanaId, false)}
@@ -68,7 +109,7 @@ export default function RincianTable({ rincianList, subKegiatanId, onRefresh, is
              </button>
           )}
           
-          <button className="flex items-center text-xs bg-primary text-white px-3 py-1.5 rounded-md hover:bg-primary-hover transition-colors shadow-sm">
+          <button className="flex items-center text-xs bg-primary text-white px-3 py-1.5 rounded-md hover:bg-primary-hover transition-colors shadow-sm" disabled={isLocked}>
             <Plus className="w-3 h-3 mr-1" /> Tambah Rincian
           </button>
         </div>
@@ -83,7 +124,7 @@ export default function RincianTable({ rincianList, subKegiatanId, onRefresh, is
       {rincianList.length === 0 ? (
         <div className="py-4 text-sm text-secondary italic text-center bg-white rounded-md border border-gray-200">Belum ada rincian belanja di sub kegiatan ini.</div>
       ) : (
-        <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 md:rounded-lg">
+        <div className="overflow-x-auto shadow ring-1 ring-black ring-opacity-5 md:rounded-lg">
           <table className="min-w-full divide-y divide-gray-300 text-sm">
             <thead className="bg-gray-100">
               <tr>
@@ -100,59 +141,102 @@ export default function RincianTable({ rincianList, subKegiatanId, onRefresh, is
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200 bg-white">
-              {rincianList.map(r => (
-                <tr key={r.id} className="hover:bg-blue-50/30 transition-colors">
-                  <td className="px-4 py-2 text-gray-700">
-                    <div className="font-medium text-xs">{r.rekening?.kode}</div>
-                  </td>
-                  <td className="px-4 py-2 text-gray-700">
-                    <div className="text-xs text-gray-500 max-w-[200px]" title={r.rekening?.nama}>
-                      {r.rekening?.nama}
-                    </div>
-                  </td>
-                  <td className="px-4 py-2 text-gray-700 max-w-xs truncate" title={r.namaPaket}>{r.namaPaket}</td>
-                  <td className="px-4 py-2 text-gray-700">
-                    <span className="inline-flex items-center rounded-md bg-blue-50 px-2 py-1 text-[10px] font-medium text-blue-700 ring-1 ring-inset ring-blue-700/10">
-                      {r.sumberDana?.nama || 'Unknown'}
-                    </span>
-                  </td>
-                  <td className="px-4 py-2 text-right text-gray-700">
-                    {r.volumePerubahan !== null && r.volumePerubahan !== undefined ? (
-                      <div className="flex flex-col items-end">
-                        <span className="text-[10px] text-gray-500 font-medium">Sebelum: <span className="line-through">{r.volume}</span></span>
-                        <span className="text-blue-700 font-semibold">Sesudah: {r.volumePerubahan}</span>
+              {rincianList.map(r => {
+                const isEditing = editingId === r.id;
+                
+                return (
+                  <tr key={r.id} className="hover:bg-blue-50/30 transition-colors">
+                    <td className="px-4 py-2 text-gray-700">
+                      <div className="font-medium text-xs">{r.rekening?.kode}</div>
+                    </td>
+                    <td className="px-4 py-2 text-gray-700">
+                      <div className="text-xs text-gray-500 max-w-[200px]" title={r.rekening?.nama}>
+                        {r.rekening?.nama}
                       </div>
-                    ) : r.volume}
-                  </td>
-                  <td className="px-4 py-2 text-right text-gray-700">
-                    {r.hargaSatuanPerubahan !== null && r.hargaSatuanPerubahan !== undefined ? (
-                      <div className="flex flex-col items-end">
-                        <span className="text-[10px] text-gray-500 font-medium">Sebelum: <span className="line-through">{formatRupiah(Number(r.hargaSatuan))}</span></span>
-                        <span className="text-blue-700 font-semibold">Sesudah: {formatRupiah(Number(r.hargaSatuanPerubahan))}</span>
-                      </div>
-                    ) : formatRupiah(Number(r.hargaSatuan))}
-                  </td>
-                  <td className="px-4 py-2 text-right text-gray-700">
-                    {formatRupiah(Number(r.pagu))}
-                  </td>
-                  <td className="px-4 py-2 text-right font-bold text-blue-700">
-                    {r.paguPerubahan !== null && r.paguPerubahan !== undefined ? formatRupiah(Number(r.paguPerubahan)) : '-'}
-                  </td>
-                  <td className={`px-4 py-2 text-right font-bold ${r.paguPerubahan !== null && r.paguPerubahan !== undefined ? (Number(r.paguPerubahan) - Number(r.pagu) > 0 ? 'text-green-600' : Number(r.paguPerubahan) - Number(r.pagu) < 0 ? 'text-red-600' : 'text-gray-400') : 'text-gray-400'}`}>
-                    {r.paguPerubahan !== null && r.paguPerubahan !== undefined ? (Number(r.paguPerubahan) - Number(r.pagu) > 0 ? '+' : '') + formatRupiah(Number(r.paguPerubahan) - Number(r.pagu)) : '-'}
-                  </td>
-                  <td className="px-4 py-2 text-center">
-                    <div className="flex justify-center gap-2">
-                      <button disabled={loading} className="text-secondary hover:text-primary transition-colors p-1 bg-gray-100 rounded">
-                        <Pencil className="w-3.5 h-3.5" />
-                      </button>
-                      <button disabled={loading} onClick={() => handleDelete(r.id)} className="text-secondary hover:text-red-500 transition-colors p-1 bg-gray-100 rounded">
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                    </td>
+                    <td className="px-4 py-2 text-gray-700 max-w-xs truncate" title={r.namaPaket}>{r.namaPaket}</td>
+                    <td className="px-4 py-2 text-gray-700">
+                      <span className="inline-flex items-center rounded-md bg-blue-50 px-2 py-1 text-[10px] font-medium text-blue-700 ring-1 ring-inset ring-blue-700/10">
+                        {r.sumberDana?.nama || 'Unknown'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-2 text-right text-gray-700">
+                      {isEditing ? (
+                        <input 
+                          type="number" 
+                          className="w-16 px-2 py-1 text-xs border border-gray-300 rounded text-right" 
+                          value={editData.volume}
+                          onChange={(e) => setEditData({...editData, volume: Number(e.target.value)})}
+                        />
+                      ) : (
+                        r.volumePerubahan !== null && r.volumePerubahan !== undefined ? (
+                          <div className="flex flex-col items-end">
+                            <span className="text-[10px] text-gray-500 font-medium">Sebelum: <span className="line-through">{r.volume}</span></span>
+                            <span className="text-blue-700 font-semibold">Sesudah: {r.volumePerubahan}</span>
+                          </div>
+                        ) : r.volume
+                      )}
+                    </td>
+                    <td className="px-4 py-2 text-right text-gray-700">
+                      {isEditing ? (
+                        <input 
+                          type="number" 
+                          className="w-24 px-2 py-1 text-xs border border-gray-300 rounded text-right" 
+                          value={editData.hargaSatuan}
+                          onChange={(e) => setEditData({...editData, hargaSatuan: Number(e.target.value)})}
+                        />
+                      ) : (
+                        r.hargaSatuanPerubahan !== null && r.hargaSatuanPerubahan !== undefined ? (
+                          <div className="flex flex-col items-end">
+                            <span className="text-[10px] text-gray-500 font-medium">Sebelum: <span className="line-through">{formatRupiah(Number(r.hargaSatuan))}</span></span>
+                            <span className="text-blue-700 font-semibold">Sesudah: {formatRupiah(Number(r.hargaSatuanPerubahan))}</span>
+                          </div>
+                        ) : formatRupiah(Number(r.hargaSatuan))
+                      )}
+                    </td>
+                    <td className="px-4 py-2 text-right text-gray-700">
+                      {formatRupiah(Number(r.pagu))}
+                    </td>
+                    <td className="px-4 py-2 text-right font-bold text-blue-700">
+                      {isEditing ? (
+                        formatRupiah(editData.volume * editData.hargaSatuan)
+                      ) : (
+                        r.paguPerubahan !== null && r.paguPerubahan !== undefined ? formatRupiah(Number(r.paguPerubahan)) : '-'
+                      )}
+                    </td>
+                    <td className={`px-4 py-2 text-right font-bold ${r.paguPerubahan !== null && r.paguPerubahan !== undefined ? (Number(r.paguPerubahan) - Number(r.pagu) > 0 ? 'text-green-600' : Number(r.paguPerubahan) - Number(r.pagu) < 0 ? 'text-red-600' : 'text-gray-400') : 'text-gray-400'}`}>
+                      {isEditing ? (
+                        <span className={(editData.volume * editData.hargaSatuan) - Number(r.pagu) > 0 ? 'text-green-600' : (editData.volume * editData.hargaSatuan) - Number(r.pagu) < 0 ? 'text-red-600' : 'text-gray-400'}>
+                          {((editData.volume * editData.hargaSatuan) - Number(r.pagu) > 0 ? '+' : '') + formatRupiah((editData.volume * editData.hargaSatuan) - Number(r.pagu))}
+                        </span>
+                      ) : (
+                        r.paguPerubahan !== null && r.paguPerubahan !== undefined ? (Number(r.paguPerubahan) - Number(r.pagu) > 0 ? '+' : '') + formatRupiah(Number(r.paguPerubahan) - Number(r.pagu)) : '-'
+                      )}
+                    </td>
+                    <td className="px-4 py-2 text-center">
+                      {isEditing ? (
+                        <div className="flex justify-center gap-2">
+                          <button disabled={loading} onClick={handleSaveEdit} className="text-white hover:bg-green-600 transition-colors p-1 bg-green-500 rounded" title="Simpan">
+                            <Check className="w-3.5 h-3.5" />
+                          </button>
+                          <button disabled={loading} onClick={() => setEditingId(null)} className="text-gray-500 hover:text-gray-700 transition-colors p-1 bg-gray-100 rounded" title="Batal">
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex justify-center gap-2">
+                          <button disabled={loading || isLocked} onClick={() => handleEditClick(r)} className="text-secondary hover:text-primary transition-colors p-1 bg-gray-100 rounded disabled:opacity-50">
+                            <Pencil className="w-3.5 h-3.5" />
+                          </button>
+                          <button disabled={loading || isLocked} onClick={() => handleDelete(r.id)} className="text-secondary hover:text-red-500 transition-colors p-1 bg-gray-100 rounded disabled:opacity-50">
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

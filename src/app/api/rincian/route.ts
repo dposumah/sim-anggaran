@@ -44,10 +44,10 @@ export async function POST(request: Request) {
   }
 }
 
-export async function PUT(request: Request) {
+  export async function PUT(request: Request) {
   try {
     const body = await request.json();
-    const { id, sumberDanaId, rekeningId, sshSbuId, tipePaket, namaPaket, volume, hargaSatuan } = body;
+    const { id, sumberDanaId, rekeningId, sshSbuId, tipePaket, namaPaket, volume, hargaSatuan, volumePerubahan, hargaSatuanPerubahan } = body;
 
     if (!id) return NextResponse.json({ error: 'ID Rincian dibutuhkan' }, { status: 400 });
 
@@ -59,12 +59,21 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: 'Data tidak ditemukan' }, { status: 404 });
     }
 
-    const pagu = volume * hargaSatuan;
+    let pagu = Number(existingRincian.pagu);
+    if (volume !== undefined && hargaSatuan !== undefined) {
+      pagu = volume * hargaSatuan;
+    }
+    
+    let paguPerubahan: any = existingRincian.paguPerubahan;
+    if (volumePerubahan !== undefined && hargaSatuanPerubahan !== undefined) {
+      paguPerubahan = volumePerubahan * hargaSatuanPerubahan;
+    }
 
     // Validation SSH/SBU
     if (sshSbuId) {
       const ssh = await prisma.sshSbu.findUnique({ where: { id: sshSbuId } });
-      if (ssh && hargaSatuan > Number(ssh.hargaSatuan)) {
+      const checkHarga = hargaSatuanPerubahan !== undefined ? hargaSatuanPerubahan : (hargaSatuan !== undefined ? hargaSatuan : Number(existingRincian.hargaSatuan));
+      if (ssh && checkHarga > Number(ssh.hargaSatuan)) {
         return NextResponse.json({ 
           error: `Harga satuan melebihi standar maksimal (Rp ${Number(ssh.hargaSatuan).toLocaleString('id-ID')})` 
         }, { status: 400 });
@@ -82,10 +91,9 @@ export async function PUT(request: Request) {
     });
 
     if (sdRelation?.isLocked) {
-      // If locked, we must ensure the total pagu doesn't decrease below lockedAmount
-      // To do this strictly, we'd sum all current rincian and check the delta.
-      // For now, if the new pagu is less than the old pagu, block it.
-      if (pagu < Number(existingRincian.pagu)) {
+      const checkPagu = paguPerubahan !== null ? Number(paguPerubahan) : pagu;
+      const oldPagu = existingRincian.paguPerubahan !== null ? Number(existingRincian.paguPerubahan) : Number(existingRincian.pagu);
+      if (checkPagu < oldPagu) {
         return NextResponse.json({ error: 'Pagu sumber dana dikunci. Anda tidak dapat mengurangi pagu rincian ini.' }, { status: 403 });
       }
     }
@@ -100,7 +108,10 @@ export async function PUT(request: Request) {
         namaPaket: namaPaket || existingRincian.namaPaket,
         volume: volume !== undefined ? volume : existingRincian.volume,
         hargaSatuan: hargaSatuan !== undefined ? hargaSatuan : existingRincian.hargaSatuan,
-        pagu
+        pagu,
+        volumePerubahan: volumePerubahan !== undefined ? volumePerubahan : existingRincian.volumePerubahan,
+        hargaSatuanPerubahan: hargaSatuanPerubahan !== undefined ? hargaSatuanPerubahan : existingRincian.hargaSatuanPerubahan,
+        paguPerubahan
       }
     });
 
