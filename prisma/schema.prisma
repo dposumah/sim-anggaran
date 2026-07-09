@@ -18,6 +18,7 @@ model TahunAnggaran {
   skpds     Skpd[]
   sshSbus   SshSbu[]
   pagus     PaguCeiling[]
+  paguSumberDanas PaguSumberDana[]
   pegawais  Pegawai[]
   pengaturanGaji PengaturanGaji?
   realisasiGajis RealisasiGaji[]
@@ -46,6 +47,7 @@ model Skpd {
   
   programs      Program[]
   pagus         PaguCeiling[]
+  paguSumberDanas PaguSumberDana[]
   users         User[]
   pegawais      Pegawai[]
   realisasiGajis RealisasiGaji[]
@@ -102,6 +104,7 @@ model SumberDana {
   
   rincianBelanjas       RincianBelanja[]
   subKegiatanSumberDanas SubKegiatanSumberDana[]
+  paguSumberDanas       PaguSumberDana[]
 }
 
 model SubKegiatanSumberDana {
@@ -182,6 +185,22 @@ model PaguCeiling {
   tahun          TahunAnggaran @relation(fields: [tahunId], references: [id])
 
   @@unique([skpdId, tahunId])
+}
+
+model PaguSumberDana {
+  id             Int     @id @default(autoincrement())
+  ceilingAmount  Decimal @db.Decimal(15, 2)
+  
+  skpdId         Int
+  skpd           Skpd @relation(fields: [skpdId], references: [id])
+  
+  sumberDanaId   Int
+  sumberDana     SumberDana @relation(fields: [sumberDanaId], references: [id])
+  
+  tahunId        Int
+  tahun          TahunAnggaran @relation(fields: [tahunId], references: [id])
+
+  @@unique([skpdId, sumberDanaId, tahunId])
 }
 
 model User {
