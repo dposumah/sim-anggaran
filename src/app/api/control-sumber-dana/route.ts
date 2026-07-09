@@ -31,6 +31,30 @@ export async function GET() {
       where: { skpdId: skpd.id, tahunId: skpd.tahunId }
     });
 
+    // Ambil semua rincian belanja untuk SKPD ini
+    const rincianList = await prisma.rincianBelanja.findMany({
+      where: {
+        subKegiatan: {
+          kegiatan: {
+            program: {
+              skpdId: skpd.id
+            }
+          }
+        }
+      },
+      select: {
+        sumberDanaId: true,
+        pagu: true,
+        paguPerubahan: true
+      }
+    });
+
+    const rincianTotals = new Map<number, number>();
+    rincianList.forEach(r => {
+      const val = r.paguPerubahan !== null ? Number(r.paguPerubahan) : Number(r.pagu);
+      rincianTotals.set(r.sumberDanaId, (rincianTotals.get(r.sumberDanaId) || 0) + val);
+    });
+
     // Gabungkan
     const result = sumberDanas.map(sd => {
       const pagu = paguList.find(p => p.sumberDanaId === sd.id);
@@ -38,7 +62,8 @@ export async function GET() {
         sumberDanaId: sd.id,
         kode: sd.kode,
         nama: sd.nama,
-        ceilingAmount: pagu ? Number(pagu.ceilingAmount) : 0
+        ceilingAmount: pagu ? Number(pagu.ceilingAmount) : 0,
+        excelAmount: rincianTotals.get(sd.id) || 0
       };
     });
 

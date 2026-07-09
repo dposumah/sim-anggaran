@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Pencil, Trash2, Plus, Lock, Check, X } from 'lucide-react';
 
 export default function RincianTable({ rincianList, subKegiatanId, onRefresh, isLocked }: { rincianList: any[], subKegiatanId: number, onRefresh: () => void, isLocked?: boolean }) {
@@ -8,7 +8,15 @@ export default function RincianTable({ rincianList, subKegiatanId, onRefresh, is
   const [errorMsg, setErrorMsg] = useState('');
   
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [editData, setEditData] = useState<{ volume: number, hargaSatuan: number }>({ volume: 1, hargaSatuan: 0 });
+  const [editData, setEditData] = useState<{ volume: number, hargaSatuan: number, sumberDanaId: number | null }>({ volume: 1, hargaSatuan: 0, sumberDanaId: null });
+  const [sumberDanas, setSumberDanas] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetch('/api/sumber-dana')
+      .then(res => res.json())
+      .then(data => setSumberDanas(Array.isArray(data) ? data : []))
+      .catch(e => console.error(e));
+  }, []);
 
   const formatRupiah = (number: number) => {
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(number);
@@ -64,7 +72,8 @@ export default function RincianTable({ rincianList, subKegiatanId, onRefresh, is
     setEditingId(r.id);
     setEditData({
       volume: r.volumePerubahan !== null && r.volumePerubahan !== undefined ? r.volumePerubahan : r.volume,
-      hargaSatuan: r.hargaSatuanPerubahan !== null && r.hargaSatuanPerubahan !== undefined ? Number(r.hargaSatuanPerubahan) : Number(r.hargaSatuan)
+      hargaSatuan: r.hargaSatuanPerubahan !== null && r.hargaSatuanPerubahan !== undefined ? Number(r.hargaSatuanPerubahan) : Number(r.hargaSatuan),
+      sumberDanaId: r.sumberDanaId
     });
   };
 
@@ -78,7 +87,8 @@ export default function RincianTable({ rincianList, subKegiatanId, onRefresh, is
         body: JSON.stringify({
           id: editingId,
           volumePerubahan: editData.volume,
-          hargaSatuanPerubahan: editData.hargaSatuan
+          hargaSatuanPerubahan: editData.hargaSatuan,
+          sumberDanaId: editData.sumberDanaId
         })
       });
       const data = await res.json();
@@ -156,9 +166,22 @@ export default function RincianTable({ rincianList, subKegiatanId, onRefresh, is
                     </td>
                     <td className="px-4 py-2 text-gray-700 max-w-xs truncate" title={r.namaPaket}>{r.namaPaket}</td>
                     <td className="px-4 py-2 text-gray-700">
-                      <span className="inline-flex items-center rounded-md bg-blue-50 px-2 py-1 text-[10px] font-medium text-blue-700 ring-1 ring-inset ring-blue-700/10">
-                        {r.sumberDana?.nama || 'Unknown'}
-                      </span>
+                      {isEditing ? (
+                        <select 
+                          className="w-full max-w-[150px] px-2 py-1 text-[10px] border border-gray-300 rounded"
+                          value={editData.sumberDanaId || ''}
+                          onChange={(e) => setEditData({...editData, sumberDanaId: Number(e.target.value)})}
+                        >
+                          <option value="">Pilih Sumber Dana...</option>
+                          {sumberDanas.map(sd => (
+                            <option key={sd.id} value={sd.id}>{sd.nama}</option>
+                          ))}
+                        </select>
+                      ) : (
+                        <span className="inline-flex items-center rounded-md bg-blue-50 px-2 py-1 text-[10px] font-medium text-blue-700 ring-1 ring-inset ring-blue-700/10">
+                          {r.sumberDana?.nama || 'Unknown'}
+                        </span>
+                      )}
                     </td>
                     <td className="px-4 py-2 text-right text-gray-700">
                       {isEditing ? (
