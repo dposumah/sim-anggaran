@@ -111,11 +111,11 @@ export default function ExplorerPage() {
           <div className="flex flex-col items-end gap-1">
             {item.totalPaguPerubahan !== undefined && item.totalPaguPerubahan !== null ? (
               <div className="flex items-center gap-2">
-                <span className="text-xs font-semibold text-gray-500 bg-gray-50 px-2 py-1 rounded border border-gray-200 line-through" title="Pagu Induk">
-                  {formatRupiah(item.totalPagu)}
+                <span className="text-xs font-medium text-gray-500">
+                  Sebelum: <span className="line-through">{formatRupiah(item.totalPagu)}</span>
                 </span>
-                <span className="text-sm font-bold text-blue-700 bg-blue-50 px-2 py-1 rounded border border-blue-200 shadow-sm" title="Pagu Perubahan">
-                  {formatRupiah(item.totalPaguPerubahan)}
+                <span className="text-sm font-bold text-blue-700 bg-blue-50 px-2 py-1 rounded border border-blue-200 shadow-sm">
+                  Sesudah: {formatRupiah(item.totalPaguPerubahan)}
                 </span>
               </div>
             ) : (
@@ -218,8 +218,8 @@ export default function ExplorerPage() {
                     <span className="text-sm font-medium text-blue-900">{sd}</span>
                     {data.paguPerubahan !== null ? (
                       <div className="flex flex-col items-end">
-                        <span className="text-[10px] font-semibold text-gray-500 line-through">{formatRupiah(data.pagu)}</span>
-                        <span className="text-sm font-bold text-blue-700">{formatRupiah(data.paguPerubahan)}</span>
+                        <span className="text-xs font-medium text-gray-500">Sebelum: <span className="line-through">{formatRupiah(data.pagu)}</span></span>
+                        <span className="text-sm font-bold text-blue-700">Sesudah: {formatRupiah(data.paguPerubahan)}</span>
                       </div>
                     ) : (
                       <span className="text-sm font-bold text-blue-700">{formatRupiah(data.pagu)}</span>

@@ -117,24 +117,24 @@ export default function RincianTable({ rincianList, subKegiatanId, onRefresh, is
                   <td className="px-4 py-2 text-right text-gray-700">
                     {r.volumePerubahan !== null && r.volumePerubahan !== undefined ? (
                       <div className="flex flex-col items-end">
-                        <span className="text-[10px] text-gray-400 line-through" title="Induk">{r.volume}</span>
-                        <span className="text-blue-700 font-semibold" title="Perubahan">{r.volumePerubahan}</span>
+                        <span className="text-[10px] text-gray-500 font-medium">Sebelum: <span className="line-through">{r.volume}</span></span>
+                        <span className="text-blue-700 font-semibold">Sesudah: {r.volumePerubahan}</span>
                       </div>
                     ) : r.volume}
                   </td>
                   <td className="px-4 py-2 text-right text-gray-700">
                     {r.hargaSatuanPerubahan !== null && r.hargaSatuanPerubahan !== undefined ? (
                       <div className="flex flex-col items-end">
-                        <span className="text-[10px] text-gray-400 line-through" title="Induk">{formatRupiah(Number(r.hargaSatuan))}</span>
-                        <span className="text-blue-700 font-semibold" title="Perubahan">{formatRupiah(Number(r.hargaSatuanPerubahan))}</span>
+                        <span className="text-[10px] text-gray-500 font-medium">Sebelum: <span className="line-through">{formatRupiah(Number(r.hargaSatuan))}</span></span>
+                        <span className="text-blue-700 font-semibold">Sesudah: {formatRupiah(Number(r.hargaSatuanPerubahan))}</span>
                       </div>
                     ) : formatRupiah(Number(r.hargaSatuan))}
                   </td>
                   <td className="px-4 py-2 text-right font-medium text-gray-900">
                     {r.paguPerubahan !== null && r.paguPerubahan !== undefined ? (
                       <div className="flex flex-col items-end">
-                        <span className="text-[10px] text-gray-400 line-through" title="Induk">{formatRupiah(Number(r.pagu))}</span>
-                        <span className="text-blue-700 font-bold" title="Perubahan">{formatRupiah(Number(r.paguPerubahan))}</span>
+                        <span className="text-[10px] text-gray-500 font-medium">Sebelum: <span className="line-through">{formatRupiah(Number(r.pagu))}</span></span>
+                        <span className="text-blue-700 font-bold">Sesudah: {formatRupiah(Number(r.paguPerubahan))}</span>
                       </div>
                     ) : formatRupiah(Number(r.pagu))}
                   </td>
