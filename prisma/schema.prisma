@@ -19,6 +19,8 @@ model TahunAnggaran {
   sshSbus   SshSbu[]
   pagus     PaguCeiling[]
   pegawais  Pegawai[]
+  pengaturanGaji PengaturanGaji?
+  realisasiGajis RealisasiGaji[]
 }
 
 model Urusan {
@@ -46,6 +48,7 @@ model Skpd {
   pagus         PaguCeiling[]
   users         User[]
   pegawais      Pegawai[]
+  realisasiGajis RealisasiGaji[]
 
   @@unique([kode, kodeSubUnit, tahunId])
 }
@@ -243,3 +246,31 @@ model Pegawai {
   tahunId          Int
   tahun            TahunAnggaran @relation(fields: [tahunId], references: [id])
 }
+
+model PengaturanGaji {
+  id              Int @id @default(autoincrement())
+  tahunId         Int @unique
+  tahun           TahunAnggaran @relation(fields: [tahunId], references: [id])
+  
+  komponenGaji13  String @default("gapok,tunjKeluarga,tunjJabatan,tunjFungsional,tunjFungsionalUmum")
+  komponenGaji14  String @default("gapok,tunjKeluarga,tunjJabatan,tunjFungsional,tunjFungsionalUmum")
+  
+  gajiTerusanBulan Int     @default(3)
+  acressPersen     Decimal @db.Decimal(5,2) @default(2.5)
+}
+
+model RealisasiGaji {
+  id              Int @id @default(autoincrement())
+  skpdId          Int
+  skpd            Skpd @relation(fields: [skpdId], references: [id])
+  tahunId         Int
+  tahun           TahunAnggaran @relation(fields: [tahunId], references: [id])
+  
+  bulan           Int 
+  uraianBelanja   String
+  kategori        String 
+  nominal         Decimal @db.Decimal(15,2)
+
+  @@unique([skpdId, tahunId, bulan, uraianBelanja, kategori])
+}
+

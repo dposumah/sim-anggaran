@@ -67,15 +67,23 @@ export default function LaporanPage() {
           <h1 className="text-2xl font-bold text-foreground">Laporan & Rekapitulasi</h1>
           <p className="text-sm text-secondary">Ringkasan total pagu anggaran per program.</p>
         </div>
-        
-        <button 
-          onClick={exportToExcel}
-          disabled={loading || data.length === 0}
-          className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-colors shadow-sm disabled:opacity-50"
-        >
-          <FileSpreadsheet className="w-5 h-5" />
-          Export ke Excel
-        </button>
+        <div className="flex gap-2">
+          <button 
+            onClick={() => window.open(`/api/laporan/export-sumber-dana?tahun=${tahun}`, '_blank')}
+            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors shadow-sm"
+          >
+            <FileSpreadsheet className="w-5 h-5" />
+            Rincian Sumber Dana
+          </button>
+          <button 
+            onClick={exportToExcel}
+            disabled={loading || data.length === 0}
+            className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-colors shadow-sm disabled:opacity-50"
+          >
+            <FileSpreadsheet className="w-5 h-5" />
+            Rekap Program
+          </button>
+        </div>
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-border overflow-hidden">
