@@ -25,6 +25,7 @@ const navigation = [
   { name: 'Master Jabatan', href: '/master-jabatan', icon: Users },
   { name: 'Master Gaji', href: '/master-gaji', icon: Database },
   { name: 'Upload Data', href: '/upload', icon: Upload },
+  { name: 'Control Sumber Dana', href: '/control-sumber-dana', icon: ShieldAlert },
   { name: 'Export Laporan', href: '/export', icon: FileDown },
   { name: 'Manajemen User', href: '/users', icon: Users },
 ]
