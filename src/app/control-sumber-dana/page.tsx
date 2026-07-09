@@ -12,7 +12,7 @@ interface ExcelDataRow {
   'NAMA SUB KEGIATAN': string;
   'KODE SUMBER DANA': string;
   'NAMA SUMBER DANA': string;
-  'PAGU': number;
+  'PAGU': number | string;
 }
 
 interface SystemSumberDana {
