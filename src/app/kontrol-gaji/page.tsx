@@ -52,7 +52,7 @@ export default function KontrolGajiPage() {
   }, []);
 
   const handleTargetChange = (skpdId: number, field: 'targetPns' | 'targetPppk', value: string) => {
-    const numValue = value === '' ? 0 : parseFloat(value.replace(/[^0-9.-]+/g, ""));
+    const numValue = value === '' ? 0 : parseFloat(value.replace(/[^0-9-]+/g, ""));
     if (isNaN(numValue)) return;
     
     setData(prev => prev.map(item => 

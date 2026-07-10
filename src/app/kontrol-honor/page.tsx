@@ -58,7 +58,7 @@ export default function KontrolHonorPage() {
   }, []);
 
   const handleTargetChange = (skpdId: number, kategori: string, value: string) => {
-    const numValue = value === '' ? 0 : parseFloat(value.replace(/[^0-9.-]+/g, ""));
+    const numValue = value === '' ? 0 : parseFloat(value.replace(/[^0-9-]+/g, ""));
     if (isNaN(numValue)) return;
     
     setData(prev => prev.map(skpd => {
@@ -246,6 +246,33 @@ export default function KontrolHonorPage() {
                           </tr>
                         )}
                       </tbody>
+                      <tfoot className="bg-gray-50 border-t-2 border-gray-200">
+                        {(() => {
+                          const totalTarget = skpd.categories.reduce((sum, cat) => sum + cat.target, 0);
+                          const totalExcel = skpd.categories.reduce((sum, cat) => sum + cat.perubahan, 0);
+                          const totalSelisih = totalExcel - totalTarget;
+                          
+                          return (
+                            <tr>
+                              <td className="px-6 py-4 font-bold text-gray-900 text-right uppercase text-xs">Total Keseluruhan</td>
+                              <td className="px-6 py-4 font-bold text-gray-900 text-right">
+                                {totalTarget > 0 ? formatCurrency(totalTarget) : '-'}
+                              </td>
+                              <td className="px-6 py-4 font-bold text-gray-900 text-right">
+                                {totalExcel > 0 ? formatCurrency(totalExcel) : '-'}
+                              </td>
+                              <td className="px-6 py-4 text-center">
+                                {totalTarget > 0 && (
+                                  <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${totalSelisih === 0 ? 'bg-green-100 text-green-800' : totalSelisih > 0 ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                                    {totalSelisih === 0 ? <CheckCircle className="w-3 h-3" /> : <AlertCircle className="w-3 h-3" />}
+                                    {totalSelisih > 0 ? '+' : ''}{totalSelisih === 0 ? 'Balance' : formatCurrency(totalSelisih)}
+                                  </span>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })()}
+                      </tfoot>
                     </table>
                   </div>
                   <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end">
