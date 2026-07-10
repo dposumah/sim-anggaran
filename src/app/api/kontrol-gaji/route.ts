@@ -58,10 +58,12 @@ export async function GET(request: Request) {
         subKegiatanId: { in: subKegiatans.map(sk => sk.id) },
         OR: [
           { namaPaket: { contains: 'PNS', mode: 'insensitive' } },
-          { namaPaket: { contains: 'PPPK', mode: 'insensitive' } }
+          { namaPaket: { contains: 'PPPK', mode: 'insensitive' } },
+          { rekening: { nama: { contains: 'PNS', mode: 'insensitive' } } },
+          { rekening: { nama: { contains: 'PPPK', mode: 'insensitive' } } }
         ]
       },
-      select: { subKegiatanId: true, namaPaket: true, pagu: true, paguPerubahan: true }
+      select: { subKegiatanId: true, namaPaket: true, pagu: true, paguPerubahan: true, rekening: { select: { nama: true } } }
     });
 
     // Daftar paket resmi
@@ -94,10 +96,11 @@ export async function GET(request: Request) {
       
       const stat = excelDataMap.get(skpdId);
       const namaPaket = r.namaPaket.trim().toUpperCase();
+      const namaRekening = r.rekening?.nama?.trim().toUpperCase() || '';
       
-      // Check if namaPaket is exactly one of the valid packages (or contains it to be safe against slight typos/whitespaces)
-      const isPns = validPnsPackages.some(vp => namaPaket.includes(vp));
-      const isPppk = validPppkPackages.some(vp => namaPaket.includes(vp));
+      // Check if either namaPaket or namaRekening matches the valid packages
+      const isPns = validPnsPackages.some(vp => namaPaket.includes(vp) || namaRekening.includes(vp));
+      const isPppk = validPppkPackages.some(vp => namaPaket.includes(vp) || namaRekening.includes(vp));
 
       const valInduk = Number(r.pagu || 0);
       const valPerubahan = r.paguPerubahan !== null ? Number(r.paguPerubahan) : valInduk;
