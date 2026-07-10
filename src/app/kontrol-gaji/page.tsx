@@ -13,6 +13,8 @@ interface KontrolGajiItem {
   excelPnsPerubahan: number;
   excelPppkInduk: number;
   excelPppkPerubahan: number;
+  pnsBreakdown: { rekening: string; induk: number; perubahan: number }[];
+  pppkBreakdown: { rekening: string; induk: number; perubahan: number }[];
   isSaving?: boolean;
 }
 
@@ -22,6 +24,11 @@ export default function KontrolGajiPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [modalData, setModalData] = useState<{
+    title: string;
+    skpdNama: string;
+    breakdown: { rekening: string; induk: number; perubahan: number }[];
+  } | null>(null);
 
   const fetchSystemData = async () => {
     setIsLoading(true);
@@ -206,7 +213,16 @@ export default function KontrolGajiPage() {
                     </td>
                     <td className="px-4 py-3 bg-blue-50/10 text-right font-medium text-gray-700">
                       <div className="text-xs text-gray-400 mb-0.5" title="Pagu Induk">I: {formatCurrency(item.excelPnsInduk)}</div>
-                      {formatCurrency(item.excelPnsPerubahan)}
+                      <button
+                        onClick={() => setModalData({
+                          title: 'Rincian Excel (PNS)',
+                          skpdNama: item.nama,
+                          breakdown: item.pnsBreakdown || []
+                        })}
+                        className="text-blue-700 hover:text-blue-900 hover:underline focus:outline-none"
+                      >
+                        {formatCurrency(item.excelPnsPerubahan)}
+                      </button>
                     </td>
                     <td className="px-4 py-3 bg-blue-50/10 text-center border-r">
                       {renderDiffBadge(item.targetPns, item.excelPnsPerubahan)}
@@ -224,7 +240,16 @@ export default function KontrolGajiPage() {
                     </td>
                     <td className="px-4 py-3 bg-emerald-50/10 text-right font-medium text-gray-700">
                       <div className="text-xs text-gray-400 mb-0.5" title="Pagu Induk">I: {formatCurrency(item.excelPppkInduk)}</div>
-                      {formatCurrency(item.excelPppkPerubahan)}
+                      <button
+                        onClick={() => setModalData({
+                          title: 'Rincian Excel (PPPK)',
+                          skpdNama: item.nama,
+                          breakdown: item.pppkBreakdown || []
+                        })}
+                        className="text-emerald-700 hover:text-emerald-900 hover:underline focus:outline-none"
+                      >
+                        {formatCurrency(item.excelPppkPerubahan)}
+                      </button>
                     </td>
                     <td className="px-4 py-3 bg-emerald-50/10 text-center">
                       {renderDiffBadge(item.targetPppk, item.excelPppkPerubahan)}
@@ -251,6 +276,67 @@ export default function KontrolGajiPage() {
           </table>
         </div>
       </div>
+
+      {/* Modal Breakdown */}
+      {modalData && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[85vh]">
+            <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-slate-50">
+              <div>
+                <h3 className="text-lg font-bold text-gray-900">{modalData.title}</h3>
+                <p className="text-sm text-gray-500 mt-0.5">{modalData.skpdNama}</p>
+              </div>
+              <button
+                onClick={() => setModalData(null)}
+                className="text-gray-400 hover:text-gray-600 focus:outline-none bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-sm font-medium hover:bg-gray-50 transition-colors"
+              >
+                Tutup
+              </button>
+            </div>
+            
+            <div className="p-6 overflow-y-auto">
+              {modalData.breakdown.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  <Info className="w-12 h-12 mx-auto text-gray-300 mb-3" />
+                  <p>Tidak ada rincian data ditemukan.</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto rounded-lg border border-gray-200">
+                  <table className="w-full text-sm text-left">
+                    <thead className="bg-gray-50 text-gray-700 border-b border-gray-200">
+                      <tr>
+                        <th className="px-4 py-3 font-semibold">Nama Rekening / Paket</th>
+                        <th className="px-4 py-3 font-semibold text-right">APBD Induk</th>
+                        <th className="px-4 py-3 font-semibold text-right">APBD Perubahan</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {modalData.breakdown
+                        .sort((a, b) => b.perubahan - a.perubahan)
+                        .map((b, idx) => (
+                        <tr key={idx} className="hover:bg-gray-50 transition-colors">
+                          <td className="px-4 py-3 font-medium text-gray-800">{b.rekening}</td>
+                          <td className="px-4 py-3 text-right text-gray-500">{formatCurrency(b.induk)}</td>
+                          <td className="px-4 py-3 text-right font-semibold text-gray-900">{formatCurrency(b.perubahan)}</td>
+                        </tr>
+                      ))}
+                      <tr className="bg-gray-50/80 font-bold border-t-2 border-gray-200">
+                        <td className="px-4 py-3 text-right">Total:</td>
+                        <td className="px-4 py-3 text-right text-gray-600">
+                          {formatCurrency(modalData.breakdown.reduce((sum, item) => sum + item.induk, 0))}
+                        </td>
+                        <td className="px-4 py-3 text-right text-primary">
+                          {formatCurrency(modalData.breakdown.reduce((sum, item) => sum + item.perubahan, 0))}
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

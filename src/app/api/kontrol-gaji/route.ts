@@ -91,12 +91,18 @@ export async function GET(request: Request) {
       if (!skpdId) return;
 
       if (!excelDataMap.has(skpdId)) {
-        excelDataMap.set(skpdId, { pnsInduk: 0, pnsPerubahan: 0, pppkInduk: 0, pppkPerubahan: 0 });
+        excelDataMap.set(skpdId, { 
+          pnsInduk: 0, pnsPerubahan: 0, 
+          pppkInduk: 0, pppkPerubahan: 0,
+          pnsBreakdown: new Map(),
+          pppkBreakdown: new Map()
+        });
       }
       
       const stat = excelDataMap.get(skpdId);
       const namaPaket = r.namaPaket.trim().toUpperCase();
-      const namaRekening = r.rekening?.nama?.trim().toUpperCase() || '';
+      const rawRekening = r.rekening?.nama || '';
+      const namaRekening = rawRekening.trim().toUpperCase();
       
       // Check if either namaPaket or namaRekening matches the valid packages
       const isPns = validPnsPackages.some(vp => namaPaket.includes(vp) || namaRekening.includes(vp));
@@ -104,21 +110,35 @@ export async function GET(request: Request) {
 
       const valInduk = Number(r.pagu || 0);
       const valPerubahan = r.paguPerubahan !== null ? Number(r.paguPerubahan) : valInduk;
+      
+      // Breakdown key
+      const bKey = rawRekening || 'Tidak Diketahui';
 
       if (isPppk) {
         stat.pppkInduk += valInduk;
         stat.pppkPerubahan += valPerubahan;
+        const b = stat.pppkBreakdown.get(bKey) || { induk: 0, perubahan: 0 };
+        b.induk += valInduk;
+        b.perubahan += valPerubahan;
+        stat.pppkBreakdown.set(bKey, b);
       } else if (isPns) {
         // Fallback to PNS if it contains PNS but not PPPK
         stat.pnsInduk += valInduk;
         stat.pnsPerubahan += valPerubahan;
+        const b = stat.pnsBreakdown.get(bKey) || { induk: 0, perubahan: 0 };
+        b.induk += valInduk;
+        b.perubahan += valPerubahan;
+        stat.pnsBreakdown.set(bKey, b);
       }
     });
 
     // 4. Gabungkan Data
     const result = skpds.map(skpd => {
       const kg = kontrolMap.get(skpd.id);
-      const ed = excelDataMap.get(skpd.id) || { pnsInduk: 0, pnsPerubahan: 0, pppkInduk: 0, pppkPerubahan: 0 };
+      const ed = excelDataMap.get(skpd.id) || { 
+        pnsInduk: 0, pnsPerubahan: 0, pppkInduk: 0, pppkPerubahan: 0,
+        pnsBreakdown: new Map(), pppkBreakdown: new Map() 
+      };
 
       return {
         skpdId: skpd.id,
@@ -129,7 +149,9 @@ export async function GET(request: Request) {
         excelPnsInduk: ed.pnsInduk,
         excelPnsPerubahan: ed.pnsPerubahan,
         excelPppkInduk: ed.pppkInduk,
-        excelPppkPerubahan: ed.pppkPerubahan
+        excelPppkPerubahan: ed.pppkPerubahan,
+        pnsBreakdown: Array.from(ed.pnsBreakdown.entries()).map(([rekening, vals]: any) => ({ rekening, ...vals })),
+        pppkBreakdown: Array.from(ed.pppkBreakdown.entries()).map(([rekening, vals]: any) => ({ rekening, ...vals }))
       };
     });
 
