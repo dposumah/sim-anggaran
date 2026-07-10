@@ -2,9 +2,9 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
 const JASA_CATEGORIES = [
-  { name: 'PPPK Paruh Waktu', keywords: ['PARUH WAKTU'] },
   { name: 'Jaminan Kesehatan', keywords: ['JAMINAN KESEHATAN'] },
   { name: 'Jaminan Kematian & Kecelakaan', keywords: ['JAMINAN KECELAKAAN', 'JAMINAN KEMATIAN'] },
+  { name: 'PPPK Paruh Waktu', keywords: ['BELANJA JASA PEGAWAI PEMERINTAH DENGAN PERJANJIAN KERJA (PPPK) PARUH WAKTU'] },
   { name: 'Pengelola Keuangan', keywords: ['PENGELOLA KEUANGAN', 'BENDAHARA'] },
   { name: 'Tenaga Supir', keywords: ['SUPIR', 'SOPIR'] },
   { name: 'Tenaga Kebersihan', keywords: ['KEBERSIHAN'] },
