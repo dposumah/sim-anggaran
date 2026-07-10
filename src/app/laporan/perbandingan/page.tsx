@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useYear } from '@/contexts/YearContext';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer } from 'recharts';
-import { Building, Folder, FileText, FileJson, Package, Download, Activity, FileSpreadsheet, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { Building, Folder, FileText, FileJson, Package, Activity, FileSpreadsheet, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 
 export default function PerbandinganPage() {
   const { tahun } = useYear();
@@ -17,7 +17,6 @@ export default function PerbandinganPage() {
       .then(res => res.json())
       .then(res => {
         setData(res);
-        // auto expand the root skpd
         if (res.tree) {
           const newExpanded = new Set<string>();
           Object.keys(res.tree).forEach(k => newExpanded.add(`skpd_${k}`));
@@ -55,19 +54,19 @@ export default function PerbandinganPage() {
 
   if (!data) return <div>Error loading data</div>;
 
-  const { summary, chartData, tree, paketsList } = data;
+  const { summary, chartData, tree } = data;
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-            <Activity className="w-6 h-6 text-primary" /> Dasbor Perbandingan Anggaran
+            <Activity className="w-6 h-6 text-primary" /> Ringkasan Perbandingan Anggaran
           </h1>
-          <p className="text-sm text-secondary">Ringkasan perbandingan APBD Induk dan Perubahan Tahun {tahun}.</p>
+          <p className="text-sm text-secondary">Ringkasan Eksekutif APBD Induk dan Perubahan Tahun {tahun}.</p>
         </div>
         <button 
-          onClick={() => window.open(`/api/laporan/export-sumber-dana?tahun=${tahun}&mode=keduanya`, '_blank')}
+          onClick={() => window.open(`/api/laporan/perbandingan/export?tahun=${tahun}`, '_blank')}
           className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-colors shadow-sm"
         >
           <FileSpreadsheet className="w-5 h-5" />
@@ -94,59 +93,57 @@ export default function PerbandinganPage() {
         </div>
 
         <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
-          <h3 className="text-sm font-medium text-gray-500 mb-2">Pagu PPPK Paruh Waktu</h3>
+          <h3 className="text-sm font-medium text-gray-500 mb-2">Gaji PNS dan PPPK</h3>
           <div className="flex justify-between items-end mb-1">
             <span className="text-xs text-gray-500">Induk</span>
-            <span className="font-semibold text-gray-700">{formatCurrency(summary.paguPppk.induk)}</span>
+            <span className="font-semibold text-gray-700">{formatCurrency(summary.gajiAsn.induk)}</span>
           </div>
           <div className="flex justify-between items-end mb-2">
             <span className="text-xs text-gray-500">Perubahan</span>
-            <span className="font-semibold text-gray-900">{formatCurrency(summary.paguPppk.perubahan)}</span>
+            <span className="font-semibold text-gray-900">{formatCurrency(summary.gajiAsn.perubahan)}</span>
           </div>
           <div className="pt-2 border-t flex justify-between items-center">
             <span className="text-xs text-gray-500">Selisih</span>
-            <span className="text-sm font-bold text-blue-600">{formatCurrency(summary.paguPppk.perubahan - summary.paguPppk.induk)}</span>
+            <span className="text-sm font-bold text-blue-600">{formatCurrency(summary.gajiAsn.perubahan - summary.gajiAsn.induk)}</span>
           </div>
         </div>
 
         <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
-          <h3 className="text-sm font-medium text-gray-500 mb-2">Perbandingan Jumlah Item</h3>
-          <div className="grid grid-cols-3 gap-2 text-center text-xs text-gray-500 mb-1">
-            <span className="text-left">Uraian</span><span>Induk</span><span>Ubah</span>
+          <h3 className="text-sm font-medium text-gray-500 mb-2">Gaji PPPK Paruh Waktu</h3>
+          <div className="flex justify-between items-end mb-1">
+            <span className="text-xs text-gray-500">Induk</span>
+            <span className="font-semibold text-gray-700">{formatCurrency(summary.gajiPppkParuhWaktu.induk)}</span>
           </div>
-          <div className="grid grid-cols-3 gap-2 text-center text-sm font-semibold mb-1 items-center">
-            <span className="text-left text-xs font-normal text-gray-600">Program</span>
-            <span>{summary.program.induk}</span><span>{summary.program.perubahan}</span>
+          <div className="flex justify-between items-end mb-2">
+            <span className="text-xs text-gray-500">Perubahan</span>
+            <span className="font-semibold text-gray-900">{formatCurrency(summary.gajiPppkParuhWaktu.perubahan)}</span>
           </div>
-          <div className="grid grid-cols-3 gap-2 text-center text-sm font-semibold mb-1 items-center">
-            <span className="text-left text-xs font-normal text-gray-600">Kegiatan</span>
-            <span>{summary.kegiatan.induk}</span><span>{summary.kegiatan.perubahan}</span>
-          </div>
-          <div className="grid grid-cols-3 gap-2 text-center text-sm font-semibold items-center">
-            <span className="text-left text-xs font-normal text-gray-600">Sub Keg</span>
-            <span>{summary.subKegiatan.induk}</span><span>{summary.subKegiatan.perubahan}</span>
+          <div className="pt-2 border-t flex justify-between items-center">
+            <span className="text-xs text-gray-500">Selisih</span>
+            <span className="text-sm font-bold text-blue-600">{formatCurrency(summary.gajiPppkParuhWaktu.perubahan - summary.gajiPppkParuhWaktu.induk)}</span>
           </div>
         </div>
         
         <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
-          <h3 className="text-sm font-medium text-gray-500 mb-2">Paket & Sumber Dana</h3>
-          <div className="grid grid-cols-3 gap-2 text-center text-xs text-gray-500 mb-1">
-            <span className="text-left">Uraian</span><span>Induk</span><span>Ubah</span>
+          <h3 className="text-sm font-medium text-gray-500 mb-2">Honor Pelayanan Umum</h3>
+          <div className="flex justify-between items-end mb-1">
+            <span className="text-xs text-gray-500">Induk</span>
+            <span className="font-semibold text-gray-700">{formatCurrency(summary.honorPelayananUmum.induk)}</span>
           </div>
-          <div className="grid grid-cols-3 gap-2 text-center text-sm font-semibold mb-1 items-center">
-            <span className="text-left text-xs font-normal text-gray-600">Paket/Rincian</span>
-            <span>{summary.paket.induk}</span><span>{summary.paket.perubahan}</span>
+          <div className="flex justify-between items-end mb-2">
+            <span className="text-xs text-gray-500">Perubahan</span>
+            <span className="font-semibold text-gray-900">{formatCurrency(summary.honorPelayananUmum.perubahan)}</span>
           </div>
-          <div className="grid grid-cols-3 gap-2 text-center text-sm font-semibold items-center">
-            <span className="text-left text-xs font-normal text-gray-600">Sumber Dana</span>
-            <span>{summary.sumberDana.induk}</span><span>{summary.sumberDana.perubahan}</span>
+          <div className="pt-2 border-t flex justify-between items-center">
+            <span className="text-xs text-gray-500">Selisih</span>
+            <span className="text-sm font-bold text-blue-600">{formatCurrency(summary.honorPelayananUmum.perubahan - summary.honorPelayananUmum.induk)}</span>
           </div>
         </div>
       </div>
 
       {/* Charts */}
       <div className="bg-white p-4 sm:p-6 rounded-xl border border-gray-100 shadow-sm">
-        <h3 className="text-lg font-bold text-gray-900 mb-4">Grafik Pagu per Sumber Dana</h3>
+        <h3 className="text-lg font-bold text-gray-900 mb-4">Pagu per Sumber Dana</h3>
         <div className="h-80">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
@@ -165,11 +162,13 @@ export default function PerbandinganPage() {
         </div>
       </div>
 
-      {/* Tabel Perbandingan Hierarkis */}
+      {/* Tabel Perbandingan Hierarkis - Khusus DAU Pendidikan */}
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-        <div className="p-4 border-b border-gray-100 bg-gray-50/50">
-          <h2 className="text-lg font-bold text-gray-900">Rincian Perbandingan (Hierarki)</h2>
-          <p className="text-sm text-gray-500 mt-1">Gunakan tabel di bawah ini untuk menelusuri perbedaan anggaran hingga level Paket/Rincian. Tabel ini mencakup nama-nama paket kegiatan yang ada.</p>
+        <div className="p-4 border-b border-gray-100 bg-gray-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h2 className="text-lg font-bold text-gray-900">Breakdown Khusus Sumber Dana DAU Bidang Pendidikan</h2>
+            <p className="text-sm text-gray-500 mt-1">Menampilkan rincian hierarki untuk DAU yang Ditentukan Penggunaannya Bidang Pendidikan.</p>
+          </div>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">

@@ -48,131 +48,108 @@ export async function GET(request: Request) {
       },
     });
 
-    // Summary counters
     let paguIndukTotal = 0;
     let paguPerubahanTotal = 0;
-    let paguIndukPppk = 0;
-    let paguPerubahanPppk = 0;
+    let gajiAsnInduk = 0;
+    let gajiAsnPerubahan = 0;
+    let gajiPppkParuhWaktuInduk = 0;
+    let gajiPppkParuhWaktuPerubahan = 0;
+    let honorPelayananUmumInduk = 0;
+    let honorPelayananUmumPerubahan = 0;
 
-    const setProgsInduk = new Set<string>();
-    const setProgsPerubahan = new Set<string>();
-    const setKegsInduk = new Set<string>();
-    const setKegsPerubahan = new Set<string>();
-    const setSubsInduk = new Set<string>();
-    const setSubsPerubahan = new Set<string>();
-    const setPaketsInduk = new Set<string>();
-    const setPaketsPerubahan = new Set<string>();
-    const setSdInduk = new Set<number>();
-    const setSdPerubahan = new Set<number>();
-
-    // Detailed Tree for comparison table
-    const tree: any = {};
+    const dauTree: any = {};
+    const sumDanaMap: Record<string, { induk: number, perubahan: number }> = {};
 
     rincianList.forEach(r => {
-      const progId = r.subKegiatan.kegiatan.program.id.toString();
-      const kegId = r.subKegiatan.kegiatan.id.toString();
-      const subId = r.subKegiatan.id.toString();
-      const paketKeyGlobal = `${subId}_${r.namaPaket}`; // unique packet per sub kegiatan
+      const skpd = r.subKegiatan.kegiatan.program.skpd;
+      const prog = r.subKegiatan.kegiatan.program;
+      const keg = r.subKegiatan.kegiatan;
+      const sub = r.subKegiatan;
+      const rek = r.rekening;
 
-      const nilaiInduk = Number(r.pagu);
+      const nilaiInduk = Number(r.pagu) || 0;
       const nilaiPerubahan = r.paguPerubahan !== null ? Number(r.paguPerubahan) : nilaiInduk;
 
       paguIndukTotal += nilaiInduk;
       paguPerubahanTotal += nilaiPerubahan;
 
-      const isPppk = r.namaPaket.toUpperCase().includes('PPPK');
-
-      if (nilaiInduk > 0) {
-        setProgsInduk.add(progId);
-        setKegsInduk.add(kegId);
-        setSubsInduk.add(subId);
-        setPaketsInduk.add(paketKeyGlobal);
-        setSdInduk.add(r.sumberDanaId);
-        if (isPppk) paguIndukPppk += nilaiInduk;
+      const isParuhWaktu = (rek.nama || '').toUpperCase().includes('PARUH WAKTU');
+      if (isParuhWaktu) {
+        gajiPppkParuhWaktuInduk += nilaiInduk;
+        gajiPppkParuhWaktuPerubahan += nilaiPerubahan;
       }
 
-      if (nilaiPerubahan > 0) {
-        setProgsPerubahan.add(progId);
-        setKegsPerubahan.add(kegId);
-        setSubsPerubahan.add(subId);
-        setPaketsPerubahan.add(paketKeyGlobal);
-        setSdPerubahan.add(r.sumberDanaId);
-        if (isPppk) paguPerubahanPppk += nilaiPerubahan;
+      if ((sub.nama || '').toUpperCase().includes('PENYEDIAAN GAJI DAN TUNJANGAN ASN') && !isParuhWaktu) {
+        gajiAsnInduk += nilaiInduk;
+        gajiAsnPerubahan += nilaiPerubahan;
       }
 
-      // Build Tree
-      const skpdKey = r.subKegiatan.kegiatan.program.skpd.kode + ' - ' + r.subKegiatan.kegiatan.program.skpd.nama;
-      const progKey = r.subKegiatan.kegiatan.program.kode + '|' + r.subKegiatan.kegiatan.program.nama;
-      const kegKey = r.subKegiatan.kegiatan.kode + '|' + r.subKegiatan.kegiatan.nama;
-      const subKey = r.subKegiatan.kode + '|' + r.subKegiatan.nama;
-      const rekKey = (r.rekening?.kode || 'Tanpa Kode') + '|' + (r.rekening?.nama || 'Tanpa Rekening');
-      const paketKey = r.namaPaket;
-      
-      if (!tree[skpdKey]) tree[skpdKey] = { induk: 0, perubahan: 0, progs: {} };
-      tree[skpdKey].induk += nilaiInduk;
-      tree[skpdKey].perubahan += nilaiPerubahan;
+      if ((sub.nama || '').toUpperCase().includes('JASA PELAYANAN UMUM KANTOR') && (rek.nama || '').toUpperCase().includes('HONORARIUM')) {
+        honorPelayananUmumInduk += nilaiInduk;
+        honorPelayananUmumPerubahan += nilaiPerubahan;
+      }
 
-      if (!tree[skpdKey].progs[progKey]) tree[skpdKey].progs[progKey] = { induk: 0, perubahan: 0, kegs: {} };
-      tree[skpdKey].progs[progKey].induk += nilaiInduk;
-      tree[skpdKey].progs[progKey].perubahan += nilaiPerubahan;
-
-      if (!tree[skpdKey].progs[progKey].kegs[kegKey]) tree[skpdKey].progs[progKey].kegs[kegKey] = { induk: 0, perubahan: 0, subs: {} };
-      tree[skpdKey].progs[progKey].kegs[kegKey].induk += nilaiInduk;
-      tree[skpdKey].progs[progKey].kegs[kegKey].perubahan += nilaiPerubahan;
-
-      if (!tree[skpdKey].progs[progKey].kegs[kegKey].subs[subKey]) tree[skpdKey].progs[progKey].kegs[kegKey].subs[subKey] = { induk: 0, perubahan: 0, reks: {} };
-      tree[skpdKey].progs[progKey].kegs[kegKey].subs[subKey].induk += nilaiInduk;
-      tree[skpdKey].progs[progKey].kegs[kegKey].subs[subKey].perubahan += nilaiPerubahan;
-
-      if (!tree[skpdKey].progs[progKey].kegs[kegKey].subs[subKey].reks[rekKey]) tree[skpdKey].progs[progKey].kegs[kegKey].subs[subKey].reks[rekKey] = { induk: 0, perubahan: 0, pakets: {} };
-      tree[skpdKey].progs[progKey].kegs[kegKey].subs[subKey].reks[rekKey].induk += nilaiInduk;
-      tree[skpdKey].progs[progKey].kegs[kegKey].subs[subKey].reks[rekKey].perubahan += nilaiPerubahan;
-
-      if (!tree[skpdKey].progs[progKey].kegs[kegKey].subs[subKey].reks[rekKey].pakets[paketKey]) tree[skpdKey].progs[progKey].kegs[kegKey].subs[subKey].reks[rekKey].pakets[paketKey] = { induk: 0, perubahan: 0, sds: [] };
-      tree[skpdKey].progs[progKey].kegs[kegKey].subs[subKey].reks[rekKey].pakets[paketKey].induk += nilaiInduk;
-      tree[skpdKey].progs[progKey].kegs[kegKey].subs[subKey].reks[rekKey].pakets[paketKey].perubahan += nilaiPerubahan;
-      
-      tree[skpdKey].progs[progKey].kegs[kegKey].subs[subKey].reks[rekKey].pakets[paketKey].sds.push({
-        nama: r.sumberDana.nama,
-        induk: nilaiInduk,
-        perubahan: nilaiPerubahan
-      });
-    });
-
-    // Chart Data by Sumber Dana
-    const chartDataMap = new Map<string, { induk: number, perubahan: number }>();
-    rincianList.forEach(r => {
       const sdNama = r.sumberDana.nama;
-      if (!chartDataMap.has(sdNama)) chartDataMap.set(sdNama, { induk: 0, perubahan: 0 });
-      
-      const obj = chartDataMap.get(sdNama)!;
-      const nInduk = Number(r.pagu);
-      const nPerubahan = r.paguPerubahan !== null ? Number(r.paguPerubahan) : nInduk;
-      
-      obj.induk += nInduk;
-      obj.perubahan += nPerubahan;
+      if (!sumDanaMap[sdNama]) sumDanaMap[sdNama] = { induk: 0, perubahan: 0 };
+      sumDanaMap[sdNama].induk += nilaiInduk;
+      sumDanaMap[sdNama].perubahan += nilaiPerubahan;
+
+      if ((sdNama || '').toUpperCase().includes('DAU YANG DITENTUKAN PENGGUNAANNYA BIDANG PENDIDIKAN')) {
+        const skpdKey = `${skpd.kode} - ${skpd.nama}`;
+        const progKey = `${prog.kode}|${prog.nama}`;
+        const kegKey = `${keg.kode}|${keg.nama}`;
+        const subKey = `${sub.kode}|${sub.nama}`;
+        const rekKey = `${rek.kode}|${rek.nama}`;
+        const paketKey = r.namaPaket;
+
+        if (!dauTree[skpdKey]) dauTree[skpdKey] = { induk: 0, perubahan: 0, progs: {} };
+        dauTree[skpdKey].induk += nilaiInduk;
+        dauTree[skpdKey].perubahan += nilaiPerubahan;
+
+        const skpdNode = dauTree[skpdKey];
+        if (!skpdNode.progs[progKey]) skpdNode.progs[progKey] = { induk: 0, perubahan: 0, kegs: {} };
+        skpdNode.progs[progKey].induk += nilaiInduk;
+        skpdNode.progs[progKey].perubahan += nilaiPerubahan;
+
+        const progNode = skpdNode.progs[progKey];
+        if (!progNode.kegs[kegKey]) progNode.kegs[kegKey] = { induk: 0, perubahan: 0, subs: {} };
+        progNode.kegs[kegKey].induk += nilaiInduk;
+        progNode.kegs[kegKey].perubahan += nilaiPerubahan;
+
+        const kegNode = progNode.kegs[kegKey];
+        if (!kegNode.subs[subKey]) kegNode.subs[subKey] = { induk: 0, perubahan: 0, reks: {} };
+        kegNode.subs[subKey].induk += nilaiInduk;
+        kegNode.subs[subKey].perubahan += nilaiPerubahan;
+
+        const subNode = kegNode.subs[subKey];
+        if (!subNode.reks[rekKey]) subNode.reks[rekKey] = { induk: 0, perubahan: 0, pakets: {} };
+        subNode.reks[rekKey].induk += nilaiInduk;
+        subNode.reks[rekKey].perubahan += nilaiPerubahan;
+
+        const rekNode = subNode.reks[rekKey];
+        if (!rekNode.pakets[paketKey]) rekNode.pakets[paketKey] = { induk: 0, perubahan: 0 };
+        rekNode.pakets[paketKey].induk += nilaiInduk;
+        rekNode.pakets[paketKey].perubahan += nilaiPerubahan;
+      }
     });
-    
-    const chartData = Array.from(chartDataMap.entries()).map(([sd, values]) => ({
-      name: sd,
-      induk: values.induk,
-      perubahan: values.perubahan
-    }));
 
-    // List of paket names for reference
-    const paketsList = Array.from(new Set(rincianList.map(r => r.namaPaket))).sort();
+    const chartData = Object.keys(sumDanaMap).map(k => ({
+      name: k,
+      induk: sumDanaMap[k].induk,
+      perubahan: sumDanaMap[k].perubahan,
+    })).sort((a, b) => b.induk - a.induk);
 
-    const summary = {
-      pagu: { induk: paguIndukTotal, perubahan: paguPerubahanTotal },
-      paguPppk: { induk: paguIndukPppk, perubahan: paguPerubahanPppk },
-      program: { induk: setProgsInduk.size, perubahan: setProgsPerubahan.size },
-      kegiatan: { induk: setKegsInduk.size, perubahan: setKegsPerubahan.size },
-      subKegiatan: { induk: setSubsInduk.size, perubahan: setSubsPerubahan.size },
-      paket: { induk: setPaketsInduk.size, perubahan: setPaketsPerubahan.size },
-      sumberDana: { induk: setSdInduk.size, perubahan: setSdPerubahan.size }
-    };
-
-    return NextResponse.json({ summary, tree, chartData, paketsList });
+    return NextResponse.json({
+      summary: {
+        pagu: { induk: paguIndukTotal, perubahan: paguPerubahanTotal },
+        gajiAsn: { induk: gajiAsnInduk, perubahan: gajiAsnPerubahan },
+        gajiPppkParuhWaktu: { induk: gajiPppkParuhWaktuInduk, perubahan: gajiPppkParuhWaktuPerubahan },
+        honorPelayananUmum: { induk: honorPelayananUmumInduk, perubahan: honorPelayananUmumPerubahan },
+        sumberDana: sumDanaMap
+      },
+      chartData,
+      tree: dauTree
+    });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
