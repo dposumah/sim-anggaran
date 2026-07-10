@@ -12,7 +12,8 @@ import {
   Upload,
   FileDown,
   FileText,
-  Calculator
+  Calculator,
+  Wallet
 } from 'lucide-react'
 
 const navigation = [
@@ -20,6 +21,7 @@ const navigation = [
   { name: 'Budget Explorer', href: '/explorer', icon: FolderTree },
   { name: 'Kebutuhan Gaji', href: '/kebutuhan-gaji', icon: Users },
   { name: 'Kontrol Gaji', href: '/kontrol-gaji', icon: Calculator },
+  { name: 'Kontrol Honor Jasa', href: '/kontrol-honor', icon: Wallet },
   { name: 'Laporan', href: '/laporan', icon: FileText },
   { name: 'Sumber Dana', href: '/sumber-dana', icon: Database },
   { name: 'Kontrol Pagu', href: '/pagu', icon: ShieldAlert },

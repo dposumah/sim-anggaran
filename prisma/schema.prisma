@@ -15,14 +15,15 @@ model TahunAnggaran {
   tahun    Int     @unique
   isActive Boolean @default(false)
 
-  skpds           Skpd[]
-  sshSbus         SshSbu[]
-  pagus           PaguCeiling[]
-  paguSumberDanas PaguSumberDana[]
-  pegawais        Pegawai[]
-  pengaturanGaji  PengaturanGaji?
-  realisasiGajis  RealisasiGaji[]
-  KontrolGaji     KontrolGaji[]
+  skpds             Skpd[]
+  sshSbus           SshSbu[]
+  pagus             PaguCeiling[]
+  paguSumberDanas   PaguSumberDana[]
+  pegawais          Pegawai[]
+  pengaturanGaji    PengaturanGaji?
+  realisasiGajis    RealisasiGaji[]
+  KontrolGaji       KontrolGaji[]
+  KontrolJasaTarget KontrolJasaTarget[]
 }
 
 model Urusan {
@@ -46,13 +47,14 @@ model Skpd {
   tahunId Int
   tahun   TahunAnggaran @relation(fields: [tahunId], references: [id])
 
-  programs        Program[]
-  pagus           PaguCeiling[]
-  paguSumberDanas PaguSumberDana[]
-  users           User[]
-  pegawais        Pegawai[]
-  realisasiGajis  RealisasiGaji[]
-  KontrolGaji     KontrolGaji[]
+  programs          Program[]
+  pagus             PaguCeiling[]
+  paguSumberDanas   PaguSumberDana[]
+  users             User[]
+  pegawais          Pegawai[]
+  realisasiGajis    RealisasiGaji[]
+  KontrolGaji       KontrolGaji[]
+  KontrolJasaTarget KontrolJasaTarget[]
 
   @@unique([kode, kodeSubUnit, tahunId])
 }
@@ -291,6 +293,19 @@ model KontrolGaji {
   targetPppk Decimal @default(0) @db.Decimal(15, 2)
 
   @@unique([skpdId, tahunId])
+}
+
+model KontrolJasaTarget {
+  id       Int     @id @default(autoincrement())
+  skpdId   Int
+  tahunId  Int
+  kategori String
+  target   Decimal @default(0) @db.Decimal(15, 2)
+
+  skpd  Skpd          @relation(fields: [skpdId], references: [id])
+  tahun TahunAnggaran @relation(fields: [tahunId], references: [id])
+
+  @@unique([skpdId, tahunId, kategori])
 }
 
 model RealisasiGaji {
