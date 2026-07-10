@@ -11,13 +11,15 @@ import {
   Users,
   Upload,
   FileDown,
-  FileText
+  FileText,
+  Calculator
 } from 'lucide-react'
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'Budget Explorer', href: '/explorer', icon: FolderTree },
   { name: 'Kebutuhan Gaji', href: '/kebutuhan-gaji', icon: Users },
+  { name: 'Kontrol Gaji', href: '/kontrol-gaji', icon: Calculator },
   { name: 'Laporan', href: '/laporan', icon: FileText },
   { name: 'Sumber Dana', href: '/sumber-dana', icon: Database },
   { name: 'Kontrol Pagu', href: '/pagu', icon: ShieldAlert },

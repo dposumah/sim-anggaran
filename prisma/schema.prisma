@@ -5,247 +5,249 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
 }
 
 model TahunAnggaran {
-  id        Int       @id @default(autoincrement())
-  tahun     Int       @unique
-  isActive  Boolean   @default(false)
-  
-  skpds     Skpd[]
-  sshSbus   SshSbu[]
-  pagus     PaguCeiling[]
+  id       Int     @id @default(autoincrement())
+  tahun    Int     @unique
+  isActive Boolean @default(false)
+
+  skpds           Skpd[]
+  sshSbus         SshSbu[]
+  pagus           PaguCeiling[]
   paguSumberDanas PaguSumberDana[]
-  pegawais  Pegawai[]
-  pengaturanGaji PengaturanGaji?
-  realisasiGajis RealisasiGaji[]
+  pegawais        Pegawai[]
+  pengaturanGaji  PengaturanGaji?
+  realisasiGajis  RealisasiGaji[]
+  KontrolGaji     KontrolGaji[]
 }
 
 model Urusan {
-  id    Int    @id @default(autoincrement())
-  kode  String @unique
-  nama  String
-  
+  id   Int    @id @default(autoincrement())
+  kode String @unique
+  nama String
+
   skpds Skpd[]
 }
 
 model Skpd {
-  id            Int    @id @default(autoincrement())
-  kode          String
-  nama          String
-  kodeSubUnit   String
-  namaSubUnit   String
-  
-  urusanId      Int
-  urusan        Urusan @relation(fields: [urusanId], references: [id])
-  
-  tahunId       Int
-  tahun         TahunAnggaran @relation(fields: [tahunId], references: [id])
-  
-  programs      Program[]
-  pagus         PaguCeiling[]
+  id          Int    @id @default(autoincrement())
+  kode        String
+  nama        String
+  kodeSubUnit String
+  namaSubUnit String
+
+  urusanId Int
+  urusan   Urusan @relation(fields: [urusanId], references: [id])
+
+  tahunId Int
+  tahun   TahunAnggaran @relation(fields: [tahunId], references: [id])
+
+  programs        Program[]
+  pagus           PaguCeiling[]
   paguSumberDanas PaguSumberDana[]
-  users         User[]
-  pegawais      Pegawai[]
-  realisasiGajis RealisasiGaji[]
+  users           User[]
+  pegawais        Pegawai[]
+  realisasiGajis  RealisasiGaji[]
+  KontrolGaji     KontrolGaji[]
 
   @@unique([kode, kodeSubUnit, tahunId])
 }
 
 model Program {
-  id                Int    @id @default(autoincrement())
-  kode              String
-  nama              String
-  kodeBidangUrusan  String
-  namaBidangUrusan  String
-  
-  skpdId            Int
-  skpd              Skpd @relation(fields: [skpdId], references: [id])
-  
-  kegiatans         Kegiatan[]
+  id               Int    @id @default(autoincrement())
+  kode             String
+  nama             String
+  kodeBidangUrusan String
+  namaBidangUrusan String
+
+  skpdId Int
+  skpd   Skpd @relation(fields: [skpdId], references: [id])
+
+  kegiatans Kegiatan[]
 
   @@unique([kode, skpdId])
 }
 
 model Kegiatan {
-  id        Int    @id @default(autoincrement())
-  kode      String
-  nama      String
-  
+  id   Int    @id @default(autoincrement())
+  kode String
+  nama String
+
   programId Int
   program   Program @relation(fields: [programId], references: [id])
-  
+
   subKegiatans SubKegiatan[]
 
   @@unique([kode, programId])
 }
 
 model SubKegiatan {
-  id         Int    @id @default(autoincrement())
-  kode       String
-  nama       String
-  
+  id   Int    @id @default(autoincrement())
+  kode String
+  nama String
+
   kegiatanId Int
   kegiatan   Kegiatan @relation(fields: [kegiatanId], references: [id])
-  
-  rincianBelanjas       RincianBelanja[]
+
+  rincianBelanjas        RincianBelanja[]
   subKegiatanSumberDanas SubKegiatanSumberDana[]
 
   @@unique([kode, kegiatanId])
 }
 
 model SumberDana {
-  id    Int    @id @default(autoincrement())
-  kode  String @unique
-  nama  String
-  
-  rincianBelanjas       RincianBelanja[]
+  id   Int    @id @default(autoincrement())
+  kode String @unique
+  nama String
+
+  rincianBelanjas        RincianBelanja[]
   subKegiatanSumberDanas SubKegiatanSumberDana[]
-  paguSumberDanas       PaguSumberDana[]
+  paguSumberDanas        PaguSumberDana[]
 }
 
 model SubKegiatanSumberDana {
-  id             Int     @id @default(autoincrement())
-  subKegiatanId  Int
-  subKegiatan    SubKegiatan @relation(fields: [subKegiatanId], references: [id], onDelete: Cascade)
-  
-  sumberDanaId   Int
-  sumberDana     SumberDana @relation(fields: [sumberDanaId], references: [id], onDelete: Cascade)
-  
-  isLocked       Boolean @default(false)
-  lockedAmount   Decimal @db.Decimal(15, 2) @default(0)
+  id            Int         @id @default(autoincrement())
+  subKegiatanId Int
+  subKegiatan   SubKegiatan @relation(fields: [subKegiatanId], references: [id], onDelete: Cascade)
+
+  sumberDanaId Int
+  sumberDana   SumberDana @relation(fields: [sumberDanaId], references: [id], onDelete: Cascade)
+
+  isLocked     Boolean @default(false)
+  lockedAmount Decimal @default(0) @db.Decimal(15, 2)
 
   @@unique([subKegiatanId, sumberDanaId])
 }
 
 model Rekening {
-  id    Int    @id @default(autoincrement())
-  kode  String @unique
-  nama  String
-  
+  id   Int    @id @default(autoincrement())
+  kode String @unique
+  nama String
+
   rincianBelanjas RincianBelanja[]
 }
 
 model RincianBelanja {
-  id              Int     @id @default(autoincrement())
-  
-  subKegiatanId   Int
-  subKegiatan     SubKegiatan @relation(fields: [subKegiatanId], references: [id], onDelete: Cascade)
-  
-  sumberDanaId    Int
-  sumberDana      SumberDana @relation(fields: [sumberDanaId], references: [id])
-  
-  rekeningId      Int
-  rekening        Rekening @relation(fields: [rekeningId], references: [id])
-  
-  sshSbuId        Int?
-  sshSbu          SshSbu? @relation(fields: [sshSbuId], references: [id])
-  
-  tipePaket       String
-  namaPaket       String
-  pagu            Decimal @db.Decimal(15, 2)
-  volume          Int     @default(1)
-  hargaSatuan     Decimal @db.Decimal(15, 2)
-  
+  id Int @id @default(autoincrement())
+
+  subKegiatanId Int
+  subKegiatan   SubKegiatan @relation(fields: [subKegiatanId], references: [id], onDelete: Cascade)
+
+  sumberDanaId Int
+  sumberDana   SumberDana @relation(fields: [sumberDanaId], references: [id])
+
+  rekeningId Int
+  rekening   Rekening @relation(fields: [rekeningId], references: [id])
+
+  sshSbuId Int?
+  sshSbu   SshSbu? @relation(fields: [sshSbuId], references: [id])
+
+  tipePaket   String
+  namaPaket   String
+  pagu        Decimal @db.Decimal(15, 2)
+  volume      Int     @default(1)
+  hargaSatuan Decimal @db.Decimal(15, 2)
+
   volumePerubahan      Int?
   hargaSatuanPerubahan Decimal? @db.Decimal(15, 2)
   paguPerubahan        Decimal? @db.Decimal(15, 2)
 }
 
 model SshSbu {
-  id               Int     @id @default(autoincrement())
-  tipe             String  // "SSH" or "SBU"
-  kodeKelompok     String?
-  uraianKelompok   String?
-  idStandarHarga   String?
-  kodeBarang       String?
-  uraianBarang     String
-  spesifikasi      String?
-  satuan           String
-  hargaSatuan      Decimal @db.Decimal(15, 2)
-  kodeRekening     String?
-  
-  tahunId          Int
-  tahun            TahunAnggaran @relation(fields: [tahunId], references: [id])
-  
-  rincianBelanjas  RincianBelanja[]
+  id             Int     @id @default(autoincrement())
+  tipe           String // "SSH" or "SBU"
+  kodeKelompok   String?
+  uraianKelompok String?
+  idStandarHarga String?
+  kodeBarang     String?
+  uraianBarang   String
+  spesifikasi    String?
+  satuan         String
+  hargaSatuan    Decimal @db.Decimal(15, 2)
+  kodeRekening   String?
+
+  tahunId Int
+  tahun   TahunAnggaran @relation(fields: [tahunId], references: [id])
+
+  rincianBelanjas RincianBelanja[]
 }
 
 model PaguCeiling {
-  id             Int     @id @default(autoincrement())
-  ceilingAmount  Decimal @db.Decimal(15, 2)
-  
-  skpdId         Int
-  skpd           Skpd @relation(fields: [skpdId], references: [id])
-  
-  tahunId        Int
-  tahun          TahunAnggaran @relation(fields: [tahunId], references: [id])
+  id            Int     @id @default(autoincrement())
+  ceilingAmount Decimal @db.Decimal(15, 2)
+
+  skpdId Int
+  skpd   Skpd @relation(fields: [skpdId], references: [id])
+
+  tahunId Int
+  tahun   TahunAnggaran @relation(fields: [tahunId], references: [id])
 
   @@unique([skpdId, tahunId])
 }
 
 model PaguSumberDana {
-  id             Int     @id @default(autoincrement())
-  ceilingAmount  Decimal @db.Decimal(15, 2)
-  
-  skpdId         Int
-  skpd           Skpd @relation(fields: [skpdId], references: [id])
-  
-  sumberDanaId   Int
-  sumberDana     SumberDana @relation(fields: [sumberDanaId], references: [id])
-  
-  tahunId        Int
-  tahun          TahunAnggaran @relation(fields: [tahunId], references: [id])
+  id            Int     @id @default(autoincrement())
+  ceilingAmount Decimal @db.Decimal(15, 2)
+
+  skpdId Int
+  skpd   Skpd @relation(fields: [skpdId], references: [id])
+
+  sumberDanaId Int
+  sumberDana   SumberDana @relation(fields: [sumberDanaId], references: [id])
+
+  tahunId Int
+  tahun   TahunAnggaran @relation(fields: [tahunId], references: [id])
 
   @@unique([skpdId, sumberDanaId, tahunId])
 }
 
 model User {
-  id             Int     @id @default(autoincrement())
-  email          String  @unique // Matches auth.users in Supabase
-  username       String  @unique
-  namaLengkap    String
-  role           String  // "ADMIN", "KEPALA_DINAS", "STAF"
-  isActive       Boolean @default(true)
-  
-  skpdId         Int?    // Null for ADMIN
-  skpd           Skpd?   @relation(fields: [skpdId], references: [id])
-  
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id          Int     @id @default(autoincrement())
+  email       String  @unique // Matches auth.users in Supabase
+  username    String  @unique
+  namaLengkap String
+  role        String // "ADMIN", "KEPALA_DINAS", "STAF"
+  isActive    Boolean @default(true)
+
+  skpdId Int? // Null for ADMIN
+  skpd   Skpd? @relation(fields: [skpdId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Jabatan {
-  id         Int       @id @default(autoincrement())
-  nama       String    @unique
-  besaranTpp Decimal   @db.Decimal(15, 2)
-  
-  pegawais   Pegawai[]
+  id         Int     @id @default(autoincrement())
+  nama       String  @unique
+  besaranTpp Decimal @db.Decimal(15, 2)
+
+  pegawais Pegawai[]
 }
 
 model MasterGaji {
-  id         Int       @id @default(autoincrement())
-  status     String    // "PNS", "PPPK"
-  golongan   String
-  masaKerja  Int
-  gajiPokok  Decimal   @db.Decimal(15, 2)
+  id        Int     @id @default(autoincrement())
+  status    String // "PNS", "PPPK"
+  golongan  String
+  masaKerja Int
+  gajiPokok Decimal @db.Decimal(15, 2)
 
   @@unique([status, golongan, masaKerja])
 }
 
 model Pegawai {
-  id               Int     @id @default(autoincrement())
-  nip              String? 
-  nama             String
-  statusPegawai    String  // "PNS", "PPPK", "HONORER"
-  golongan         String?
-  masaKerja        Int?
-  
-  jumlahIstriSuami Int     @default(0)
-  jumlahAnak       Int     @default(0)
+  id            Int     @id @default(autoincrement())
+  nip           String?
+  nama          String
+  statusPegawai String // "PNS", "PPPK", "HONORER"
+  golongan      String?
+  masaKerja     Int?
+
+  jumlahIstriSuami Int @default(0)
+  jumlahAnak       Int @default(0)
 
   // Field Integrasi SIMGAJI
   gajiPokok               Decimal? @db.Decimal(15, 2)
@@ -256,40 +258,52 @@ model Pegawai {
   tunjanganPph            Decimal? @db.Decimal(15, 2)
   pembulatan              Int?     @default(0)
 
-  jabatanId        Int?
-  jabatan          Jabatan? @relation(fields: [jabatanId], references: [id])
+  jabatanId Int?
+  jabatan   Jabatan? @relation(fields: [jabatanId], references: [id])
 
-  skpdId           Int
-  skpd             Skpd @relation(fields: [skpdId], references: [id])
+  skpdId Int
+  skpd   Skpd @relation(fields: [skpdId], references: [id])
 
-  tahunId          Int
-  tahun            TahunAnggaran @relation(fields: [tahunId], references: [id])
+  tahunId Int
+  tahun   TahunAnggaran @relation(fields: [tahunId], references: [id])
 }
 
 model PengaturanGaji {
-  id              Int @id @default(autoincrement())
-  tahunId         Int @unique
-  tahun           TahunAnggaran @relation(fields: [tahunId], references: [id])
-  
-  komponenGaji13  String @default("gapok,tunjKeluarga,tunjJabatan,tunjFungsional,tunjFungsionalUmum")
-  komponenGaji14  String @default("gapok,tunjKeluarga,tunjJabatan,tunjFungsional,tunjFungsionalUmum")
-  
+  id      Int           @id @default(autoincrement())
+  tahunId Int           @unique
+  tahun   TahunAnggaran @relation(fields: [tahunId], references: [id])
+
+  komponenGaji13 String @default("gapok,tunjKeluarga,tunjJabatan,tunjFungsional,tunjFungsionalUmum")
+  komponenGaji14 String @default("gapok,tunjKeluarga,tunjJabatan,tunjFungsional,tunjFungsionalUmum")
+
   gajiTerusanBulan Int     @default(3)
-  acressPersen     Decimal @db.Decimal(5,2) @default(2.5)
+  acressPersen     Decimal @default(2.5) @db.Decimal(5, 2)
+}
+
+model KontrolGaji {
+  id      Int           @id @default(autoincrement())
+  skpdId  Int
+  skpd    Skpd          @relation(fields: [skpdId], references: [id])
+  tahunId Int
+  tahun   TahunAnggaran @relation(fields: [tahunId], references: [id])
+
+  targetPns  Decimal @default(0) @db.Decimal(15, 2)
+  targetPppk Decimal @default(0) @db.Decimal(15, 2)
+
+  @@unique([skpdId, tahunId])
 }
 
 model RealisasiGaji {
-  id              Int @id @default(autoincrement())
-  skpdId          Int
-  skpd            Skpd @relation(fields: [skpdId], references: [id])
-  tahunId         Int
-  tahun           TahunAnggaran @relation(fields: [tahunId], references: [id])
-  
-  bulan           Int 
-  uraianBelanja   String
-  kategori        String 
-  nominal         Decimal @db.Decimal(15,2)
+  id      Int           @id @default(autoincrement())
+  skpdId  Int
+  skpd    Skpd          @relation(fields: [skpdId], references: [id])
+  tahunId Int
+  tahun   TahunAnggaran @relation(fields: [tahunId], references: [id])
+
+  bulan         Int
+  uraianBelanja String
+  kategori      String
+  nominal       Decimal @db.Decimal(15, 2)
 
   @@unique([skpdId, tahunId, bulan, uraianBelanja, kategori])
 }
-
