@@ -217,18 +217,21 @@ export async function POST(request: Request) {
           where: { subKegiatan: { kegiatan: { program: { skpdId: { in: skpdIdsInUpload } } } } }
         });
         
-        const existingMap = new Map();
+        const existingMap = new Map<string, any[]>();
         existingRincian.forEach((r: any) => {
-          existingMap.set(`${r.subKegiatanId}_${r.sumberDanaId}_${r.rekeningId}_${r.tipePaket}_${r.namaPaket}`, r);
+          const key = `${r.subKegiatanId}_${r.sumberDanaId}_${r.rekeningId}_${r.tipePaket}_${r.namaPaket}`;
+          if (!existingMap.has(key)) existingMap.set(key, []);
+          existingMap.get(key)!.push(r);
         });
 
         const mergedRincian: any[] = [];
         
         for (const item of rincianList) {
           const key = `${item.subKegiatanId}_${item.sumberDanaId}_${item.rekeningId}_${item.tipePaket}_${item.namaPaket}`;
-          const exist = existingMap.get(key);
+          const existArr = existingMap.get(key);
           
-          if (exist) {
+          if (existArr && existArr.length > 0) {
+            const exist = existArr.shift();
             const { id, ...rest } = exist;
             mergedRincian.push({
               ...rest,
@@ -236,7 +239,6 @@ export async function POST(request: Request) {
               hargaSatuanPerubahan: item.hargaSatuan,
               paguPerubahan: item.pagu
             });
-            existingMap.delete(key);
           } else {
             mergedRincian.push({
               ...item,
@@ -250,14 +252,16 @@ export async function POST(request: Request) {
           }
         }
         
-        for (const exist of existingMap.values()) {
-          const { id, ...rest } = exist;
-          mergedRincian.push({
-            ...rest,
-            volumePerubahan: 0,
-            hargaSatuanPerubahan: 0,
-            paguPerubahan: 0
-          });
+        for (const existArr of existingMap.values()) {
+          for (const exist of existArr) {
+            const { id, ...rest } = exist;
+            mergedRincian.push({
+              ...rest,
+              volumePerubahan: 0,
+              hargaSatuanPerubahan: 0,
+              paguPerubahan: 0
+            });
+          }
         }
         
         await prisma.rincianBelanja.deleteMany({
