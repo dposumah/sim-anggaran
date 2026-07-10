@@ -210,15 +210,15 @@ export async function POST(request: Request) {
     });
 
     if (rincianList.length > 0) {
-      const skIdsInUpload = Array.from(new Set(rincianList.map(r => r.subKegiatanId)));
+      const skpdIdsInUpload = Array.from(sIdMap.values()) as number[];
       
       if (isPerubahan) {
         const existingRincian = await prisma.rincianBelanja.findMany({
-          where: { subKegiatanId: { in: skIdsInUpload as number[] } }
+          where: { subKegiatan: { kegiatan: { program: { skpdId: { in: skpdIdsInUpload } } } } }
         });
         
         const existingMap = new Map();
-        existingRincian.forEach(r => {
+        existingRincian.forEach((r: any) => {
           existingMap.set(`${r.subKegiatanId}_${r.sumberDanaId}_${r.rekeningId}_${r.tipePaket}_${r.namaPaket}`, r);
         });
 
@@ -261,7 +261,7 @@ export async function POST(request: Request) {
         }
         
         await prisma.rincianBelanja.deleteMany({
-          where: { subKegiatanId: { in: skIdsInUpload as number[] } }
+          where: { subKegiatan: { kegiatan: { program: { skpdId: { in: skpdIdsInUpload } } } } }
         });
         
         const chunkSize = 500;
@@ -272,7 +272,7 @@ export async function POST(request: Request) {
         }
       } else {
         await prisma.rincianBelanja.deleteMany({
-          where: { subKegiatanId: { in: skIdsInUpload as number[] } }
+          where: { subKegiatan: { kegiatan: { program: { skpdId: { in: skpdIdsInUpload } } } } }
         });
         
         const chunkSize = 500;
