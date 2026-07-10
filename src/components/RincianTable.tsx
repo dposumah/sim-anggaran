@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Pencil, Trash2, Plus, Lock, Check, X } from 'lucide-react';
+import { Pencil, Trash2, Plus, Lock, Check, X, Download } from 'lucide-react';
+import * as XLSX from 'xlsx';
 
 export default function RincianTable({ rincianList, subKegiatanId, onRefresh, isLocked }: { rincianList: any[], subKegiatanId: number, onRefresh: () => void, isLocked?: boolean }) {
   const [loading, setLoading] = useState(false);
@@ -64,6 +65,44 @@ export default function RincianTable({ rincianList, subKegiatanId, onRefresh, is
     }
   };
 
+  const exportToExcel = () => {
+    if (rincianList.length === 0) return;
+    
+    const wsData = rincianList.map((r, index) => ({
+      'No': index + 1,
+      'Kode Rekening': r.rekening?.kode || '-',
+      'Nama Rekening': r.rekening?.nama || '-',
+      'Rincian (Paket)': r.namaPaket,
+      'Komponen': r.komponen || '-',
+      'Volume': r.volume,
+      'Satuan': r.satuan || '-',
+      'Harga Satuan': Number(r.hargaSatuan),
+      'Pagu': Number(r.pagu),
+      'Pagu Perubahan': r.paguPerubahan !== null ? Number(r.paguPerubahan) : '-',
+      'Sumber Dana': r.sumberDana?.nama || '-'
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(wsData);
+    
+    ws['!cols'] = [
+      { wch: 5 },
+      { wch: 15 },
+      { wch: 35 },
+      { wch: 40 },
+      { wch: 25 },
+      { wch: 10 },
+      { wch: 10 },
+      { wch: 15 },
+      { wch: 15 },
+      { wch: 15 },
+      { wch: 20 }
+    ];
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Rincian_Belanja');
+    XLSX.writeFile(wb, `Rincian_SubKegiatan_${subKegiatanId}.xlsx`);
+  };
+
   const handleEditClick = (r: any) => {
     if (isLocked) {
       alert("Sub kegiatan ini terkunci. Anda tidak dapat mengubah rincian.");
@@ -119,6 +158,16 @@ export default function RincianTable({ rincianList, subKegiatanId, onRefresh, is
              </button>
           )}
           
+          {rincianList.length > 0 && (
+            <button 
+              onClick={exportToExcel}
+              className="flex items-center text-xs bg-green-600 text-white px-3 py-1.5 rounded-md hover:bg-green-700 transition-colors shadow-sm"
+              title="Export Rincian ke Excel"
+            >
+              <Download className="w-3 h-3 mr-1" /> Export
+            </button>
+          )}
+
           <button className="flex items-center text-xs bg-primary text-white px-3 py-1.5 rounded-md hover:bg-primary-hover transition-colors shadow-sm" disabled={isLocked}>
             <Plus className="w-3 h-3 mr-1" /> Tambah Rincian
           </button>
