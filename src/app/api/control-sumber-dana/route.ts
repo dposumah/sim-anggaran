@@ -45,14 +45,37 @@ export async function GET() {
       select: {
         sumberDanaId: true,
         pagu: true,
-        paguPerubahan: true
+        paguPerubahan: true,
+        namaPaket: true,
+        subKegiatan: {
+          select: {
+            kode: true,
+            nama: true
+          }
+        }
       }
     });
 
     const rincianTotals = new Map<number, number>();
+    const rincianBreakdowns = new Map<number, any[]>();
+
     rincianList.forEach(r => {
       const val = r.paguPerubahan !== null ? Number(r.paguPerubahan) : Number(r.pagu);
+      if (val === 0) return; // Skip zero pagu for breakdown to keep payload smaller
+
       rincianTotals.set(r.sumberDanaId, (rincianTotals.get(r.sumberDanaId) || 0) + val);
+      
+      const breakdownItem = {
+        subKegiatan: r.subKegiatan.nama,
+        kodeSubKegiatan: r.subKegiatan.kode,
+        rincian: r.namaPaket,
+        pagu: val
+      };
+
+      if (!rincianBreakdowns.has(r.sumberDanaId)) {
+        rincianBreakdowns.set(r.sumberDanaId, []);
+      }
+      rincianBreakdowns.get(r.sumberDanaId)!.push(breakdownItem);
     });
 
     // Gabungkan
@@ -63,7 +86,8 @@ export async function GET() {
         kode: sd.kode,
         nama: sd.nama,
         ceilingAmount: pagu ? Number(pagu.ceilingAmount) : 0,
-        excelAmount: rincianTotals.get(sd.id) || 0
+        excelAmount: rincianTotals.get(sd.id) || 0,
+        breakdown: rincianBreakdowns.get(sd.id) || []
       };
     });
 
