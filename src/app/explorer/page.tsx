@@ -118,7 +118,7 @@ export default function ExplorerPage() {
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(number);
   };
 
-  const renderRow = (item: any, type: string, depth: number) => {
+  const renderRow = (item: any, type: string, depth: number, parentInfo: any = {}) => {
     const key = `${type}_${item.id}`;
     
     // Auto-expand if searching and there is a match in children, otherwise respect manual toggle
@@ -135,6 +135,17 @@ export default function ExplorerPage() {
     let name = item.nama;
     if (type === 'skpd' && item.nama !== item.namaSubUnit) {
       name = `${item.nama} - ${item.namaSubUnit}`;
+    }
+
+    const currentInfo = { ...parentInfo };
+    if (type === 'skpd') {
+      currentInfo.skpd = { kode: code, nama: name };
+    } else if (type === 'program') {
+      currentInfo.program = { kode: code, nama: name };
+    } else if (type === 'kegiatan') {
+      currentInfo.kegiatan = { kode: code, nama: name };
+    } else if (type === 'subkegiatan') {
+      currentInfo.subkegiatan = { kode: code, nama: name };
     }
 
     return (
@@ -212,9 +223,9 @@ export default function ExplorerPage() {
 
         {isExpanded && (
           <div>
-            {type === 'skpd' && item.programs?.map((p: any) => renderRow(p, 'program', depth + 1))}
-            {type === 'program' && item.kegiatans?.map((k: any) => renderRow(k, 'kegiatan', depth + 1))}
-            {type === 'kegiatan' && item.subKegiatans?.map((s: any) => renderRow(s, 'subkegiatan', depth + 1))}
+            {type === 'skpd' && item.programs?.map((p: any) => renderRow(p, 'program', depth + 1, currentInfo))}
+            {type === 'program' && item.kegiatans?.map((k: any) => renderRow(k, 'kegiatan', depth + 1, currentInfo))}
+            {type === 'kegiatan' && item.subKegiatans?.map((s: any) => renderRow(s, 'subkegiatan', depth + 1, currentInfo))}
             {type === 'subkegiatan' && (
               <div className="bg-gray-50 border-b border-gray-200 shadow-inner">
                 {!rincianData[key] ? (
@@ -224,6 +235,7 @@ export default function ExplorerPage() {
                     rincianList={rincianData[key]} 
                     subKegiatanId={item.id}
                     isLocked={item.is_locked}
+                    parentInfo={currentInfo}
                     onRefresh={() => {
                       fetch(`/api/explorer?level=rincian&subKegiatanId=${item.id}`)
                         .then(res => res.json())

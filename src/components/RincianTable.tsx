@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { Pencil, Trash2, Plus, Lock, Check, X, Download } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
-export default function RincianTable({ rincianList, subKegiatanId, onRefresh, isLocked }: { rincianList: any[], subKegiatanId: number, onRefresh: () => void, isLocked?: boolean }) {
+export default function RincianTable({ rincianList, subKegiatanId, onRefresh, isLocked, parentInfo = {} }: { rincianList: any[], subKegiatanId: number, onRefresh: () => void, isLocked?: boolean, parentInfo?: any }) {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   
@@ -68,21 +68,37 @@ export default function RincianTable({ rincianList, subKegiatanId, onRefresh, is
   const exportToExcel = () => {
     if (rincianList.length === 0) return;
     
-    const wsData = rincianList.map((r, index) => ({
-      'No': index + 1,
-      'Kode Rekening': r.rekening?.kode || '-',
-      'Nama Rekening': r.rekening?.nama || '-',
-      'Rincian (Paket)': r.namaPaket,
-      'Komponen': r.komponen || '-',
-      'Volume': r.volume,
-      'Satuan': r.satuan || '-',
-      'Harga Satuan': Number(r.hargaSatuan),
-      'Pagu': Number(r.pagu),
-      'Pagu Perubahan': r.paguPerubahan !== null ? Number(r.paguPerubahan) : '-',
-      'Sumber Dana': r.sumberDana?.nama || '-'
-    }));
+    // Create header rows for Dinas, Program, Kegiatan, Sub Kegiatan
+    const headerRows = [
+      ['Dinas', `${parentInfo?.skpd?.kode || ''} - ${parentInfo?.skpd?.nama || ''}`],
+      ['Program', `${parentInfo?.program?.kode || ''} - ${parentInfo?.program?.nama || ''}`],
+      ['Kegiatan', `${parentInfo?.kegiatan?.kode || ''} - ${parentInfo?.kegiatan?.nama || ''}`],
+      ['Sub Kegiatan', `${parentInfo?.subkegiatan?.kode || ''} - ${parentInfo?.subkegiatan?.nama || ''}`],
+      [''],
+      [
+        'No', 'Kode Rekening', 'Nama Rekening', 'Rincian (Paket)', 'Komponen',
+        'Volume', 'Satuan', 'Harga Satuan', 'Pagu', 'Pagu Perubahan', 'Sumber Dana'
+      ]
+    ];
 
-    const ws = XLSX.utils.json_to_sheet(wsData);
+    const dataRows = rincianList.map((r, index) => [
+      index + 1,
+      r.rekening?.kode || '-',
+      r.rekening?.nama || '-',
+      r.namaPaket,
+      r.komponen || '-',
+      r.volume,
+      r.satuan || '-',
+      Number(r.hargaSatuan),
+      Number(r.pagu),
+      r.paguPerubahan !== null ? Number(r.paguPerubahan) : '-',
+      r.sumberDana?.nama || '-'
+    ]);
+
+    const wsData = [...headerRows, ...dataRows];
+    
+    // Create worksheet from array of arrays (aoa)
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
     
     ws['!cols'] = [
       { wch: 5 },
