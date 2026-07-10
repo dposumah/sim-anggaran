@@ -11,6 +11,7 @@ export default function RincianTable({ rincianList, subKegiatanId, onRefresh, is
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editData, setEditData] = useState<{ volume: number, hargaSatuan: number, sumberDanaId: number | null }>({ volume: 1, hargaSatuan: 0, sumberDanaId: null });
   const [sumberDanas, setSumberDanas] = useState<any[]>([]);
+  const [exportMode, setExportMode] = useState<'induk' | 'perubahan' | 'keduanya'>('perubahan');
 
   useEffect(() => {
     fetch('/api/sumber-dana')
@@ -75,25 +76,41 @@ export default function RincianTable({ rincianList, subKegiatanId, onRefresh, is
       ['Kegiatan', `${parentInfo?.kegiatan?.kode || ''} - ${parentInfo?.kegiatan?.nama || ''}`],
       ['Sub Kegiatan', `${parentInfo?.subkegiatan?.kode || ''} - ${parentInfo?.subkegiatan?.nama || ''}`],
       [''],
-      [
-        'No', 'Kode Rekening', 'Nama Rekening', 'Rincian (Paket)', 'Komponen',
-        'Volume', 'Satuan', 'Harga Satuan', 'Pagu', 'Pagu Perubahan', 'Sumber Dana'
-      ]
     ];
+    
+    const colHeaders = [
+      'No', 'Kode Rekening', 'Nama Rekening', 'Rincian (Paket)', 'Komponen',
+      'Volume', 'Satuan', 'Harga Satuan'
+    ];
+    if (exportMode === 'induk') colHeaders.push('Pagu Induk');
+    else if (exportMode === 'perubahan') colHeaders.push('Pagu Perubahan');
+    else colHeaders.push('Pagu Induk', 'Pagu Perubahan', 'Selisih');
+    colHeaders.push('Sumber Dana');
 
-    const dataRows = rincianList.map((r, index) => [
-      index + 1,
-      r.rekening?.kode || '-',
-      r.rekening?.nama || '-',
-      r.namaPaket,
-      r.komponen || '-',
-      r.volume,
-      r.satuan || '-',
-      Number(r.hargaSatuan),
-      Number(r.pagu),
-      r.paguPerubahan !== null ? Number(r.paguPerubahan) : '-',
-      r.sumberDana?.nama || '-'
-    ]);
+    headerRows.push(colHeaders);
+
+    const dataRows = rincianList.map((r, index) => {
+      const row: any[] = [
+        index + 1,
+        r.rekening?.kode || '-',
+        r.rekening?.nama || '-',
+        r.namaPaket,
+        r.komponen || '-',
+        r.volume,
+        r.satuan || '-',
+        Number(r.hargaSatuan)
+      ];
+
+      const paguInduk = Number(r.pagu);
+      const paguPerubahan = r.paguPerubahan !== null ? Number(r.paguPerubahan) : paguInduk;
+
+      if (exportMode === 'induk') row.push(paguInduk);
+      else if (exportMode === 'perubahan') row.push(paguPerubahan);
+      else row.push(paguInduk, paguPerubahan, paguPerubahan - paguInduk);
+
+      row.push(r.sumberDana?.nama || '-');
+      return row;
+    });
 
     const wsData = [...headerRows, ...dataRows];
     
@@ -175,13 +192,24 @@ export default function RincianTable({ rincianList, subKegiatanId, onRefresh, is
           )}
           
           {rincianList.length > 0 && (
-            <button 
-              onClick={exportToExcel}
-              className="flex items-center text-xs bg-green-600 text-white px-3 py-1.5 rounded-md hover:bg-green-700 transition-colors shadow-sm"
-              title="Export Rincian ke Excel"
-            >
-              <Download className="w-3 h-3 mr-1" /> Export
-            </button>
+            <div className="flex items-center gap-1">
+              <select
+                className="text-xs border border-gray-300 rounded px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                value={exportMode}
+                onChange={(e) => setExportMode(e.target.value as any)}
+              >
+                <option value="induk">Pagu Induk</option>
+                <option value="perubahan">Pagu Perubahan</option>
+                <option value="keduanya">Induk & Perubahan</option>
+              </select>
+              <button 
+                onClick={exportToExcel}
+                className="flex items-center text-xs bg-green-600 text-white px-3 py-1.5 rounded hover:bg-green-700 transition-colors shadow-sm"
+                title="Export Rincian ke Excel"
+              >
+                <Download className="w-3 h-3 mr-1" /> Export
+              </button>
+            </div>
           )}
 
           <button className="flex items-center text-xs bg-primary text-white px-3 py-1.5 rounded-md hover:bg-primary-hover transition-colors shadow-sm" disabled={isLocked}>

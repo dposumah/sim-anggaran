@@ -9,6 +9,7 @@ export default function LaporanPage() {
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const { tahun } = useYear();
+  const [exportModeSd, setExportModeSd] = useState<'induk' | 'perubahan' | 'keduanya'>('perubahan');
 
   useEffect(() => {
     fetch(`/api/laporan?tahun=${tahun}`)
@@ -67,9 +68,18 @@ export default function LaporanPage() {
           <h1 className="text-2xl font-bold text-foreground">Laporan & Rekapitulasi</h1>
           <p className="text-sm text-secondary">Ringkasan total pagu anggaran per program.</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
+          <select
+            className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-blue-500 focus:border-blue-500 outline-none"
+            value={exportModeSd}
+            onChange={(e) => setExportModeSd(e.target.value as any)}
+          >
+            <option value="induk">Pagu Induk</option>
+            <option value="perubahan">Pagu Perubahan</option>
+            <option value="keduanya">Induk & Perubahan</option>
+          </select>
           <button 
-            onClick={() => window.open(`/api/laporan/export-sumber-dana?tahun=${tahun}`, '_blank')}
+            onClick={() => window.open(`/api/laporan/export-sumber-dana?tahun=${tahun}&mode=${exportModeSd}`, '_blank')}
             className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors shadow-sm"
           >
             <FileSpreadsheet className="w-5 h-5" />
