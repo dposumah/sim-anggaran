@@ -11,7 +11,7 @@ import {
   X,
   Search
 } from 'lucide-react';
-import RincianTable from '@/components/RincianTable';
+import Link from 'next/link';
 import { useYear } from '@/contexts/YearContext';
 
 export default function ExplorerPage() {
@@ -242,22 +242,10 @@ export default function ExplorerPage() {
             {type === 'program' && item.children?.map((k: any) => renderRow(k, 'kegiatan', depth + 1, currentInfo))}
             {type === 'kegiatan' && item.children?.map((s: any) => renderRow(s, 'subKegiatan', depth + 1, currentInfo))}
             {(type === 'subkegiatan' || type === 'subKegiatan') && (
-              <div className="bg-gray-50 border-b border-gray-200 shadow-inner">
-                {!rincianData[key] ? (
-                  <div className="p-4 text-center text-sm text-gray-500">Memuat rincian...</div>
-                ) : (
-                  <RincianTable 
-                    rincianList={rincianData[key]} 
-                    subKegiatanId={item.id}
-                    isLocked={item.is_locked}
-                    parentInfo={currentInfo}
-                    onRefresh={() => {
-                      fetch(`/api/explorer?level=rincian&subKegiatanId=${item.id}`)
-                        .then(res => res.json())
-                        .then(data => setRincianData(prev => ({ ...prev, [key]: data })));
-                    }}
-                  />
-                )}
+              <div className="bg-gray-50 border-b border-gray-200 shadow-inner p-4 flex justify-center">
+                <Link href={`/explorer/${item.id}`} className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ring-offset-background bg-blue-600 text-white hover:bg-blue-700 h-10 py-2 px-4">
+                  Buka Halaman Rincian
+                </Link>
               </div>
             )}
           </div>
