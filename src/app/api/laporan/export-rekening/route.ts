@@ -52,6 +52,34 @@ export async function GET(request: Request) {
       ]
     });
 
+    const realisasiList = await prisma.realisasiBelanja.findMany({
+      where: {
+        subKegiatan: {
+          kegiatan: {
+            program: {
+              skpd: {
+                tahunId: tahunData.id,
+                nama: { contains: 'PENDIDIKAN', mode: 'insensitive' }
+              }
+            }
+          }
+        }
+      }
+    });
+
+    const subRekRealisasiMap: Record<string, number> = {};
+    realisasiList.forEach(r => {
+      const key = `${r.subKegiatanId}-${r.rekeningId}`;
+      subRekRealisasiMap[key] = (subRekRealisasiMap[key] || 0) + Number(r.nominal || 0);
+    });
+
+    const subRekPaguMap: Record<string, number> = {};
+    rincianList.forEach(r => {
+      const key = `${r.subKegiatanId}-${r.rekeningId}`;
+      const pagu = r.paguPerubahan !== null ? Number(r.paguPerubahan) : Number(r.paguInduk || 0);
+      subRekPaguMap[key] = (subRekPaguMap[key] || 0) + pagu;
+    });
+
     const groupedBySubKegiatan = rincianList.reduce((acc, r) => {
       const skId = r.subKegiatan.id;
       if (!acc[skId]) {
@@ -64,9 +92,10 @@ export async function GET(request: Request) {
       return acc;
     }, {} as Record<string, any>);
 
-    const wsData: any[][] = [];
+    const wb = XLSX.utils.book_new();
 
     Object.values(groupedBySubKegiatan).forEach(group => {
+      const wsData: any[][] = [];
       const sk = group.subKegiatan;
       const prog = sk.kegiatan.program;
       const keg = sk.kegiatan;
@@ -89,34 +118,48 @@ export async function GET(request: Request) {
       wsData.push(['Pagu Sub Kegiatan', totalPaguPerubahan]);
       wsData.push([]);
       
-      wsData.push(['Nama Rekening', 'Sumber Dana', 'Uraian Paket', 'Pagu Induk', 'Pagu Perubahan']);
+      wsData.push(['Nama Rekening', 'Sumber Dana', 'Uraian Paket', 'Pagu Induk', 'Pagu Perubahan', 'Realisasi']);
       
       rincian.forEach((r: any) => {
+        const key = `${r.subKegiatanId}-${r.rekeningId}`;
+        const totalPagu = subRekPaguMap[key] || 1;
+        const totalReal = subRekRealisasiMap[key] || 0;
+        const rowPaguPerubahan = Number(r.paguPerubahan !== null ? r.paguPerubahan : (r.paguInduk || 0));
+        const propReal = (rowPaguPerubahan / totalPagu) * totalReal;
+
         wsData.push([
           r.rekening.nama,
           r.sumberDana.nama,
           r.namaPaket || '-',
           Number(r.paguInduk || 0),
-          Number(r.paguPerubahan !== null ? r.paguPerubahan : (r.paguInduk || 0))
+          rowPaguPerubahan,
+          propReal
         ]);
       });
       
-      wsData.push([]);
-      wsData.push([]);
+      const ws = XLSX.utils.aoa_to_sheet(wsData);
+      ws['!cols'] = [
+        { wch: 45 }, // Kolom A
+        { wch: 35 }, // Kolom B
+        { wch: 30 }, // Kolom C
+        { wch: 18 }, // Kolom D
+        { wch: 18 }, // Kolom E
+        { wch: 18 }  // Kolom F (Realisasi)
+      ];
+
+      let sheetName = sk.kode || 'Sheet';
+      if (sheetName.length > 31) sheetName = sheetName.substring(0, 31);
+      
+      // Ensure unique sheet name if there happen to be duplicates somehow
+      let counter = 1;
+      let finalSheetName = sheetName;
+      while (wb.SheetNames.includes(finalSheetName)) {
+        finalSheetName = `${sheetName.substring(0, 28)}_${counter}`;
+        counter++;
+      }
+      
+      XLSX.utils.book_append_sheet(wb, ws, finalSheetName);
     });
-
-    const ws = XLSX.utils.aoa_to_sheet(wsData);
-    
-    ws['!cols'] = [
-      { wch: 45 }, // Kolom A
-      { wch: 35 }, // Kolom B
-      { wch: 30 }, // Kolom C
-      { wch: 18 }, // Kolom D
-      { wch: 18 }  // Kolom E
-    ];
-
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Rincian_Rekening');
     const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'buffer' });
 
     return new NextResponse(excelBuffer, {
