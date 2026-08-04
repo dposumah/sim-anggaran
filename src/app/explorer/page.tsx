@@ -127,7 +127,7 @@ export default function ExplorerPage() {
     let Icon = Building;
     if (type === 'program') Icon = Folder;
     if (type === 'kegiatan') Icon = FileText;
-    if (type === 'subkegiatan') Icon = FileJson;
+    if (type === 'subkegiatan' || type === 'subKegiatan') Icon = FileJson;
     
     let code = item.kode;
     if (type === 'skpd') code = item.kodeSubUnit;
@@ -144,7 +144,7 @@ export default function ExplorerPage() {
       currentInfo.program = { kode: code, nama: name };
     } else if (type === 'kegiatan') {
       currentInfo.kegiatan = { kode: code, nama: name };
-    } else if (type === 'subkegiatan') {
+    } else if (type === 'subkegiatan' || type === 'subKegiatan') {
       currentInfo.subkegiatan = { kode: code, nama: name };
     }
 
@@ -168,7 +168,7 @@ export default function ExplorerPage() {
             <div className="flex-1 min-w-0">
               <span className="font-medium text-gray-700 mr-2">{code}</span>
               <span className={`text-gray-900 ${depth === 0 ? 'font-semibold' : ''}`}>{name}</span>
-              {type === 'subkegiatan' && item.is_locked && (
+              {(type === 'subkegiatan' || type === 'subKegiatan') && item.is_locked && (
                 <span className="ml-2 inline-flex items-center rounded-md bg-red-50 px-2 py-0.5 text-[10px] font-medium text-red-700 ring-1 ring-inset ring-red-600/10">
                   Terkunci
                 </span>
@@ -239,9 +239,9 @@ export default function ExplorerPage() {
         {isExpanded && (
           <div>
             {type === 'skpd' && item.programs?.map((p: any) => renderRow(p, 'program', depth + 1, currentInfo))}
-            {type === 'program' && item.kegiatans?.map((k: any) => renderRow(k, 'kegiatan', depth + 1, currentInfo))}
-            {type === 'kegiatan' && item.subKegiatans?.map((s: any) => renderRow(s, 'subkegiatan', depth + 1, currentInfo))}
-            {type === 'subkegiatan' && (
+            {type === 'program' && item.children?.map((k: any) => renderRow(k, 'kegiatan', depth + 1, currentInfo))}
+            {type === 'kegiatan' && item.children?.map((s: any) => renderRow(s, 'subKegiatan', depth + 1, currentInfo))}
+            {(type === 'subkegiatan' || type === 'subKegiatan') && (
               <div className="bg-gray-50 border-b border-gray-200 shadow-inner">
                 {!rincianData[key] ? (
                   <div className="p-4 text-center text-sm text-gray-500">Memuat rincian...</div>
