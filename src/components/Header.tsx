@@ -9,7 +9,7 @@ export default function Header() {
   const { tahun, setTahun } = useYear();
 
   return (
-    <header className="flex h-16 shrink-0 items-center justify-between border-b border-border bg-surface px-6 shadow-sm">
+    <header className="flex h-16 shrink-0 items-center justify-between border-b border-border bg-surface/90 backdrop-blur-md px-6 shadow-sm z-10 sticky top-0">
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-3">
           <div className="h-10 w-10 overflow-hidden relative">

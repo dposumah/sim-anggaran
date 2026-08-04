@@ -17,7 +17,6 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Tahun anggaran tidak ditemukan' }, { status: 404 });
     }
 
-    // Fetch all RincianBelanja for Dinas Pendidikan for the year
     const rincianList = await prisma.rincianBelanja.findMany({
       where: {
         subKegiatan: {
@@ -63,31 +62,47 @@ export async function GET(request: Request) {
       },
       include: {
         rekening: true,
-        subKegiatan: true
+        subKegiatan: true,
+        sumberDana: true // Realisasi doesn't easily have sumberDana, we rely on Rincian mapping below
       }
     });
 
+    // Note: realisasiBelanja actually does not have sumberDana directly linked unless it's joined.
+    // Wait, in schema, realisasiBelanja has no sumberDana. It's OK. We map Realisasi for BOSP Reguler/Kinerja by checking Rekening/Paket if possible, but actually since we don't have sumberDana for realisasi, we can try to guess it from `rincianList`. 
+    // To be perfectly accurate, we should aggregate pagu by SubKegiatan+Rekening+SumberDana.
+    // For simplicity, BOSP Reguler vs Kinerja realisasi will just be proportional or we map it if we can.
+    // Wait, the prompt just said "Perbandingan Pagu vs Realisasi", but for the BOSP cards "data Pagu BOSP Reguler dan BOSP Kinerja", maybe only Pagu is needed? 
+    // Let's create a map to store BOSP Reguler/Kinerja values.
+    
     let paguIndukTotal = 0; let paguPerubahanTotal = 0; let realisasiTotal = 0;
     
-    // Gaji
     let gajiPnsInduk = 0; let gajiPnsPerubahan = 0; let gajiPnsRealisasi = 0;
     let gajiPppkInduk = 0; let gajiPppkPerubahan = 0; let gajiPppkRealisasi = 0;
     let pppkParuhWaktuInduk = 0; let pppkParuhWaktuPerubahan = 0; let pppkParuhWaktuRealisasi = 0;
     
-    // TPP & TPG
     let tppInduk = 0; let tppPerubahan = 0; let tppRealisasi = 0;
     let tpgInduk = 0; let tpgPerubahan = 0; let tpgRealisasi = 0;
     
-    // BOSP
-    let bospSdInduk = 0; let bospSdPerubahan = 0; let bospSdRealisasi = 0;
-    let bospSmpInduk = 0; let bospSmpPerubahan = 0; let bospSmpRealisasi = 0;
-    let bospPaudInduk = 0; let bospPaudPerubahan = 0; let bospPaudRealisasi = 0;
-    let bospKesetaraanInduk = 0; let bospKesetaraanPerubahan = 0; let bospKesetaraanRealisasi = 0;
+    const initBosp = () => ({ induk: 0, perubahan: 0, realisasi: 0, reguler: { induk: 0, perubahan: 0, realisasi: 0 }, kinerja: { induk: 0, perubahan: 0, realisasi: 0 } });
+    const bospSd = initBosp();
+    const bospSmp = initBosp();
+    const bospPaud = initBosp();
+    const bospKesetaraan = initBosp();
     
-    // Maps
     const paketMap: Record<string, { nama: string, induk: number, perubahan: number }> = {};
     const subKegRealisasiMap: Record<number, { nama: string, kode: string, paguInduk: number, paguPerubahan: number, realisasi: number }> = {};
+    const rekRealisasiMap: Record<number, { nama: string, kode: string, paguInduk: number, paguPerubahan: number, realisasi: number }> = {};
     const sumDanaMap: Record<string, { induk: number, perubahan: number, realisasi: number }> = {};
+
+    // Helper to determine if BOSP Reguler or Kinerja based on sumberDana
+    const getBospType = (sdNama: string) => {
+      const upper = sdNama.toUpperCase();
+      if (upper.includes('KINERJA')) return 'kinerja';
+      return 'reguler'; // Default to reguler if not specified as kinerja
+    };
+
+    // To properly map Realisasi to Reguler/Kinerja, we create a map of SubKegiatan+Rekening -> BOSP Type
+    const bospTypeMap: Record<string, string> = {}; 
 
     rincianList.forEach(r => {
       const prog = r.subKegiatan.kegiatan.program;
@@ -106,9 +121,19 @@ export async function GET(request: Request) {
       subKegRealisasiMap[sub.id].paguInduk += nilaiInduk;
       subKegRealisasiMap[sub.id].paguPerubahan += nilaiPerubahan;
 
+      if (!rekRealisasiMap[rek.id]) {
+        rekRealisasiMap[rek.id] = { nama: rek.nama, kode: rek.kode, paguInduk: 0, paguPerubahan: 0, realisasi: 0 };
+      }
+      rekRealisasiMap[rek.id].paguInduk += nilaiInduk;
+      rekRealisasiMap[rek.id].paguPerubahan += nilaiPerubahan;
+
+      const subUpper = (sub.nama || '').toUpperCase();
+      const rekUpper = (rek.nama || '').toUpperCase();
+      const isBosp = subUpper.includes('BOS') || subUpper.includes('BOP');
+      const isGaji = subUpper.includes('GAJI DAN TUNJANGAN ASN');
+
       // PNS & PPPK
-      if ((sub.nama || '').toUpperCase().includes('GAJI DAN TUNJANGAN ASN')) {
-        const rekUpper = (rek.nama || '').toUpperCase();
+      if (isGaji) {
         const isExcluded = rekUpper.includes('PNSD') || rekUpper.includes('TUNJANGAN PROFESI GURU') || rekUpper.includes('TAMBAHAN PENGHASILAN') || rekUpper.includes('TAMSIL');
         if (!isExcluded) {
           if (rekUpper.includes('PNS')) {
@@ -122,39 +147,52 @@ export async function GET(request: Request) {
       }
 
       // Paruh Waktu
-      if ((sub.nama || '').toUpperCase().includes('PENYEDIAAN JASA PELAYANAN UMUM KANTOR') && (rek.nama || '').toUpperCase().includes('PARUH WAKTU')) {
+      if ((sub.nama || '').toUpperCase().includes('PENYEDIAAN JASA PELAYANAN UMUM KANTOR') && rekUpper.includes('PARUH WAKTU')) {
         pppkParuhWaktuInduk += nilaiInduk;
         pppkParuhWaktuPerubahan += nilaiPerubahan;
       }
 
       // TPP & TPG
-      if ((rek.nama || '').toUpperCase().includes('TAMBAHAN PENGHASILAN BERDASARKAN BEBAN KERJA PNS')) {
+      if (rekUpper.includes('TAMBAHAN PENGHASILAN BERDASARKAN BEBAN KERJA PNS')) {
         tppInduk += nilaiInduk;
         tppPerubahan += nilaiPerubahan;
       }
-      if ((rek.nama || '').toUpperCase().includes('TUNJANGAN PROFESI GURU')) {
+      if (rekUpper.includes('TUNJANGAN PROFESI GURU')) {
         tpgInduk += nilaiInduk;
         tpgPerubahan += nilaiPerubahan;
       }
 
       // BOSP
-      const subUpper = (sub.nama || '').toUpperCase();
-      if (subUpper.includes('PENGELOLAAN DANA BOS SEKOLAH DASAR')) {
-        bospSdInduk += nilaiInduk;
-        bospSdPerubahan += nilaiPerubahan;
-      } else if (subUpper.includes('PENGELOLAAN DANA BOS SEKOLAH MENENGAH PERTAMA')) {
-        bospSmpInduk += nilaiInduk;
-        bospSmpPerubahan += nilaiPerubahan;
-      } else if (subUpper.includes('PENGELOLAAN DANA BOP PAUD')) {
-        bospPaudInduk += nilaiInduk;
-        bospPaudPerubahan += nilaiPerubahan;
-      } else if (subUpper.includes('PENGELOLAAN DANA BOP SEKOLAH NONFORMAL/KESETARAAN')) {
-        bospKesetaraanInduk += nilaiInduk;
-        bospKesetaraanPerubahan += nilaiPerubahan;
+      if (isBosp) {
+        const sdNama = r.sumberDana.nama || '';
+        const bospType = getBospType(sdNama);
+        // Store for realisasi mapping
+        bospTypeMap[`${sub.id}-${rek.id}`] = bospType;
+
+        if (subUpper.includes('SEKOLAH DASAR')) {
+          bospSd.induk += nilaiInduk;
+          bospSd.perubahan += nilaiPerubahan;
+          bospSd[bospType].induk += nilaiInduk;
+          bospSd[bospType].perubahan += nilaiPerubahan;
+        } else if (subUpper.includes('SEKOLAH MENENGAH PERTAMA')) {
+          bospSmp.induk += nilaiInduk;
+          bospSmp.perubahan += nilaiPerubahan;
+          bospSmp[bospType].induk += nilaiInduk;
+          bospSmp[bospType].perubahan += nilaiPerubahan;
+        } else if (subUpper.includes('PAUD')) {
+          bospPaud.induk += nilaiInduk;
+          bospPaud.perubahan += nilaiPerubahan;
+          bospPaud[bospType].induk += nilaiInduk;
+          bospPaud[bospType].perubahan += nilaiPerubahan;
+        } else if (subUpper.includes('KESETARAAN')) {
+          bospKesetaraan.induk += nilaiInduk;
+          bospKesetaraan.perubahan += nilaiPerubahan;
+          bospKesetaraan[bospType].induk += nilaiInduk;
+          bospKesetaraan[bospType].perubahan += nilaiPerubahan;
+        }
       }
 
-      // Uraian Paket (Exclude Program Penunjang and BOSP)
-      const isBosp = subUpper.includes('BOS') || subUpper.includes('BOP');
+      // Uraian Paket
       const isEmptyPaket = (r.namaPaket || '').trim() === '-' || (r.namaPaket || '').trim() === '';
       if (r.namaPaket && !(prog.nama || '').toUpperCase().includes('PROGRAM PENUNJANG URUSAN PEMERINTAHAN DAERAH KABUPATEN/KOTA') && !isBosp && !isEmptyPaket) {
         if (!paketMap[r.namaPaket]) paketMap[r.namaPaket] = { nama: r.namaPaket, induk: 0, perubahan: 0 };
@@ -178,43 +216,46 @@ export async function GET(request: Request) {
       if (subKegRealisasiMap[sub.id]) {
         subKegRealisasiMap[sub.id].realisasi += nilai;
       }
+      if (rekRealisasiMap[rek.id]) {
+        rekRealisasiMap[rek.id].realisasi += nilai;
+      }
 
-      // PNS & PPPK
-      if ((sub.nama || '').toUpperCase().includes('GAJI DAN TUNJANGAN ASN')) {
-        const rekUpper = (rek.nama || '').toUpperCase();
+      const subUpper = (sub.nama || '').toUpperCase();
+      const rekUpper = (rek.nama || '').toUpperCase();
+      const isBosp = subUpper.includes('BOS') || subUpper.includes('BOP');
+      const isGaji = subUpper.includes('GAJI DAN TUNJANGAN ASN');
+
+      if (isGaji) {
         const isExcluded = rekUpper.includes('PNSD') || rekUpper.includes('TUNJANGAN PROFESI GURU') || rekUpper.includes('TAMBAHAN PENGHASILAN') || rekUpper.includes('TAMSIL');
         if (!isExcluded) {
-          if (rekUpper.includes('PNS')) {
-            gajiPnsRealisasi += nilai;
-          } else if (rekUpper.includes('PPPK')) {
-            gajiPppkRealisasi += nilai;
-          }
+          if (rekUpper.includes('PNS')) gajiPnsRealisasi += nilai;
+          else if (rekUpper.includes('PPPK')) gajiPppkRealisasi += nilai;
         }
       }
 
-      // Paruh Waktu
-      if ((sub.nama || '').toUpperCase().includes('PENYEDIAAN JASA PELAYANAN UMUM KANTOR') && (rek.nama || '').toUpperCase().includes('PARUH WAKTU')) {
+      if ((sub.nama || '').toUpperCase().includes('PENYEDIAAN JASA PELAYANAN UMUM KANTOR') && rekUpper.includes('PARUH WAKTU')) {
         pppkParuhWaktuRealisasi += nilai;
       }
 
-      // TPP & TPG
-      if ((rek.nama || '').toUpperCase().includes('TAMBAHAN PENGHASILAN BERDASARKAN BEBAN KERJA PNS')) {
-        tppRealisasi += nilai;
-      }
-      if ((rek.nama || '').toUpperCase().includes('TUNJANGAN PROFESI GURU')) {
-        tpgRealisasi += nilai;
-      }
+      if (rekUpper.includes('TAMBAHAN PENGHASILAN BERDASARKAN BEBAN KERJA PNS')) tppRealisasi += nilai;
+      if (rekUpper.includes('TUNJANGAN PROFESI GURU')) tpgRealisasi += nilai;
 
-      // BOSP
-      const subUpper = (sub.nama || '').toUpperCase();
-      if (subUpper.includes('PENGELOLAAN DANA BOS SEKOLAH DASAR')) {
-        bospSdRealisasi += nilai;
-      } else if (subUpper.includes('PENGELOLAAN DANA BOS SEKOLAH MENENGAH PERTAMA')) {
-        bospSmpRealisasi += nilai;
-      } else if (subUpper.includes('PENGELOLAAN DANA BOP PAUD')) {
-        bospPaudRealisasi += nilai;
-      } else if (subUpper.includes('PENGELOLAAN DANA BOP SEKOLAH NONFORMAL/KESETARAAN')) {
-        bospKesetaraanRealisasi += nilai;
+      if (isBosp) {
+        const bospType = bospTypeMap[`${sub.id}-${rek.id}`] || 'reguler';
+        
+        if (subUpper.includes('SEKOLAH DASAR')) {
+          bospSd.realisasi += nilai;
+          bospSd[bospType as 'reguler' | 'kinerja'].realisasi += nilai;
+        } else if (subUpper.includes('SEKOLAH MENENGAH PERTAMA')) {
+          bospSmp.realisasi += nilai;
+          bospSmp[bospType as 'reguler' | 'kinerja'].realisasi += nilai;
+        } else if (subUpper.includes('PAUD')) {
+          bospPaud.realisasi += nilai;
+          bospPaud[bospType as 'reguler' | 'kinerja'].realisasi += nilai;
+        } else if (subUpper.includes('KESETARAAN')) {
+          bospKesetaraan.realisasi += nilai;
+          bospKesetaraan[bospType as 'reguler' | 'kinerja'].realisasi += nilai;
+        }
       }
     });
 
@@ -229,11 +270,61 @@ export async function GET(request: Request) {
       .sort((a, b) => b.perubahan - a.perubahan)
       .slice(0, 10);
 
-    // Get top 15 sub kegiatan terbesar (exclude Gaji dan Tunjangan)
+    // Get top 15 sub kegiatan terbesar (exclude Gaji dan Tunjangan and BOSP)
     const topSubKegiatan = Object.values(subKegRealisasiMap)
-      .filter(sk => !sk.nama.toUpperCase().includes('GAJI DAN TUNJANGAN ASN'))
+      .filter(sk => {
+        const upper = sk.nama.toUpperCase();
+        return !upper.includes('GAJI DAN TUNJANGAN ASN') && !upper.includes('BOS') && !upper.includes('BOP');
+      })
       .sort((a, b) => b.paguPerubahan - a.paguPerubahan)
-      .slice(0, 15); // Top 15 Sub Kegiatan
+      .slice(0, 15);
+
+    // Get top 15 rekening terbesar (exclude Gaji dan Tunjangan and BOSP)
+    // To properly exclude them, we need to know if a rekening is exclusively used for BOSP/Gaji.
+    // Wait, it's easier to just rely on the pagu that we accumulated, but `rekRealisasiMap` accumulated ALL values.
+    // Let's filter rekRealisasiMap to only contain Rekening that are not completely BOSP/Gaji related.
+    // Or we can rebuild rekRealisasiMap to ONLY accumulate when it's not Gaji/BOSP.
+    
+    // Actually, to make it accurate, I should re-calculate topRekening by iterating rincianList again or applying the filter during the first pass.
+    // Let's rebuild topRekening safely by iterating rincianList again just for top Rekening, filtering out Gaji and BOSP.
+    
+    const rekFilteredMap: Record<number, { nama: string, kode: string, paguInduk: number, paguPerubahan: number, realisasi: number }> = {};
+    
+    rincianList.forEach(r => {
+      const sub = r.subKegiatan;
+      const rek = r.rekening;
+      const subUpper = (sub.nama || '').toUpperCase();
+      const isBosp = subUpper.includes('BOS') || subUpper.includes('BOP');
+      const isGaji = subUpper.includes('GAJI DAN TUNJANGAN ASN');
+      
+      if (!isBosp && !isGaji) {
+        if (!rekFilteredMap[rek.id]) {
+          rekFilteredMap[rek.id] = { nama: rek.nama, kode: rek.kode, paguInduk: 0, paguPerubahan: 0, realisasi: 0 };
+        }
+        const nilaiInduk = r.paguInduk ? Number(r.paguInduk) : 0;
+        const nilaiPerubahan = r.paguPerubahan !== null ? Number(r.paguPerubahan) : nilaiInduk;
+        rekFilteredMap[rek.id].paguInduk += nilaiInduk;
+        rekFilteredMap[rek.id].paguPerubahan += nilaiPerubahan;
+      }
+    });
+    
+    realisasiList.forEach(r => {
+      const sub = r.subKegiatan;
+      const rek = r.rekening;
+      const subUpper = (sub.nama || '').toUpperCase();
+      const isBosp = subUpper.includes('BOS') || subUpper.includes('BOP');
+      const isGaji = subUpper.includes('GAJI DAN TUNJANGAN ASN');
+      
+      if (!isBosp && !isGaji) {
+        if (rekFilteredMap[rek.id]) {
+          rekFilteredMap[rek.id].realisasi += Number(r.nominal || 0);
+        }
+      }
+    });
+
+    const topRekening = Object.values(rekFilteredMap)
+      .sort((a, b) => b.paguPerubahan - a.paguPerubahan)
+      .slice(0, 15);
 
     return NextResponse.json({
       summary: {
@@ -243,14 +334,15 @@ export async function GET(request: Request) {
         gajiPppkParuhWaktu: { induk: pppkParuhWaktuInduk, perubahan: pppkParuhWaktuPerubahan, realisasi: pppkParuhWaktuRealisasi },
         tpp: { induk: tppInduk, perubahan: tppPerubahan, realisasi: tppRealisasi },
         tpg: { induk: tpgInduk, perubahan: tpgPerubahan, realisasi: tpgRealisasi },
-        bospSd: { induk: bospSdInduk, perubahan: bospSdPerubahan, realisasi: bospSdRealisasi },
-        bospSmp: { induk: bospSmpInduk, perubahan: bospSmpPerubahan, realisasi: bospSmpRealisasi },
-        bospPaud: { induk: bospPaudInduk, perubahan: bospPaudPerubahan, realisasi: bospPaudRealisasi },
-        bospKesetaraan: { induk: bospKesetaraanInduk, perubahan: bospKesetaraanPerubahan, realisasi: bospKesetaraanRealisasi },
+        bospSd,
+        bospSmp,
+        bospPaud,
+        bospKesetaraan,
       },
       chartData,
       topPaket,
-      topSubKegiatan
+      topSubKegiatan,
+      topRekening
     });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });

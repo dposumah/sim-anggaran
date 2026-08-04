@@ -19,7 +19,7 @@ export default function ClientLayoutWrapper({ children }: { children: React.Reac
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-background">
+    <div className="flex h-screen overflow-hidden bg-gradient-to-br from-red-50 via-white to-red-50">
       <Sidebar />
       <div className="flex flex-1 flex-col overflow-hidden">
         <Header />
