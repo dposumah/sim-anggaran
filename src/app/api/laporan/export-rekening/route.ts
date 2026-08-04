@@ -52,23 +52,69 @@ export async function GET(request: Request) {
       ]
     });
 
-    const exportData = rincianList.map((r, i) => ({
-      'No': i + 1,
-      'Kode Program': r.subKegiatan.kegiatan.program.kode,
-      'Nama Program': r.subKegiatan.kegiatan.program.nama,
-      'Kode Kegiatan': r.subKegiatan.kegiatan.kode,
-      'Nama Kegiatan': r.subKegiatan.kegiatan.nama,
-      'Kode Sub Kegiatan': r.subKegiatan.kode,
-      'Nama Sub Kegiatan': r.subKegiatan.nama,
-      'Kode Rekening': r.rekening.kode,
-      'Nama Rekening': r.rekening.nama,
-      'Sumber Dana': r.sumberDana.nama,
-      'Uraian Paket': r.namaPaket || '-',
-      'Pagu Induk': Number(r.paguInduk),
-      'Pagu Perubahan': r.paguPerubahan ? Number(r.paguPerubahan) : Number(r.paguInduk)
-    }));
+    const groupedBySubKegiatan = rincianList.reduce((acc, r) => {
+      const skId = r.subKegiatan.id;
+      if (!acc[skId]) {
+        acc[skId] = {
+          subKegiatan: r.subKegiatan,
+          rincian: []
+        };
+      }
+      acc[skId].rincian.push(r);
+      return acc;
+    }, {} as Record<string, any>);
 
-    const ws = XLSX.utils.json_to_sheet(exportData);
+    const wsData: any[][] = [];
+
+    Object.values(groupedBySubKegiatan).forEach(group => {
+      const sk = group.subKegiatan;
+      const prog = sk.kegiatan.program;
+      const keg = sk.kegiatan;
+      const rincian = group.rincian;
+
+      let totalPaguInduk = 0;
+      let totalPaguPerubahan = 0;
+      
+      rincian.forEach((r: any) => {
+        totalPaguInduk += Number(r.paguInduk || 0);
+        totalPaguPerubahan += Number(r.paguPerubahan !== null ? r.paguPerubahan : (r.paguInduk || 0));
+      });
+
+      wsData.push(['Kode Program', prog.kode]);
+      wsData.push(['Nama Program', prog.nama]);
+      wsData.push(['Kode Kegiatan', keg.kode]);
+      wsData.push(['Nama Kegiatan', keg.nama]);
+      wsData.push(['Kode Sub Kegiatan', sk.kode]);
+      wsData.push(['Nama Sub Kegiatan', sk.nama]);
+      wsData.push(['Pagu Sub Kegiatan', totalPaguPerubahan]);
+      wsData.push([]);
+      
+      wsData.push(['Nama Rekening', 'Sumber Dana', 'Uraian Paket', 'Pagu Induk', 'Pagu Perubahan']);
+      
+      rincian.forEach((r: any) => {
+        wsData.push([
+          r.rekening.nama,
+          r.sumberDana.nama,
+          r.namaPaket || '-',
+          Number(r.paguInduk || 0),
+          Number(r.paguPerubahan !== null ? r.paguPerubahan : (r.paguInduk || 0))
+        ]);
+      });
+      
+      wsData.push([]);
+      wsData.push([]);
+    });
+
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+    
+    ws['!cols'] = [
+      { wch: 45 }, // Kolom A
+      { wch: 35 }, // Kolom B
+      { wch: 30 }, // Kolom C
+      { wch: 18 }, // Kolom D
+      { wch: 18 }  // Kolom E
+    ];
+
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Rincian_Rekening');
     const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'buffer' });
