@@ -1,4 +1,5 @@
 export const dynamic = 'force-dynamic';
+export const maxDuration = 300;
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import * as XLSX from 'xlsx';
@@ -260,12 +261,17 @@ export async function POST(request: Request) {
         for (const existArr of existingMap.values()) {
           for (const exist of existArr) {
             const { id, ...rest } = exist;
-            mergedRincian.push({
-              ...rest,
-              volumePerubahan: 0,
-              hargaSatuanPerubahan: 0,
-              paguPerubahan: 0
-            });
+            const updatedRest = { ...rest };
+            if (paguType === 'rkpd') {
+              updatedRest.volumeRkpd = 0;
+              updatedRest.hargaSatuanRkpd = 0;
+              updatedRest.paguRkpd = 0;
+            } else if (paguType === 'perubahan') {
+              updatedRest.volumePerubahan = 0;
+              updatedRest.hargaSatuanPerubahan = 0;
+              updatedRest.paguPerubahan = 0;
+            }
+            mergedRincian.push(updatedRest);
           }
         }
         
