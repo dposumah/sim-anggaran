@@ -14,6 +14,7 @@ export default function LaporanEksekutif() {
   const [activeChartTab, setActiveChartTab] = useState<'subkegiatan' | 'rekening'>('subkegiatan');
   const [selectedBosp, setSelectedBosp] = useState<{ title: string, data: any } | null>(null);
   const [selectedChartData, setSelectedChartData] = useState<{ title: string, type: 'subkegiatan' | 'rekening', data: any } | null>(null);
+  const [selectedPaket, setSelectedPaket] = useState<{ title: string, rincian: any[] } | null>(null);
 
   useEffect(() => {
     setLoading(true);
@@ -178,7 +179,7 @@ export default function LaporanEksekutif() {
         <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
           <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
             <Package className="w-5 h-5 text-primary" />
-            Top 10 Uraian Paket
+            Top 10 Kegiatan Teknis
           </h3>
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
@@ -187,14 +188,23 @@ export default function LaporanEksekutif() {
                 <XAxis type="number" tickFormatter={(value) => `${(value / 1000000).toFixed(0)}Jt`} style={{ fontSize: '11px' }} />
                 <YAxis dataKey="nama" type="category" width={120} style={{ fontSize: '10px' }} tick={{ fill: '#475569' }} />
                 <RechartsTooltip content={<CustomTooltip />} />
-                <Bar dataKey="perubahan" name="Pagu Perubahan" fill="#fca5a5" radius={[0, 4, 4, 0]} barSize={20} />
+                <Bar 
+                  dataKey="perubahan" 
+                  name="Pagu Perubahan" 
+                  fill="#fca5a5" 
+                  radius={[0, 4, 4, 0]} 
+                  barSize={20} 
+                  onClick={(data: any) => setSelectedPaket({ title: data.payload?.nama || data.nama, rincian: data.payload?.rincian || [] })}
+                  cursor="pointer"
+                />
               </BarChart>
             </ResponsiveContainer>
           </div>
+          <p className="text-[10px] text-gray-400 mt-2 text-center italic">* Klik pada batang grafik untuk melihat rincian.</p>
         </div>
       </div>
 
-      {/* Tabs for Top 15 Sub Kegiatan / Rekening */}
+      {/* Tabs for Sub Kegiatan / Rekening */}
       <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
         <div className="flex flex-col sm:flex-row justify-between items-center mb-6 border-b border-gray-100 pb-3">
           <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2 mb-3 sm:mb-0">
@@ -206,45 +216,34 @@ export default function LaporanEksekutif() {
               onClick={() => setActiveChartTab('subkegiatan')}
               className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${activeChartTab === 'subkegiatan' ? 'bg-white text-primary shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
             >
-              Top 15 Sub Kegiatan
+              Kegiatan
             </button>
             <button
               onClick={() => setActiveChartTab('rekening')}
               className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${activeChartTab === 'rekening' ? 'bg-white text-primary shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
             >
-              Top 15 Rekening
+              Rekening
             </button>
           </div>
         </div>
         
-        <div className="h-[500px]">
+        <div style={{ height: `${Math.max(500, (activeChartTab === 'subkegiatan' ? topSubKegiatan.length : topRekening.length) * 45)}px` }}>
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart 
               data={activeChartTab === 'subkegiatan' ? topSubKegiatan : topRekening} 
-              layout="horizontal" 
-              margin={{ top: 20, right: 10, left: 10, bottom: 90 }}
+              layout="vertical" 
+              margin={{ top: 5, right: 30, left: 10, bottom: 5 }}
             >
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-              <XAxis 
-                dataKey="nama" 
-                angle={-45} 
-                textAnchor="end" 
-                height={90} 
-                interval={0} 
-                style={{ fontSize: '9px' }} 
-                tick={{ fill: '#475569' }} 
-              />
-              <YAxis 
-                tickFormatter={(value) => `${(value / 1000000000).toFixed(1)}M`} 
-                style={{ fontSize: '11px' }} 
-              />
+              <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#f1f5f9" />
+              <XAxis type="number" tickFormatter={(value) => `${(value / 1000000000).toFixed(1)}M`} style={{ fontSize: '11px' }} />
+              <YAxis dataKey="nama" type="category" width={220} style={{ fontSize: '10px' }} tick={{ fill: '#475569' }} />
               <RechartsTooltip content={<CustomTooltip />} />
               <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} />
               <Bar 
                 dataKey="paguPerubahan" 
                 name="Pagu Perubahan" 
                 fill="#dc2626" 
-                radius={[4, 4, 0, 0]} 
+                radius={[0, 4, 4, 0]} 
                 barSize={12} 
                 onClick={(data: any) => setSelectedChartData({ title: data.payload?.nama || data.nama, type: activeChartTab, data: data.payload || data })}
                 cursor="pointer"
@@ -253,7 +252,7 @@ export default function LaporanEksekutif() {
                 dataKey="realisasi" 
                 name="Realisasi" 
                 fill="#10b981" 
-                radius={[4, 4, 0, 0]} 
+                radius={[0, 4, 4, 0]} 
                 barSize={12} 
                 onClick={(data: any) => setSelectedChartData({ title: data.payload?.nama || data.nama, type: activeChartTab, data: data.payload || data })}
                 cursor="pointer"
@@ -322,6 +321,80 @@ export default function LaporanEksekutif() {
             <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 text-right">
               <button 
                 onClick={() => setSelectedChartData(null)}
+                className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 shadow-sm transition-colors"
+              >
+                Tutup
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Kegiatan Teknis Detail Modal */}
+      {selectedPaket && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl overflow-hidden border border-gray-100 flex flex-col max-h-[90vh]">
+            <div className="bg-gray-50 px-6 py-4 border-b border-gray-100 flex justify-between items-center shrink-0">
+              <h3 className="font-bold text-lg text-gray-800 flex items-center gap-2">
+                <Package className="w-5 h-5 text-primary" />
+                Rincian Kegiatan Teknis
+              </h3>
+              <button 
+                onClick={() => setSelectedPaket(null)}
+                className="text-gray-400 hover:text-gray-600 bg-white p-1 rounded-full shadow-sm"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            
+            <div className="p-6 overflow-y-auto flex-1">
+              <h4 className="font-bold text-primary mb-4 text-xl">{selectedPaket.title}</h4>
+              <div className="overflow-x-auto rounded-xl border border-gray-200">
+                <table className="min-w-full divide-y divide-gray-200 text-sm">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-3 text-left font-bold text-gray-600">Sub Kegiatan</th>
+                      <th className="px-4 py-3 text-left font-bold text-gray-600">Rekening</th>
+                      <th className="px-4 py-3 text-left font-bold text-gray-600">Sumber Dana</th>
+                      <th className="px-4 py-3 text-right font-bold text-gray-600">Pagu Perubahan</th>
+                      <th className="px-4 py-3 text-right font-bold text-gray-600">Realisasi</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200 bg-white">
+                    {selectedPaket.rincian.length === 0 ? (
+                      <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-500">Belum ada rincian yang terdata</td></tr>
+                    ) : (
+                      selectedPaket.rincian.map((r, i) => (
+                        <tr key={i} className="hover:bg-gray-50 transition-colors">
+                          <td className="px-4 py-3 text-gray-800 align-top">{r.subKegiatan}</td>
+                          <td className="px-4 py-3 text-gray-600 align-top">{r.rekening}</td>
+                          <td className="px-4 py-3 text-gray-500 text-xs align-top"><span className="bg-gray-100 px-2 py-1 rounded-md">{r.sumberDana}</span></td>
+                          <td className="px-4 py-3 text-right font-semibold text-primary align-top whitespace-nowrap">{formatCurrency(r.paguPerubahan)}</td>
+                          <td className="px-4 py-3 text-right font-bold text-green-600 align-top whitespace-nowrap">{formatCurrency(r.realisasi)}</td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                  {selectedPaket.rincian.length > 0 && (
+                    <tfoot className="bg-gray-50 border-t-2 border-gray-200 font-bold">
+                      <tr>
+                        <td colSpan={3} className="px-4 py-3 text-right text-gray-700">Total:</td>
+                        <td className="px-4 py-3 text-right text-primary">
+                          {formatCurrency(selectedPaket.rincian.reduce((acc, curr) => acc + (curr.paguPerubahan || 0), 0))}
+                        </td>
+                        <td className="px-4 py-3 text-right text-green-600">
+                          {formatCurrency(selectedPaket.rincian.reduce((acc, curr) => acc + (curr.realisasi || 0), 0))}
+                        </td>
+                      </tr>
+                    </tfoot>
+                  )}
+                </table>
+              </div>
+            </div>
+            
+            <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 text-right shrink-0">
+              <button 
+                onClick={() => setSelectedPaket(null)}
                 className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 shadow-sm transition-colors"
               >
                 Tutup

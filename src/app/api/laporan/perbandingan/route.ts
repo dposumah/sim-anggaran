@@ -89,10 +89,12 @@ export async function GET(request: Request) {
     const bospPaud = initBosp();
     const bospKesetaraan = initBosp();
     
-    const paketMap: Record<string, { nama: string, induk: number, perubahan: number }> = {};
+    const paketMap: Record<string, { nama: string, induk: number, perubahan: number, realisasi: number, rincian: any[] }> = {};
     const subKegRealisasiMap: Record<number, { nama: string, kode: string, paguInduk: number, paguPerubahan: number, realisasi: number }> = {};
     const rekRealisasiMap: Record<number, { nama: string, kode: string, paguInduk: number, paguPerubahan: number, realisasi: number }> = {};
     const sumDanaMap: Record<string, { induk: number, perubahan: number, realisasi: number }> = {};
+    const subRekPaguMap: Record<string, number> = {};
+    const subRekRealisasiMap: Record<string, number> = {};
 
     // Helper to determine if BOSP Reguler or Kinerja based on sumberDana
     const getBospType = (sdNama: string) => {
@@ -201,15 +203,27 @@ export async function GET(request: Request) {
       // Uraian Paket
       const isEmptyPaket = (r.namaPaket || '').trim() === '-' || (r.namaPaket || '').trim() === '';
       if (r.namaPaket && !(prog.nama || '').toUpperCase().includes('PROGRAM PENUNJANG URUSAN PEMERINTAHAN DAERAH KABUPATEN/KOTA') && !isBosp && !isEmptyPaket) {
-        if (!paketMap[r.namaPaket]) paketMap[r.namaPaket] = { nama: r.namaPaket, induk: 0, perubahan: 0 };
+        if (!paketMap[r.namaPaket]) paketMap[r.namaPaket] = { nama: r.namaPaket, induk: 0, perubahan: 0, realisasi: 0, rincian: [] };
         paketMap[r.namaPaket].induk += nilaiInduk;
         paketMap[r.namaPaket].perubahan += nilaiPerubahan;
+        paketMap[r.namaPaket].rincian.push({
+          subKegiatanId: sub.id,
+          rekeningId: rek.id,
+          subKegiatan: sub.nama,
+          rekening: rek.nama,
+          sumberDana: r.sumberDana.nama || 'Tidak Ada',
+          paguPerubahan: nilaiPerubahan,
+          realisasi: 0
+        });
       }
 
       const sdNama = r.sumberDana.nama || 'Tidak Ada Sumber Dana';
       if (!sumDanaMap[sdNama]) sumDanaMap[sdNama] = { induk: 0, perubahan: 0, realisasi: 0 };
       sumDanaMap[sdNama].induk += nilaiInduk;
       sumDanaMap[sdNama].perubahan += nilaiPerubahan;
+      
+      const subRekKey = `${sub.id}-${rek.id}`;
+      subRekPaguMap[subRekKey] = (subRekPaguMap[subRekKey] || 0) + nilaiPerubahan;
     });
 
     realisasiList.forEach(r => {
@@ -234,6 +248,9 @@ export async function GET(request: Request) {
       if (rekRealisasiMap[rek.id]) {
         rekRealisasiMap[rek.id].realisasi += nilai;
       }
+      
+      const subRekKey = `${sub.id}-${rek.id}`;
+      subRekRealisasiMap[subRekKey] = (subRekRealisasiMap[subRekKey] || 0) + nilai;
 
       if (isGaji) {
         const isExcluded = rekUpper.includes('PNSD') || rekUpper.includes('TUNJANGAN PROFESI GURU') || rekUpper.includes('TAMBAHAN PENGHASILAN') || rekUpper.includes('TAMSIL');
@@ -268,6 +285,18 @@ export async function GET(request: Request) {
         }
       }
     });
+    
+    // Assign proportional realisasi to paket rincian
+    Object.values(paketMap).forEach((paket: any) => {
+      paket.rincian.forEach((r: any) => {
+        const subRekKey = `${r.subKegiatanId}-${r.rekeningId}`;
+        const totalPagu = subRekPaguMap[subRekKey] || 1;
+        const totalRealisasi = subRekRealisasiMap[subRekKey] || 0;
+        const propReal = (r.paguPerubahan / totalPagu) * totalRealisasi;
+        r.realisasi = propReal;
+        paket.realisasi += propReal;
+      });
+    });
 
     const chartData = Object.keys(sumDanaMap).map(k => ({
       name: k,
@@ -284,10 +313,9 @@ export async function GET(request: Request) {
     const topSubKegiatan = Object.values(subKegRealisasiMap)
       .filter(sk => {
         const upper = sk.nama.toUpperCase();
-        return !upper.includes('GAJI DAN TUNJANGAN ASN') && !upper.includes('BOS') && !upper.includes('BOP');
+        return !upper.includes('GAJI DAN TUNJANGAN ASN') && !upper.includes('BOS') && !upper.includes('BOP') && sk.realisasi > 0;
       })
-      .sort((a, b) => b.paguPerubahan - a.paguPerubahan)
-      .slice(0, 15);
+      .sort((a, b) => b.paguPerubahan - a.paguPerubahan);
 
     // Get top 15 rekening terbesar (exclude Gaji dan Tunjangan and BOSP)
     // To properly exclude them, we need to know if a rekening is exclusively used for BOSP/Gaji.
@@ -337,8 +365,8 @@ export async function GET(request: Request) {
     });
 
     const topRekening = Object.values(rekFilteredMap)
-      .sort((a, b) => b.paguPerubahan - a.paguPerubahan)
-      .slice(0, 15);
+      .filter(r => r.realisasi > 0)
+      .sort((a, b) => b.paguPerubahan - a.paguPerubahan);
 
     return NextResponse.json({
       summary: {
