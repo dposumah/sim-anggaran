@@ -112,27 +112,37 @@ export default function LaporanEksekutif() {
   return (
     <div className="space-y-6">
       {/* Overview Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm relative overflow-hidden group">
-          <div className="absolute -right-4 -top-4 opacity-[0.03] group-hover:opacity-10 transition-opacity">
-            <Building className="w-24 h-24 text-primary" />
+      <div className="mb-4">
+        <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm relative overflow-hidden group w-full flex flex-col md:flex-row justify-between items-center gap-6">
+          <div className="absolute -right-10 -top-10 opacity-[0.03] group-hover:opacity-10 transition-opacity">
+            <Building className="w-48 h-48 text-primary" />
           </div>
-          <p className="text-gray-500 text-sm font-medium mb-1">Total Pagu Induk</p>
-          <h3 className="text-2xl font-bold text-gray-800 mb-4">{formatCurrency(summary.pagu.induk)}</h3>
-          <p className="text-primary text-sm font-medium mb-1 pt-3 border-t border-gray-100">Total Pagu Perubahan</p>
-          <h3 className="text-2xl font-bold text-primary">{formatCurrency(summary.pagu.perubahan)}</h3>
-          <div className="mt-4 pt-3 border-t border-gray-100 flex justify-between items-center">
-            <span className="text-sm font-medium text-green-600">Total Realisasi</span>
-            <span className="font-bold text-green-700 bg-green-50 px-2 py-1 rounded-lg">{formatCurrency(summary.pagu.realisasi)}</span>
+          <div className="flex-1 text-center md:text-left border-b md:border-b-0 md:border-r border-gray-100 pb-4 md:pb-0 pr-0 md:pr-6">
+            <p className="text-gray-500 text-sm font-medium mb-1">Total Pagu Induk</p>
+            <h3 className="text-2xl font-bold text-gray-800">{formatCurrency(summary.pagu.induk)}</h3>
+          </div>
+          <div className="flex-1 text-center md:text-left border-b md:border-b-0 md:border-r border-gray-100 pb-4 md:pb-0 px-0 md:px-6">
+            <p className="text-primary text-sm font-medium mb-1">Total Pagu Perubahan</p>
+            <h3 className="text-2xl font-bold text-primary">{formatCurrency(summary.pagu.perubahan)}</h3>
+          </div>
+          <div className="flex-1 text-center md:text-left pl-0 md:pl-6">
+            <p className="text-sm font-medium text-green-600 mb-1">Total Realisasi</p>
+            <h3 className="text-2xl font-bold text-green-700">{formatCurrency(summary.pagu.realisasi)}</h3>
+            <div className="mt-2 text-xs font-medium bg-green-50 text-green-700 px-3 py-1 rounded-full inline-block">
+              {((summary.pagu.realisasi / summary.pagu.perubahan) * 100).toFixed(1)}% Serapan
+            </div>
           </div>
         </div>
-
-        <ScoreCard title="Gaji PNS" item={summary.gajiPns} icon={Briefcase} />
-        <ScoreCard title="Gaji PPPK" item={summary.gajiPppk} icon={Briefcase} />
-        <ScoreCard title="Tunjangan Profesi Guru" item={summary.tpg} icon={GraduationCap} />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+        <ScoreCard title="Gaji PNS" item={summary.gajiPns} icon={Briefcase} />
+        <ScoreCard title="Gaji PPPK" item={summary.gajiPppk} icon={Briefcase} />
+        <ScoreCard title="Tambahan Penghasilan (TPP)" item={summary.tpp} icon={Briefcase} />
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+        <ScoreCard title="Tunjangan Profesi (TPG)" item={summary.tpg} icon={GraduationCap} />
         <ScoreCard title="BOSP SD" item={summary.bospSd} icon={GraduationCap} isBosp={true} />
         <ScoreCard title="BOSP SMP" item={summary.bospSmp} icon={GraduationCap} isBosp={true} />
         <ScoreCard title="BOP PAUD" item={summary.bospPaud} icon={GraduationCap} isBosp={true} />
@@ -230,15 +240,6 @@ export default function LaporanEksekutif() {
               />
               <RechartsTooltip content={<CustomTooltip />} />
               <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} />
-              <Bar 
-                dataKey="paguInduk" 
-                name="Pagu Induk" 
-                fill="#fca5a5" 
-                radius={[4, 4, 0, 0]} 
-                barSize={12} 
-                onClick={(data: any) => setSelectedChartData({ title: data.payload?.nama || data.nama, type: activeChartTab, data: data.payload || data })} 
-                cursor="pointer"
-              />
               <Bar 
                 dataKey="paguPerubahan" 
                 name="Pagu Perubahan" 
