@@ -29,9 +29,15 @@ export async function login(formData: FormData) {
 export async function loginWithGoogle() {
   const supabase = await createClient()
   // Generate the callback URL for the OAuth flow
-  // Use VERCEL_URL if deployed, otherwise localhost
-  const host = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
-  
+  let host = 'http://localhost:3000'
+  if (process.env.NEXT_PUBLIC_SITE_URL) {
+    host = process.env.NEXT_PUBLIC_SITE_URL
+  } else if (process.env.VERCEL_PROJECT_PRODUCTION_URL) {
+    host = `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+  } else if (process.env.VERCEL_URL) {
+    host = `https://${process.env.VERCEL_URL}`
+  }
+
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: {
