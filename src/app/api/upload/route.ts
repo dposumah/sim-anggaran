@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic';
 export const maxDuration = 300;
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { revalidateTag } from 'next/cache';
 import * as XLSX from 'xlsx';
 
 export async function POST(request: Request) {
@@ -299,6 +300,7 @@ export async function POST(request: Request) {
       }
     }
 
+    revalidateTag('laporanData', 'default');
     return NextResponse.json({ 
       success: true, 
       message: `Data dari file ${file.name} (TA ${tahun}) berhasil diuraikan dan disimpan! ${rows.length} baris Dinas Pendidikan diproses.` 

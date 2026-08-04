@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { revalidateTag } from 'next/cache';
 import * as XLSX from 'xlsx';
 
 export const maxDuration = 300; // 5 minutes limit
@@ -247,6 +248,7 @@ export async function POST(request: Request) {
       }
     }
 
+    revalidateTag('laporanData', 'default');
     return NextResponse.json({
       success: true,
       summary: {

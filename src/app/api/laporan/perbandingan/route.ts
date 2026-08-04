@@ -1,29 +1,18 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { unstable_cache } from 'next/cache';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET(request: Request) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const tahunStr = searchParams.get('tahun') || '2026';
-    const tahun = parseInt(tahunStr, 10);
-
-    const tahunData = await prisma.tahunAnggaran.findUnique({
-      where: { tahun }
-    });
-
-    if (!tahunData) {
-      return NextResponse.json({ error: 'Tahun anggaran tidak ditemukan' }, { status: 404 });
-    }
-
+const getCachedLaporan = unstable_cache(
+  async (tahun: number, tahunId: number) => {
     const rincianList = await prisma.rincianBelanja.findMany({
       where: {
         subKegiatan: {
           kegiatan: {
             program: {
               skpd: {
-                tahunId: tahunData.id,
+                tahunId: tahunId,
                 nama: { contains: 'PENDIDIKAN', mode: 'insensitive' }
               }
             }
@@ -53,7 +42,7 @@ export async function GET(request: Request) {
           kegiatan: {
             program: {
               skpd: {
-                tahunId: tahunData.id,
+                tahunId: tahunId,
                 nama: { contains: 'PENDIDIKAN', mode: 'insensitive' }
               }
             }
@@ -137,8 +126,6 @@ export async function GET(request: Request) {
       }
       rekRealisasiMap[rek.id].paguInduk += nilaiInduk;
       rekRealisasiMap[rek.id].paguPerubahan += nilaiPerubahan;
-
-
 
       // PNS & PPPK
       if (isGaji) {
@@ -317,15 +304,6 @@ export async function GET(request: Request) {
       })
       .sort((a, b) => b.paguPerubahan - a.paguPerubahan);
 
-    // Get top 15 rekening terbesar (exclude Gaji dan Tunjangan and BOSP)
-    // To properly exclude them, we need to know if a rekening is exclusively used for BOSP/Gaji.
-    // Wait, it's easier to just rely on the pagu that we accumulated, but `rekRealisasiMap` accumulated ALL values.
-    // Let's filter rekRealisasiMap to only contain Rekening that are not completely BOSP/Gaji related.
-    // Or we can rebuild rekRealisasiMap to ONLY accumulate when it's not Gaji/BOSP.
-    
-    // Actually, to make it accurate, I should re-calculate topRekening by iterating rincianList again or applying the filter during the first pass.
-    // Let's rebuild topRekening safely by iterating rincianList again just for top Rekening, filtering out Gaji and BOSP.
-    
     const rekFilteredMap: Record<number, { nama: string, kode: string, paguInduk: number, paguPerubahan: number, realisasi: number }> = {};
     
     rincianList.forEach(r => {
@@ -368,7 +346,7 @@ export async function GET(request: Request) {
       .filter(r => r.realisasi > 0)
       .sort((a, b) => b.paguPerubahan - a.paguPerubahan);
 
-    return NextResponse.json({
+    return {
       summary: {
         pagu: { induk: paguIndukTotal, perubahan: paguPerubahanTotal, realisasi: realisasiTotal },
         gajiPns: { induk: gajiPnsInduk, perubahan: gajiPnsPerubahan, realisasi: gajiPnsRealisasi },
@@ -385,7 +363,29 @@ export async function GET(request: Request) {
       topPaket,
       topSubKegiatan,
       topRekening
+    };
+  },
+  ['laporan-perbandingan-data'],
+  { tags: ['laporanData'], revalidate: false }
+);
+
+export async function GET(request: Request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const tahunStr = searchParams.get('tahun') || '2026';
+    const tahun = parseInt(tahunStr, 10);
+
+    const tahunData = await prisma.tahunAnggaran.findUnique({
+      where: { tahun }
     });
+
+    if (!tahunData) {
+      return NextResponse.json({ error: 'Tahun anggaran tidak ditemukan' }, { status: 404 });
+    }
+
+    const data = await getCachedLaporan(tahun, tahunData.id);
+
+    return NextResponse.json(data);
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
