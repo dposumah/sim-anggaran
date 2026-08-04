@@ -155,7 +155,8 @@ export async function GET(request: Request) {
 
       // Uraian Paket (Exclude Program Penunjang and BOSP)
       const isBosp = subUpper.includes('BOS') || subUpper.includes('BOP');
-      if (r.namaPaket && !(prog.nama || '').toUpperCase().includes('PROGRAM PENUNJANG URUSAN PEMERINTAHAN DAERAH KABUPATEN/KOTA') && !isBosp) {
+      const isEmptyPaket = (r.namaPaket || '').trim() === '-' || (r.namaPaket || '').trim() === '';
+      if (r.namaPaket && !(prog.nama || '').toUpperCase().includes('PROGRAM PENUNJANG URUSAN PEMERINTAHAN DAERAH KABUPATEN/KOTA') && !isBosp && !isEmptyPaket) {
         if (!paketMap[r.namaPaket]) paketMap[r.namaPaket] = { nama: r.namaPaket, induk: 0, perubahan: 0 };
         paketMap[r.namaPaket].induk += nilaiInduk;
         paketMap[r.namaPaket].perubahan += nilaiPerubahan;
@@ -228,7 +229,9 @@ export async function GET(request: Request) {
       .sort((a, b) => b.perubahan - a.perubahan)
       .slice(0, 10);
 
+    // Get top 15 sub kegiatan terbesar (exclude Gaji dan Tunjangan)
     const topSubKegiatan = Object.values(subKegRealisasiMap)
+      .filter(sk => !sk.nama.toUpperCase().includes('GAJI DAN TUNJANGAN ASN'))
       .sort((a, b) => b.paguPerubahan - a.paguPerubahan)
       .slice(0, 15); // Top 15 Sub Kegiatan
 
