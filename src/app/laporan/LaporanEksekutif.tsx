@@ -13,7 +13,7 @@ export default function LaporanEksekutif() {
   const [loading, setLoading] = useState(true);
   const [activeChartTab, setActiveChartTab] = useState<'subkegiatan' | 'rekening'>('subkegiatan');
   const [selectedBosp, setSelectedBosp] = useState<{ title: string, data: any } | null>(null);
-  const [selectedChartData, setSelectedChartData] = useState<{ title: string, type: 'subkegiatan' | 'rekening', data: any } | null>(null);
+  const [selectedChartData, setSelectedChartData] = useState<{ title: string, type: 'subkegiatan' | 'rekening' | 'sumberdana', data: any } | null>(null);
   const [selectedPaket, setSelectedPaket] = useState<{ title: string, rincian: any[] } | null>(null);
 
   useEffect(() => {
@@ -159,7 +159,17 @@ export default function LaporanEksekutif() {
           </h3>
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+              <AreaChart 
+                data={chartData} 
+                margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+                onClick={(e: any) => {
+                  if (e && e.activePayload && e.activePayload.length > 0) {
+                    const payload = e.activePayload[0].payload;
+                    setSelectedChartData({ title: payload.name, type: 'sumberdana', data: payload });
+                  }
+                }}
+                className="cursor-pointer"
+              >
                 <defs>
                   <linearGradient id="colorPerubahan" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#dc2626" stopOpacity={0.3}/>
@@ -270,7 +280,7 @@ export default function LaporanEksekutif() {
             <div className="bg-gray-50 px-6 py-4 border-b border-gray-100 flex justify-between items-center">
               <h3 className="font-bold text-lg text-gray-800 flex items-center gap-2">
                 <Table className="w-5 h-5 text-primary" />
-                Rincian {selectedChartData.type === 'subkegiatan' ? 'Sub Kegiatan' : 'Rekening'}
+                Rincian {selectedChartData.type === 'subkegiatan' ? 'Sub Kegiatan' : selectedChartData.type === 'sumberdana' ? 'Sumber Dana' : 'Rekening'}
               </h3>
               <button 
                 onClick={() => setSelectedChartData(null)}
