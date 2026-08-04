@@ -63,8 +63,8 @@ export default function Sidebar() {
 
   return (
     <div className="flex h-full w-64 flex-col bg-primary text-white">
-      <div className="flex h-16 shrink-0 items-center px-6">
-        <h1 className="text-xl font-bold tracking-tight">Tomohon Budget</h1>
+      <div className="flex h-16 shrink-0 items-center gap-3 px-6 border-b border-sidebar-border bg-sidebar-header">
+        <h1 className="text-lg font-bold tracking-tight text-white leading-tight">SIM-Anggaran<br/>Dikbud</h1>
       </div>
       <div className="flex flex-1 flex-col overflow-y-auto pt-5 pb-4">
         <nav className="flex-1 space-y-1 px-3">

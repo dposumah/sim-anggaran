@@ -30,10 +30,10 @@ export default function LoginPage() {
              <Image src="/logo-tomohon.png" alt="Logo Tomohon" fill className="object-contain" />
           </div>
           <h2 className="mt-2 text-center text-3xl font-extrabold text-gray-900">
-            SIM-Anggaran
+            SIM-Anggaran Dikbud
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600">
-            Masuk ke portal SKPD Kota Tomohon
+            Dinas Pendidikan dan Kebudayaan Daerah
           </p>
         </div>
         

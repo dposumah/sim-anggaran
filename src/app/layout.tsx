@@ -15,8 +15,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Tomohon Budget - Aplikasi Monitoring Anggaran SKPD",
-  description: "Aplikasi Monitoring Anggaran SKPD Kota Tomohon",
+  title: "SIM-Anggaran Dikbud",
+  description: "Aplikasi Monitoring Anggaran Dinas Pendidikan dan Kebudayaan Daerah Kota Tomohon",
 };
 
 export default function RootLayout({
