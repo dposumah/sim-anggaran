@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Pencil, Trash2, Plus, Lock, Check, X, Download } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { Pencil, Trash2, Plus, Lock, Check, X, Download, ArrowUpDown, ChevronUp, ChevronDown } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
 export default function RincianTable({ rincianList, subKegiatanId, onRefresh, isLocked, parentInfo = {} }: { rincianList: any[], subKegiatanId: number, onRefresh: () => void, isLocked?: boolean, parentInfo?: any }) {
@@ -12,6 +12,57 @@ export default function RincianTable({ rincianList, subKegiatanId, onRefresh, is
   const [editData, setEditData] = useState<{ volume: number, hargaSatuan: number, sumberDanaId: number | null }>({ volume: 1, hargaSatuan: 0, sumberDanaId: null });
   const [sumberDanas, setSumberDanas] = useState<any[]>([]);
   const [exportMode, setExportMode] = useState<'induk' | 'perubahan' | 'keduanya'>('perubahan');
+  
+  const [sortConfig, setSortConfig] = useState<{ key: string, direction: 'asc' | 'desc' } | null>(null);
+
+  const sortedRincian = useMemo(() => {
+    let sortableItems = [...rincianList];
+    if (sortConfig !== null) {
+      sortableItems.sort((a, b) => {
+        let aValue: any = a[sortConfig.key];
+        let bValue: any = b[sortConfig.key];
+        
+        // Handle nested or computed properties
+        if (sortConfig.key === 'rekening') {
+          aValue = a.rekening?.kode || '';
+          bValue = b.rekening?.kode || '';
+        } else if (sortConfig.key === 'sumberDana') {
+          aValue = a.sumberDana?.nama || '';
+          bValue = b.sumberDana?.nama || '';
+        } else if (sortConfig.key === 'sisa') {
+          aValue = Number(a.paguPerubahan || 0) - Number(a.realisasi || 0);
+          bValue = Number(b.paguPerubahan || 0) - Number(b.realisasi || 0);
+        }
+
+        if (aValue < bValue) {
+          return sortConfig.direction === 'asc' ? -1 : 1;
+        }
+        if (aValue > bValue) {
+          return sortConfig.direction === 'asc' ? 1 : -1;
+        }
+        return 0;
+      });
+    }
+    return sortableItems;
+  }, [rincianList, sortConfig]);
+
+  const requestSort = (key: string) => {
+    let direction: 'asc' | 'desc' = 'asc';
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const renderSortIcon = (key: string) => {
+    if (!sortConfig || sortConfig.key !== key) {
+      return <ArrowUpDown className="w-3 h-3 ml-1 inline-block text-gray-400" />;
+    }
+    if (sortConfig.direction === 'asc') {
+      return <ChevronUp className="w-3 h-3 ml-1 inline-block text-blue-600" />;
+    }
+    return <ChevronDown className="w-3 h-3 ml-1 inline-block text-blue-600" />;
+  };
 
   useEffect(() => {
     fetch('/api/sumber-dana')
@@ -232,19 +283,35 @@ export default function RincianTable({ rincianList, subKegiatanId, onRefresh, is
           <table className="min-w-full divide-y divide-gray-300 text-sm">
             <thead className="bg-gray-100">
               <tr>
-                <th className="px-4 py-2.5 text-left font-semibold text-gray-900">Rekening</th>
-                <th className="px-4 py-2.5 text-left font-semibold text-gray-900">Uraian / Paket</th>
-                <th className="px-4 py-2.5 text-left font-semibold text-gray-900">Sumber Dana</th>
-                <th className="px-4 py-2.5 text-right font-semibold text-gray-900">Pagu Induk</th>
-                <th className="px-4 py-2.5 text-right font-semibold text-gray-900">Pagu RKPD</th>
-                <th className="px-4 py-2.5 text-right font-semibold text-blue-800">Pagu Perubahan</th>
-                <th className="px-4 py-2.5 text-right font-semibold text-purple-700">Realisasi</th>
-                <th className="px-4 py-2.5 text-right font-semibold text-gray-900">Sisa (Per - Real)</th>
+                <th className="px-4 py-2.5 text-left font-semibold text-gray-900 cursor-pointer select-none" onClick={() => requestSort('rekening')}>
+                  Rekening {renderSortIcon('rekening')}
+                </th>
+                <th className="px-4 py-2.5 text-left font-semibold text-gray-900 cursor-pointer select-none" onClick={() => requestSort('namaPaket')}>
+                  Uraian / Paket {renderSortIcon('namaPaket')}
+                </th>
+                <th className="px-4 py-2.5 text-left font-semibold text-gray-900 cursor-pointer select-none" onClick={() => requestSort('sumberDana')}>
+                  Sumber Dana {renderSortIcon('sumberDana')}
+                </th>
+                <th className="px-4 py-2.5 text-right font-semibold text-gray-900 cursor-pointer select-none" onClick={() => requestSort('paguInduk')}>
+                  Pagu Induk {renderSortIcon('paguInduk')}
+                </th>
+                <th className="px-4 py-2.5 text-right font-semibold text-gray-900 cursor-pointer select-none" onClick={() => requestSort('paguRkpd')}>
+                  Pagu RKPD {renderSortIcon('paguRkpd')}
+                </th>
+                <th className="px-4 py-2.5 text-right font-semibold text-blue-800 cursor-pointer select-none" onClick={() => requestSort('paguPerubahan')}>
+                  Pagu Perubahan {renderSortIcon('paguPerubahan')}
+                </th>
+                <th className="px-4 py-2.5 text-right font-semibold text-purple-700 cursor-pointer select-none" onClick={() => requestSort('realisasi')}>
+                  Realisasi {renderSortIcon('realisasi')}
+                </th>
+                <th className="px-4 py-2.5 text-right font-semibold text-gray-900 cursor-pointer select-none" onClick={() => requestSort('sisa')}>
+                  Sisa (Per - Real) {renderSortIcon('sisa')}
+                </th>
                 <th className="px-4 py-2.5 text-center font-semibold text-gray-900">Aksi</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200 bg-white">
-              {rincianList.map(r => {
+              {sortedRincian.map(r => {
                 const isEditing = editingId === r.id;
                 
                 return (
