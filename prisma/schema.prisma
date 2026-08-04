@@ -226,6 +226,7 @@ model User {
   username    String  @unique
   namaLengkap String
   role        String // "ADMIN", "KEPALA_DINAS", "STAF"
+  password    String? // Optional password for manual auth
   isActive    Boolean @default(true)
 
   skpdId Int? // Null for ADMIN
