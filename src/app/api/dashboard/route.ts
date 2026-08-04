@@ -119,17 +119,17 @@ export async function GET(request: Request) {
     const sdMap = new Map(sumberDanas.map(sd => [sd.id, sd.nama]));
     
     const sumberDanaChart = sumberDanaAgg.map(agg => ({
+      id: agg.sumberDanaId,
       name: agg.sumberDanaId ? sdMap.get(agg.sumberDanaId) || 'Unknown' : 'Belum Ditentukan',
       value: Number(agg._sum.pagu || 0)
     })).sort((a, b) => b.value - a.value);
 
-    // 2. Top 10 Rekening Chart (Bar Chart)
+    // 2. All Rekening Chart (Bar Chart / Table)
     const rekeningAgg = await prisma.rincianBelanja.groupBy({
       by: ['rekeningId'],
       where: { subKegiatan: { kegiatan: { program: { skpdId: { in: skpdIdList } } } } },
       _sum: { pagu: true },
-      orderBy: { _sum: { pagu: 'desc' } },
-      take: 10
+      orderBy: { _sum: { pagu: 'desc' } }
     });
 
     const rekenings = await prisma.rekening.findMany({
@@ -137,9 +137,10 @@ export async function GET(request: Request) {
     });
     const rekMap = new Map(rekenings.map(r => [r.id, r]));
 
-    const topRekeningChart = rekeningAgg.map(agg => {
+    const rekeningChart = rekeningAgg.map(agg => {
       const rek = rekMap.get(agg.rekeningId);
       return {
+        id: agg.rekeningId,
         kode: rek?.kode || 'Unknown',
         nama: rek?.nama || 'Unknown',
         value: Number(agg._sum.pagu || 0)
@@ -154,9 +155,9 @@ export async function GET(request: Request) {
         kegiatanCount,
         subKegiatanCount
       },
-      skpdData: top10Skpd,
+      top10Skpd,
       sumberDanaChart,
-      topRekeningChart
+      rekeningChart
     });
 
   } catch (error: any) {
