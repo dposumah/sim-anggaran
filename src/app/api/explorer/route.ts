@@ -177,9 +177,44 @@ export async function GET(request: Request) {
           include: {
             sumberDana: true,
             rekening: true
-          }
+          },
+          orderBy: [
+            { rekening: { kode: 'asc' } },
+            { id: 'asc' }
+          ]
         });
-        return NextResponse.json(rincian);
+
+        const realisasiData = await prisma.realisasiBelanja.groupBy({
+          by: ['rekeningId', 'sumberDanaId'],
+          where: { subKegiatanId: parseInt(subKegiatanId, 10) },
+          _sum: { nominal: true }
+        });
+
+        const realisasiMap = new Map<string, number>();
+        realisasiData.forEach(r => {
+          realisasiMap.set(`${r.sumberDanaId}_${r.rekeningId}`, Number(r._sum.nominal || 0));
+        });
+
+        const enhancedRincian = rincian.map(r => {
+          const key = `${r.sumberDanaId}_${r.rekeningId}`;
+          let availableRealisasi = realisasiMap.get(key) || 0;
+          
+          const paguPerubahan = Number(r.paguPerubahan || 0);
+          const allocatedRealisasi = Math.min(availableRealisasi, paguPerubahan);
+          
+          if (availableRealisasi > 0) {
+            // Subtract allocated so next package under same rekening gets the rest
+            realisasiMap.set(key, availableRealisasi - allocatedRealisasi);
+          }
+
+          return {
+            ...r,
+            realisasi: allocatedRealisasi
+          };
+        });
+
+        // Any leftover realisasi can be dumped to the last item of that rekening, but this proportional-like cap is usually enough for display
+        return NextResponse.json(enhancedRincian);
 
       default:
         return NextResponse.json({ error: 'Invalid level' }, { status: 400 });

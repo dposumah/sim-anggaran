@@ -232,16 +232,14 @@ export default function RincianTable({ rincianList, subKegiatanId, onRefresh, is
           <table className="min-w-full divide-y divide-gray-300 text-sm">
             <thead className="bg-gray-100">
               <tr>
-                <th className="px-4 py-2.5 text-left font-semibold text-gray-900">Kode Rekening</th>
-                <th className="px-4 py-2.5 text-left font-semibold text-gray-900">Nama Rekening</th>
+                <th className="px-4 py-2.5 text-left font-semibold text-gray-900">Rekening</th>
                 <th className="px-4 py-2.5 text-left font-semibold text-gray-900">Uraian / Paket</th>
                 <th className="px-4 py-2.5 text-left font-semibold text-gray-900">Sumber Dana</th>
-                <th className="px-4 py-2.5 text-right font-semibold text-gray-900">Volume</th>
-                <th className="px-4 py-2.5 text-right font-semibold text-gray-900">Harga Satuan</th>
                 <th className="px-4 py-2.5 text-right font-semibold text-gray-900">Pagu Induk</th>
                 <th className="px-4 py-2.5 text-right font-semibold text-gray-900">Pagu RKPD</th>
                 <th className="px-4 py-2.5 text-right font-semibold text-blue-800">Pagu Perubahan</th>
-                <th className="px-4 py-2.5 text-right font-semibold text-gray-900">Selisih (Per - Ind)</th>
+                <th className="px-4 py-2.5 text-right font-semibold text-purple-700">Realisasi</th>
+                <th className="px-4 py-2.5 text-right font-semibold text-gray-900">Sisa (Per - Real)</th>
                 <th className="px-4 py-2.5 text-center font-semibold text-gray-900">Aksi</th>
               </tr>
             </thead>
@@ -253,13 +251,11 @@ export default function RincianTable({ rincianList, subKegiatanId, onRefresh, is
                   <tr key={r.id} className="hover:bg-blue-50/30 transition-colors">
                     <td className="px-4 py-2 text-gray-700">
                       <div className="font-medium text-xs">{r.rekening?.kode}</div>
-                    </td>
-                    <td className="px-4 py-2 text-gray-700">
                       <div className="text-xs text-gray-500 max-w-[200px]" title={r.rekening?.nama}>
                         {r.rekening?.nama}
                       </div>
                     </td>
-                    <td className="px-4 py-2 text-gray-700 max-w-xs truncate" title={r.namaPaket}>{r.namaPaket}</td>
+                    <td className="px-4 py-2 text-gray-700 max-w-sm whitespace-normal break-words">{r.namaPaket}</td>
                     <td className="px-4 py-2 text-gray-700">
                       {isEditing ? (
                         <select 
@@ -278,40 +274,7 @@ export default function RincianTable({ rincianList, subKegiatanId, onRefresh, is
                         </span>
                       )}
                     </td>
-                    <td className="px-4 py-2 text-right text-gray-700">
-                      {isEditing ? (
-                        <input 
-                          type="number" 
-                          className="w-16 px-2 py-1 text-xs border border-gray-300 rounded text-right" 
-                          value={editData.volume}
-                          onChange={(e) => setEditData({...editData, volume: Number(e.target.value)})}
-                        />
-                      ) : (
-                        r.volumePerubahan !== null && r.volumePerubahan !== undefined ? (
-                          <div className="flex flex-col items-end">
-                            <span className="text-[10px] text-gray-500 font-medium">Induk: <span className="line-through">{r.volumeInduk}</span></span>
-                            <span className="text-blue-700 font-semibold">Perubahan: {r.volumePerubahan}</span>
-                          </div>
-                        ) : r.volumeInduk
-                      )}
-                    </td>
-                    <td className="px-4 py-2 text-right text-gray-700">
-                      {isEditing ? (
-                        <input 
-                          type="number" 
-                          className="w-24 px-2 py-1 text-xs border border-gray-300 rounded text-right" 
-                          value={editData.hargaSatuan}
-                          onChange={(e) => setEditData({...editData, hargaSatuan: Number(e.target.value)})}
-                        />
-                      ) : (
-                        r.hargaSatuanPerubahan !== null && r.hargaSatuanPerubahan !== undefined ? (
-                          <div className="flex flex-col items-end">
-                            <span className="text-[10px] text-gray-500 font-medium">Induk: <span className="line-through">{formatRupiah(Number(r.hargaSatuanInduk))}</span></span>
-                            <span className="text-blue-700 font-semibold">Perubahan: {formatRupiah(Number(r.hargaSatuanPerubahan))}</span>
-                          </div>
-                        ) : formatRupiah(Number(r.hargaSatuanInduk))
-                      )}
-                    </td>
+
                     <td className="px-4 py-2 text-right text-gray-700">
                       {formatRupiah(Number(r.paguInduk))}
                     </td>
@@ -325,14 +288,11 @@ export default function RincianTable({ rincianList, subKegiatanId, onRefresh, is
                         r.paguPerubahan !== null && r.paguPerubahan !== undefined ? formatRupiah(Number(r.paguPerubahan)) : '-'
                       )}
                     </td>
-                    <td className={`px-4 py-2 text-right font-bold ${r.paguPerubahan !== null && r.paguPerubahan !== undefined ? (Number(r.paguPerubahan) - Number(r.paguInduk) > 0 ? 'text-green-600' : Number(r.paguPerubahan) - Number(r.paguInduk) < 0 ? 'text-red-600' : 'text-gray-400') : 'text-gray-400'}`}>
-                      {isEditing ? (
-                        <span className={(editData.volume * editData.hargaSatuan) - Number(r.paguInduk) > 0 ? 'text-green-600' : (editData.volume * editData.hargaSatuan) - Number(r.paguInduk) < 0 ? 'text-red-600' : 'text-gray-400'}>
-                          {((editData.volume * editData.hargaSatuan) - Number(r.paguInduk) > 0 ? '+' : '') + formatRupiah((editData.volume * editData.hargaSatuan) - Number(r.paguInduk))}
-                        </span>
-                      ) : (
-                        r.paguPerubahan !== null && r.paguPerubahan !== undefined ? (Number(r.paguPerubahan) - Number(r.paguInduk) > 0 ? '+' : '') + formatRupiah(Number(r.paguPerubahan) - Number(r.paguInduk)) : '-'
-                      )}
+                    <td className="px-4 py-2 text-right font-bold text-purple-700">
+                      {formatRupiah(Number(r.realisasi || 0))}
+                    </td>
+                    <td className={`px-4 py-2 text-right font-bold ${r.paguPerubahan !== null && r.paguPerubahan !== undefined ? (Number(r.paguPerubahan) - Number(r.realisasi || 0) >= 0 ? 'text-green-600' : 'text-red-600') : 'text-gray-400'}`}>
+                      {r.paguPerubahan !== null && r.paguPerubahan !== undefined ? formatRupiah(Number(r.paguPerubahan) - Number(r.realisasi || 0)) : '-'}
                     </td>
                     <td className="px-4 py-2 text-center">
                       {isEditing ? (
