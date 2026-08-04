@@ -16,10 +16,10 @@ export async function POST(request: Request) {
     // If locking, we need to calculate the current total pagu for this sumber dana
     if (isLocked) {
       const result = await prisma.rincianBelanja.aggregate({
-        _sum: { pagu: true },
+        _sum: { paguInduk: true },
         where: { subKegiatanId, sumberDanaId }
       });
-      lockedAmount = Number(result._sum.pagu || 0);
+      lockedAmount = Number(result._sum.paguInduk || 0);
     }
 
     // Update the relation

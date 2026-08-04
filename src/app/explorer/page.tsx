@@ -155,7 +155,7 @@ export default function ExplorerPage() {
           onClick={() => toggleNode(type, item.id)}
         >
           {/* Uraian */}
-          <div className="col-span-12 lg:col-span-6 flex items-center" style={{ paddingLeft: `${depth * 1.5 + 0.5}rem` }}>
+          <div className="col-span-12 lg:col-span-4 flex items-center" style={{ paddingLeft: `${depth * 1.5 + 0.5}rem` }}>
             <div className="w-5 flex justify-center mr-1">
               {isExpanded ? (
                 <ChevronDown className="w-4 h-4 text-gray-500" />
@@ -187,34 +187,49 @@ export default function ExplorerPage() {
             </div>
           </div>
           
-          {/* Values */}
           {item.totalPaguPerubahan !== undefined && item.totalPaguPerubahan !== null ? (
             <>
-              <div className="col-span-4 lg:col-span-2 text-right">
-                <span className="text-xs text-gray-500 block lg:hidden">Sebelum</span>
-                <span className="text-sm font-semibold text-gray-700">{formatRupiah(item.totalPagu)}</span>
+              <div className="col-span-2 lg:col-span-2 text-right">
+                <span className="text-xs text-gray-500 block lg:hidden">Induk</span>
+                <span className="text-sm font-semibold text-gray-700">{formatRupiah(item.totalPaguInduk || item.pagu)}</span>
               </div>
-              <div className="col-span-4 lg:col-span-2 text-right">
-                <span className="text-xs text-gray-500 block lg:hidden">Sesudah</span>
-                <span className="text-sm font-bold text-blue-700">{formatRupiah(item.totalPaguPerubahan)}</span>
+              <div className="col-span-2 lg:col-span-2 text-right">
+                <span className="text-xs text-gray-500 block lg:hidden">Perubahan</span>
+                <span className="text-sm font-bold text-blue-700">{formatRupiah(item.totalPaguPerubahan || 0)}</span>
               </div>
-              <div className="col-span-4 lg:col-span-2 text-right">
-                <span className="text-xs text-gray-500 block lg:hidden">Selisih</span>
-                <span className={`text-sm font-bold ${item.totalPaguPerubahan - item.totalPagu > 0 ? 'text-green-600' : item.totalPaguPerubahan - item.totalPagu < 0 ? 'text-red-600' : 'text-gray-400'}`}>
-                  {(item.totalPaguPerubahan - item.totalPagu) > 0 ? '+' : ''}{formatRupiah(item.totalPaguPerubahan - item.totalPagu)}
-                </span>
+              <div className="col-span-2 lg:col-span-2 text-right">
+                <span className="text-xs text-gray-500 block lg:hidden">Realisasi</span>
+                <span className="text-sm font-bold text-purple-700">{formatRupiah(item.totalRealisasi || 0)}</span>
+              </div>
+              <div className="col-span-2 lg:col-span-2 text-right">
+                <span className="text-xs text-gray-500 block lg:hidden">Sisa</span>
+                {(() => {
+                  const paguAcuan = item.totalPaguPerubahan || item.totalPaguInduk || item.pagu || 0;
+                  const real = item.totalRealisasi || 0;
+                  const sisa = paguAcuan - real;
+                  const pct = paguAcuan > 0 ? (real / paguAcuan * 100) : 0;
+                  return (
+                    <div className="flex flex-col items-end">
+                      <span className={`text-sm font-bold ${sisa >= 0 ? 'text-green-600' : 'text-red-600'}`}>{formatRupiah(sisa)}</span>
+                      <span className="text-[10px] text-gray-500">{pct.toFixed(1)}%</span>
+                    </div>
+                  );
+                })()}
               </div>
             </>
           ) : (
             <>
-              <div className="col-span-4 lg:col-span-2 text-right">
-                <span className="text-xs text-gray-500 block lg:hidden">Pagu</span>
-                <span className="text-sm font-semibold text-gray-800">{formatRupiah(item.totalPagu)}</span>
+              <div className="col-span-2 lg:col-span-2 text-right">
+                <span className="text-xs text-gray-500 block lg:hidden">Induk</span>
+                <span className="text-sm font-semibold text-gray-800">{formatRupiah(item.totalPaguInduk || item.pagu)}</span>
               </div>
-              <div className="col-span-4 lg:col-span-2 text-right">
+              <div className="col-span-2 lg:col-span-2 text-right">
                 <span className="text-sm font-semibold text-gray-400">-</span>
               </div>
-              <div className="col-span-4 lg:col-span-2 text-right">
+              <div className="col-span-2 lg:col-span-2 text-right">
+                <span className="text-sm font-semibold text-gray-400">-</span>
+              </div>
+              <div className="col-span-2 lg:col-span-2 text-right">
                 <span className="text-sm font-semibold text-gray-400">-</span>
               </div>
             </>
@@ -285,10 +300,11 @@ export default function ExplorerPage() {
           <div className="min-w-full">
             {/* Header Columns */}
             <div className="hidden lg:grid grid-cols-12 gap-2 p-3 bg-gray-50 border-b border-gray-200 font-bold text-sm text-gray-700">
-               <div className="col-span-6 pl-10">Uraian / Kode</div>
-               <div className="col-span-2 text-right">Pagu Sebelum</div>
-               <div className="col-span-2 text-right text-blue-800">Pagu Sesudah</div>
-               <div className="col-span-2 text-right">Selisih</div>
+               <div className="col-span-4 pl-10">Uraian / Kode</div>
+               <div className="col-span-2 text-right">Pagu Induk</div>
+               <div className="col-span-2 text-right text-blue-800">Pagu Perubahan</div>
+               <div className="col-span-2 text-right text-purple-700">Realisasi</div>
+               <div className="col-span-2 text-right">Sisa / %</div>
             </div>
             
             {filteredTreeData.map(skpd => renderRow(skpd, 'skpd', 0))}

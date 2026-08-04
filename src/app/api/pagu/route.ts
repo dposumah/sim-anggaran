@@ -28,7 +28,7 @@ export async function GET(request: Request) {
       kode: skpd.kodeSubUnit || skpd.kode,
       nama: skpd.namaSubUnit === skpd.nama ? skpd.nama : `${skpd.nama} - ${skpd.namaSubUnit}`,
       paguId: skpd.pagus.length > 0 ? skpd.pagus[0].id : null,
-      ceilingAmount: skpd.pagus.length > 0 ? Number(skpd.pagus[0].ceilingAmount) : 0
+      ceilingAmount: skpd.pagus.length > 0 ? Number(skpd.pagus[0].paguInduk) : 0
     }));
 
     return NextResponse.json(result);
@@ -39,7 +39,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const { skpdId, ceilingAmount, tahun } = await request.json();
+    const { skpdId, paguInduk, tahun } = await request.json();
     const t = tahun || 2026;
 
     const tahunData = await prisma.tahunAnggaran.findUnique({ where: { tahun: t } });
@@ -47,8 +47,8 @@ export async function POST(request: Request) {
 
     const pagu = await prisma.paguCeiling.upsert({
       where: { skpdId_tahunId: { skpdId, tahunId: tahunData.id } },
-      update: { ceilingAmount },
-      create: { skpdId, tahunId: tahunData.id, ceilingAmount }
+      update: { paguInduk },
+      create: { skpdId, tahunId: tahunData.id, paguInduk }
     });
 
     return NextResponse.json(pagu);

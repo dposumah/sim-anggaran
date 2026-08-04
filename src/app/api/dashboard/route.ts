@@ -1,4 +1,3 @@
-export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
@@ -15,47 +14,7 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Tahun anggaran tidak ditemukan' }, { status: 404 });
     }
 
-    // Total counts (Khusus Dinas Pendidikan)
-    const skpdCount = await prisma.skpd.count({ 
-      where: { 
-        tahunId: tahunData.id,
-        nama: { contains: 'PENDIDIKAN', mode: 'insensitive' }
-      } 
-    });
-    
-    const programCount = await prisma.program.count({
-      where: { 
-        skpd: { 
-          tahunId: tahunData.id,
-          nama: { contains: 'PENDIDIKAN', mode: 'insensitive' }
-        } 
-      }
-    });
-    
-    const kegiatanCount = await prisma.kegiatan.count({
-      where: { 
-        program: {
-          skpd: { 
-            tahunId: tahunData.id,
-            nama: { contains: 'PENDIDIKAN', mode: 'insensitive' }
-          }
-        }
-      }
-    });
-
-    const subKegiatanCount = await prisma.subKegiatan.count({
-      where: { 
-        kegiatan: {
-          program: {
-            skpd: { 
-              tahunId: tahunData.id,
-              nama: { contains: 'PENDIDIKAN', mode: 'insensitive' }
-            }
-          }
-        }
-      }
-    });
-
+    // Only Pendidikan
     const skpds = await prisma.skpd.findMany({
       where: { 
         tahunId: tahunData.id,
@@ -66,70 +25,118 @@ export async function GET(request: Request) {
     
     const skpdIdList = skpds.map(s => s.id);
 
-    // Aggregate pagu per SKPD efficiently
-    const rincianBySkpd = await prisma.rincianBelanja.groupBy({
+    const [
+      totalPaguAgg,
+      skpdCount,
+      programCount,
+      kegiatanCount,
+      subKegiatanCount
+    ] = await Promise.all([
+      prisma.rincianBelanja.aggregate({
+        _sum: { paguInduk: true, paguRkpd: true, paguPerubahan: true },
+        where: { subKegiatan: { kegiatan: { program: { skpdId: { in: skpdIdList } } } } }
+      }),
+      prisma.skpd.count({ where: { id: { in: skpdIdList } } }),
+      prisma.program.count({ where: { skpdId: { in: skpdIdList } } }),
+      prisma.kegiatan.count({ where: { program: { skpdId: { in: skpdIdList } } } }),
+      prisma.subKegiatan.count({ where: { kegiatan: { program: { skpdId: { in: skpdIdList } } } } })
+    ]);
+
+    const totalPagu = Number(totalPaguAgg._sum.paguInduk || 0); // fallback for backward compat
+    const totalPaguInduk = Number(totalPaguAgg._sum.paguInduk || 0);
+    const totalPaguRkpd = Number(totalPaguAgg._sum.paguRkpd || 0);
+    const totalPaguPerubahan = Number(totalPaguAgg._sum.paguPerubahan || 0);
+
+    const skpdAgg = await prisma.rincianBelanja.groupBy({
       by: ['subKegiatanId'],
       where: { subKegiatan: { kegiatan: { program: { skpdId: { in: skpdIdList } } } } },
-      _sum: { pagu: true }
+      _sum: { paguInduk: true, paguRkpd: true, paguPerubahan: true }
     });
 
-    // Map subKegiatanId -> skpdId
-    const subKegs = await prisma.subKegiatan.findMany({
-      where: { id: { in: rincianBySkpd.map(r => r.subKegiatanId) } },
-      select: { id: true, kegiatan: { select: { program: { select: { skpdId: true } } } } }
+    const skpdMap = new Map<number, { 
+      nama: string; 
+      kode: string; 
+      paguInduk: number; 
+      paguRkpd: number; 
+      paguPerubahan: number;
+      ceiling: number;
+    }>();
+    
+    skpds.forEach(skpd => {
+      skpdMap.set(skpd.id, {
+        nama: skpd.nama === skpd.namaSubUnit ? skpd.nama : `${skpd.nama} - ${skpd.namaSubUnit}`,
+        kode: skpd.kode,
+        paguInduk: 0,
+        paguRkpd: 0,
+        paguPerubahan: 0,
+        ceiling: skpd.pagus.length > 0 ? Number(skpd.pagus[0].paguInduk) : 0
+      });
     });
-    
-    const subToSkpd = new Map(subKegs.map(s => [s.id, s.kegiatan.program.skpdId]));
-    
-    let totalPagu = 0;
-    const paguBySkpd: Record<number, number> = {};
-    
-    rincianBySkpd.forEach(r => {
-      const skpdId = subToSkpd.get(r.subKegiatanId);
+
+    const subKegs = await prisma.subKegiatan.findMany({
+      where: { id: { in: skpdAgg.map(a => a.subKegiatanId) } },
+      include: { kegiatan: { include: { program: { select: { skpdId: true } } } } }
+    });
+
+    const subKegMap = new Map(subKegs.map(sk => [sk.id, sk.kegiatan.program.skpdId]));
+
+    skpdAgg.forEach(agg => {
+      const skpdId = subKegMap.get(agg.subKegiatanId);
       if (skpdId) {
-        const p = Number(r._sum.pagu || 0);
-        paguBySkpd[skpdId] = (paguBySkpd[skpdId] || 0) + p;
-        totalPagu += p;
+        const existing = skpdMap.get(skpdId);
+        if (existing) {
+          existing.paguInduk += Number(agg._sum.paguInduk || 0);
+          existing.paguRkpd += Number(agg._sum.paguRkpd || 0);
+          existing.paguPerubahan += Number(agg._sum.paguPerubahan || 0);
+        }
       }
     });
 
-    const skpdData = skpds.map(skpd => {
-      const ceiling = skpd.pagus.length > 0 ? Number(skpd.pagus[0].ceilingAmount) : 0;
-      const displayName = skpd.nama === skpd.namaSubUnit ? skpd.nama : `${skpd.nama} - ${skpd.namaSubUnit}`;
-      return {
-        id: skpd.id,
-        nama: displayName,
-        pagu: paguBySkpd[skpd.id] || 0,
-        ceiling: ceiling
-      };
-    }).sort((a, b) => b.pagu - a.pagu);
+    const skpdData = Array.from(skpdMap.values())
+      .map(s => ({
+        ...s,
+        value: s.paguInduk, // backward compat
+      }))
+      .sort((a, b) => b.paguInduk - a.paguInduk);
 
     const top10Skpd = skpdData.slice(0, 10);
 
-    // 1. Sumber Dana Chart (Pie Chart)
+    // 1. Rekapitulasi per Sumber Dana
     const sumberDanaAgg = await prisma.rincianBelanja.groupBy({
       by: ['sumberDanaId'],
       where: { subKegiatan: { kegiatan: { program: { skpdId: { in: skpdIdList } } } } },
-      _sum: { pagu: true }
+      _sum: { 
+        paguInduk: true,
+        paguRkpd: true,
+        paguPerubahan: true 
+      },
+      orderBy: { _sum: { paguInduk: 'desc' } }
     });
-    
+
     const sumberDanas = await prisma.sumberDana.findMany({
-      where: { id: { in: sumberDanaAgg.map(s => s.sumberDanaId).filter(Boolean) as number[] } }
+      where: { id: { in: sumberDanaAgg.map(a => a.sumberDanaId).filter(Boolean) as number[] } }
     });
     const sdMap = new Map(sumberDanas.map(sd => [sd.id, sd.nama]));
     
     const sumberDanaChart = sumberDanaAgg.map(agg => ({
       id: agg.sumberDanaId,
       name: agg.sumberDanaId ? sdMap.get(agg.sumberDanaId) || 'Unknown' : 'Belum Ditentukan',
-      value: Number(agg._sum.pagu || 0)
-    })).sort((a, b) => b.value - a.value);
+      value: Number(agg._sum.paguInduk || 0), // backward compat
+      paguInduk: Number(agg._sum.paguInduk || 0),
+      paguRkpd: Number(agg._sum.paguRkpd || 0),
+      paguPerubahan: Number(agg._sum.paguPerubahan || 0)
+    })).sort((a, b) => b.paguInduk - a.paguInduk);
 
-    // 2. All Rekening Chart (Bar Chart / Table)
+    // 2. Rekapitulasi per Rekening Belanja
     const rekeningAgg = await prisma.rincianBelanja.groupBy({
       by: ['rekeningId'],
       where: { subKegiatan: { kegiatan: { program: { skpdId: { in: skpdIdList } } } } },
-      _sum: { pagu: true },
-      orderBy: { _sum: { pagu: 'desc' } }
+      _sum: { 
+        paguInduk: true,
+        paguRkpd: true,
+        paguPerubahan: true 
+      },
+      orderBy: { _sum: { paguInduk: 'desc' } }
     });
 
     const rekenings = await prisma.rekening.findMany({
@@ -143,13 +150,19 @@ export async function GET(request: Request) {
         id: agg.rekeningId,
         kode: rek?.kode || 'Unknown',
         nama: rek?.nama || 'Unknown',
-        value: Number(agg._sum.pagu || 0)
+        value: Number(agg._sum.paguInduk || 0), // backward compat
+        paguInduk: Number(agg._sum.paguInduk || 0),
+        paguRkpd: Number(agg._sum.paguRkpd || 0),
+        paguPerubahan: Number(agg._sum.paguPerubahan || 0)
       };
     });
 
     return NextResponse.json({
       summary: {
         totalPagu,
+        totalPaguInduk,
+        totalPaguRkpd,
+        totalPaguPerubahan,
         skpdCount,
         programCount,
         kegiatanCount,
@@ -161,7 +174,10 @@ export async function GET(request: Request) {
     });
 
   } catch (error: any) {
-    console.error('Dashboard API Error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error('API Error:', error);
+    return NextResponse.json(
+      { error: 'Terjadi kesalahan sistem', details: error.message },
+      { status: 500 }
+    );
   }
 }

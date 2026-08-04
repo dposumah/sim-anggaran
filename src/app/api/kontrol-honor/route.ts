@@ -56,25 +56,16 @@ export async function GET(request: Request) {
     });
 
     // 2. Ambil Rincian Belanja dari Excel
-    const subKegiatans = await prisma.subKegiatan.findMany({
-      where: {
-        kegiatan: { program: { skpdId: { in: skpdIds } } },
-        nama: { contains: 'Penyediaan Jasa Pelayanan Umum', mode: 'insensitive' }
-      },
-      select: { id: true, kegiatan: { select: { program: { select: { skpdId: true } } } } }
-    });
-
-    const subKegiatanMap = new Map();
-    subKegiatans.forEach(sk => subKegiatanMap.set(sk.id, sk.kegiatan.program.skpdId));
-
     const rincianList = await prisma.rincianBelanja.findMany({
-      where: { subKegiatanId: { in: subKegiatans.map(sk => sk.id) } },
-      select: { 
-        subKegiatanId: true, 
-        namaPaket: true, 
-        pagu: true, 
+      where: { subKegiatan: { kegiatan: { program: { skpdId: { in: skpdIds } } } } },
+      select: {
+        subKegiatanId: true,
+        paguInduk: true,
+        paguRkpd: true,
         paguPerubahan: true,
-        rekening: { select: { nama: true } } 
+        namaPaket: true,
+        rekening: { select: { kode: true, nama: true } },
+        subKegiatan: { select: { kegiatan: { select: { program: { select: { skpdId: true } } } } } }
       }
     });
 
@@ -98,10 +89,10 @@ export async function GET(request: Request) {
 
       // Aggregate Excel data
       rincianList.forEach(r => {
-        if (subKegiatanMap.get(r.subKegiatanId) !== skpd.id) return;
+        if (r.subKegiatan.kegiatan.program.skpdId !== skpd.id) return;
 
         const catName = getCategory(r.rekening?.nama || '', r.namaPaket || '');
-        const valInduk = Number(r.pagu || 0);
+        const valInduk = Number(r.paguInduk || 0);
         const valPerubahan = r.paguPerubahan !== null ? Number(r.paguPerubahan) : valInduk;
 
         const catData = categoriesMap.get(catName);

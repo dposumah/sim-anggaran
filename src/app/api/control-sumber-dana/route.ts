@@ -44,7 +44,7 @@ export async function GET() {
       },
       select: {
         sumberDanaId: true,
-        pagu: true,
+        paguInduk: true,
         paguPerubahan: true,
         namaPaket: true,
         subKegiatan: {
@@ -60,7 +60,7 @@ export async function GET() {
     const rincianBreakdowns = new Map<number, any[]>();
 
     rincianList.forEach(r => {
-      const val = r.paguPerubahan !== null ? Number(r.paguPerubahan) : Number(r.pagu);
+      const val = r.paguPerubahan !== null ? Number(r.paguPerubahan) : Number(r.paguInduk);
       if (val === 0) return; // Skip zero pagu for breakdown to keep payload smaller
 
       rincianTotals.set(r.sumberDanaId, (rincianTotals.get(r.sumberDanaId) || 0) + val);
@@ -81,11 +81,12 @@ export async function GET() {
     // Gabungkan
     const result = sumberDanas.map(sd => {
       const pagu = paguList.find(p => p.sumberDanaId === sd.id);
+      const paguInduk = pagu ? Number(pagu.paguInduk) : 0;
       return {
         sumberDanaId: sd.id,
         kode: sd.kode,
         nama: sd.nama,
-        ceilingAmount: pagu ? Number(pagu.ceilingAmount) : 0,
+        paguInduk: paguInduk,
         excelAmount: rincianTotals.get(sd.id) || 0,
         breakdown: rincianBreakdowns.get(sd.id) || []
       };
@@ -110,9 +111,9 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { skpdId, tahunId, sumberDanaId, ceilingAmount } = body;
+    const { skpdId, tahunId, sumberDanaId, paguInduk } = body;
 
-    if (!skpdId || !tahunId || !sumberDanaId || ceilingAmount === undefined) {
+    if (!skpdId || !tahunId || !sumberDanaId || paguInduk === undefined) {
       return NextResponse.json({ error: 'Data tidak lengkap' }, { status: 400 });
     }
 
@@ -125,13 +126,13 @@ export async function POST(request: Request) {
         }
       },
       update: {
-        ceilingAmount: Number(ceilingAmount)
+        paguInduk: Number(paguInduk)
       },
       create: {
         skpdId: Number(skpdId),
         sumberDanaId: Number(sumberDanaId),
         tahunId: Number(tahunId),
-        ceilingAmount: Number(ceilingAmount)
+        paguInduk: Number(paguInduk)
       }
     });
 

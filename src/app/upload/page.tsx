@@ -7,7 +7,7 @@ export default function UploadPage() {
   const [file, setFile] = useState<File | null>(null);
   const [type, setType] = useState('rekap');
   const [tahun, setTahun] = useState<number>(2026);
-  const [isPerubahan, setIsPerubahan] = useState(false);
+  const [paguType, setPaguType] = useState('perubahan');
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [message, setMessage] = useState('');
@@ -42,7 +42,7 @@ export default function UploadPage() {
     formData.append('file', file);
     formData.append('type', type);
     formData.append('tahun', tahun.toString());
-    formData.append('isPerubahan', isPerubahan.toString());
+    formData.append('paguType', paguType);
 
     try {
       const res = await fetch('/api/upload', {
@@ -135,17 +135,19 @@ export default function UploadPage() {
           </div>
 
           {type === 'rekap' && (
-            <div className="flex items-center gap-2">
-              <input 
-                type="checkbox" 
-                id="isPerubahan"
-                checked={isPerubahan}
-                onChange={(e) => setIsPerubahan(e.target.checked)}
-                className="w-4 h-4 text-primary rounded border-gray-300 focus:ring-primary"
-              />
-              <label htmlFor="isPerubahan" className="text-sm font-medium text-gray-700">
-                Tandai sebagai Data Perubahan APBD
-              </label>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Tahapan Anggaran</label>
+              <div className="flex gap-4">
+                <select 
+                  value={paguType} 
+                  onChange={(e) => setPaguType(e.target.value)}
+                  className="w-full rounded-md border border-border bg-surface px-4 py-2 text-sm text-foreground shadow-sm focus:border-primary focus:outline-none"
+                >
+                  <option value="induk">Pagu Induk</option>
+                  <option value="rkpd">Pagu RKPD (Pergeseran)</option>
+                  <option value="perubahan">Pagu Perubahan</option>
+                </select>
+              </div>
             </div>
           )}
 

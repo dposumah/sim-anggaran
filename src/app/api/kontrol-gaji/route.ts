@@ -38,56 +38,31 @@ export async function GET(request: Request) {
       kontrolMap.set(kg.skpdId, kg);
     });
 
-    // 3. Ambil data dari RincianBelanja (Excel) untuk Gaji PNS dan PPPK
-    // Filter SubKegiatan "Penyediaan Gaji dan Tunjangan" (biasanya mengandung kata ini)
-    const subKegiatans = await prisma.subKegiatan.findMany({
-      where: {
-        kegiatan: { program: { skpdId: { in: skpdIds } } },
-        nama: { contains: 'Gaji dan Tunjangan', mode: 'insensitive' }
-      },
-      select: { id: true, kegiatan: { select: { program: { select: { skpdId: true } } } } }
+    const REKENING_PNS = ['5.1.02.01.01.0001', '5.1.02.01.01.0002', '5.1.02.01.01.0003', '5.1.02.01.01.0004', '5.1.02.01.01.0005', '5.1.02.01.01.0006', '5.1.02.01.01.0007', '5.1.02.01.01.0008', '5.1.02.01.01.0009', '5.1.02.01.01.0010'];
+    const REKENING_PPPK = ['5.1.02.01.01.0011', '5.1.02.01.01.0012', '5.1.02.01.01.0013', '5.1.02.01.01.0014', '5.1.02.01.01.0015', '5.1.02.01.01.0016', '5.1.02.01.01.0017', '5.1.02.01.01.0018', '5.1.02.01.01.0019', '5.1.02.01.01.0020'];
+
+    // 3. Ambil data dari RincianBelanja (Excel)
+    const rincian = await prisma.rincianBelanja.findMany({
+      where: { subKegiatan: { kegiatan: { program: { skpdId: { in: skpdIds } } } } },
+      select: {
+        subKegiatanId: true,
+        paguInduk: true,
+        paguRkpd: true,
+        paguPerubahan: true,
+        rekening: { select: { kode: true, nama: true } },
+        subKegiatan: {
+          select: {
+            kegiatan: { select: { program: { select: { skpdId: true } } } }
+          }
+        }
+      }
     });
-
-    const subKegiatanMap = new Map();
-    subKegiatans.forEach(sk => {
-      subKegiatanMap.set(sk.id, sk.kegiatan.program.skpdId);
-    });
-
-    const rincianGaji = await prisma.rincianBelanja.findMany({
-      where: {
-        subKegiatanId: { in: subKegiatans.map(sk => sk.id) },
-        OR: [
-          { namaPaket: { contains: 'PNS', mode: 'insensitive' } },
-          { namaPaket: { contains: 'PPPK', mode: 'insensitive' } },
-          { rekening: { nama: { contains: 'PNS', mode: 'insensitive' } } },
-          { rekening: { nama: { contains: 'PPPK', mode: 'insensitive' } } }
-        ]
-      },
-      select: { subKegiatanId: true, namaPaket: true, pagu: true, paguPerubahan: true, rekening: { select: { nama: true } } }
-    });
-
-    // Daftar paket resmi
-    const validPnsPackages = [
-      'Belanja Gaji Pokok PNS',
-      'Belanja Tunjangan Keluarga PNS',
-      'Belanja Tunjangan Jabatan PNS',
-      'Belanja Tunjangan Fungsional PNS',
-      'Belanja Tunjangan Fungsional Umum PNS',
-      'Belanja Tunjangan Beras PNS',
-      'Belanja Tunjangan PPh/Tunjangan Khusus PNS',
-      'Belanja Pembulatan Gaji PNS',
-      'Belanja Iuran Jaminan Kesehatan PNS',
-      'Belanja Iuran Jaminan Kecelakaan Kerja PNS',
-      'Belanja Iuran Jaminan Kematian PNS'
-    ].map(s => s.toUpperCase());
-
-    const validPppkPackages = validPnsPackages.map(s => s.replace('PNS', 'PPPK'));
 
     // Kalkulasi per SKPD
     const excelDataMap = new Map();
     
-    rincianGaji.forEach(r => {
-      const skpdId = subKegiatanMap.get(r.subKegiatanId);
+    rincian.forEach(r => {
+      const skpdId = r.subKegiatan.kegiatan.program.skpdId;
       if (!skpdId) return;
 
       if (!excelDataMap.has(skpdId)) {
@@ -100,19 +75,14 @@ export async function GET(request: Request) {
       }
       
       const stat = excelDataMap.get(skpdId);
-      const namaPaket = r.namaPaket.trim().toUpperCase();
-      const rawRekening = r.rekening?.nama || '';
-      const namaRekening = rawRekening.trim().toUpperCase();
       
-      // Check if either namaPaket or namaRekening matches the valid packages
-      const isPns = validPnsPackages.some(vp => namaPaket.includes(vp) || namaRekening.includes(vp));
-      const isPppk = validPppkPackages.some(vp => namaPaket.includes(vp) || namaRekening.includes(vp));
+      const isPns = REKENING_PNS.some(k => r.rekening?.kode.startsWith(k));
+      const isPppk = REKENING_PPPK.some(k => r.rekening?.kode.startsWith(k));
 
-      const valInduk = Number(r.pagu || 0);
-      const valPerubahan = r.paguPerubahan !== null ? Number(r.paguPerubahan) : valInduk;
+      const valInduk = Number(r.paguInduk || 0);
+      const valPerubahan = Number(r.paguPerubahan !== null ? r.paguPerubahan : valInduk);
       
-      // Breakdown key
-      const bKey = rawRekening || 'Tidak Diketahui';
+      const bKey = r.rekening?.nama || 'Tidak Diketahui';
 
       if (isPppk) {
         stat.pppkInduk += valInduk;
@@ -121,8 +91,9 @@ export async function GET(request: Request) {
         b.induk += valInduk;
         b.perubahan += valPerubahan;
         stat.pppkBreakdown.set(bKey, b);
-      } else if (isPns) {
-        // Fallback to PNS if it contains PNS but not PPPK
+      }
+      
+      if (isPns) {
         stat.pnsInduk += valInduk;
         stat.pnsPerubahan += valPerubahan;
         const b = stat.pnsBreakdown.get(bKey) || { induk: 0, perubahan: 0 };

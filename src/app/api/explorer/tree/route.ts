@@ -1,4 +1,3 @@
-export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
@@ -6,6 +5,7 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const tahun = parseInt(searchParams.get('tahun') || '2026', 10);
+    const skpdIdParam = searchParams.get('skpdId');
 
     const tahunData = await prisma.tahunAnggaran.findUnique({
       where: { tahun }
@@ -15,23 +15,25 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Tahun anggaran tidak ditemukan' }, { status: 404 });
     }
 
-    // 1. Fetch SKPD Pendidikan
-    const skpdsFlat = await prisma.skpd.findMany({
-      where: { 
-        tahunId: tahunData.id,
-        nama: { contains: 'PENDIDIKAN', mode: 'insensitive' }
-      },
-      orderBy: { kode: 'asc' }
-    });
-
-    if (skpdsFlat.length === 0) {
-      return NextResponse.json([]);
+    let skpdFilter: any = { tahunId: tahunData.id };
+    if (skpdIdParam) {
+      skpdFilter.id = parseInt(skpdIdParam, 10);
+    } else {
+      skpdFilter.nama = { contains: 'PENDIDIKAN', mode: 'insensitive' };
     }
 
-    const skpdIds = skpdsFlat.map(s => s.id);
+    const skpds = await prisma.skpd.findMany({ where: skpdFilter });
+    const skpdIds = skpds.map(s => s.id);
 
-    // 2. Fetch related data concurrently to prevent timeouts on Vercel
-    const [programsFlat, kegiatansFlat, subKegiatansFlat, sdRelsFlat, paguPerSubSkpdAndSd, sds] = await Promise.all([
+    const [
+      programsFlat,
+      kegiatansFlat,
+      subKegiatansFlat,
+      sdRelsFlat,
+      paguPerSubSkpdAndSd,
+      sds,
+      realisasiPerSub
+    ] = await Promise.all([
       prisma.program.findMany({
         where: { skpdId: { in: skpdIds } },
         orderBy: { kode: 'asc' }
@@ -50,43 +52,47 @@ export async function GET(request: Request) {
       prisma.rincianBelanja.groupBy({
         by: ['subKegiatanId', 'sumberDanaId'],
         where: { subKegiatan: { kegiatan: { program: { skpdId: { in: skpdIds } } } } },
-        _sum: { pagu: true, paguPerubahan: true }
+        _sum: { paguInduk: true, paguRkpd: true, paguPerubahan: true }
       }),
-      prisma.sumberDana.findMany()
+      prisma.sumberDana.findMany(),
+      prisma.realisasiBelanja.groupBy({
+        by: ['subKegiatanId'],
+        where: { subKegiatan: { kegiatan: { program: { skpdId: { in: skpdIds } } } } },
+        _sum: { nominal: true, alokasiRealisasi: true }
+      })
     ]);
 
     const sdNameMap = new Map(sds.map(s => [s.id, s.nama]));
 
-    const subPaguSdMap = new Map<number, { [key: string]: { pagu: number, paguPerubahan: number | null } }>();
-    const allSubTotalMap = new Map<number, { pagu: number, paguPerubahan: number | null }>();
+    const subPaguSdMap = new Map<number, { [key: string]: { paguInduk: number, paguRkpd: number, paguPerubahan: number } }>();
+    const allSubTotalMap = new Map<number, { paguInduk: number, paguRkpd: number, paguPerubahan: number }>();
 
     for (const p of paguPerSubSkpdAndSd) {
       const sId = p.subKegiatanId;
       const sdNama = sdNameMap.get(p.sumberDanaId) || 'Unknown';
-      const pagu = Number(p._sum.pagu || 0);
-      const paguPerubahan = p._sum.paguPerubahan !== null ? Number(p._sum.paguPerubahan) : null;
+      
+      const paguInduk = Number(p._sum.paguInduk || 0);
+      const paguRkpd = Number(p._sum.paguRkpd || 0);
+      const paguPerubahan = Number(p._sum.paguPerubahan || 0);
 
       if (!subPaguSdMap.has(sId)) subPaguSdMap.set(sId, {});
       const sdObj = subPaguSdMap.get(sId)!;
       
-      const currSd = sdObj[sdNama] || { pagu: 0, paguPerubahan: null };
+      const currSd = sdObj[sdNama] || { paguInduk: 0, paguRkpd: 0, paguPerubahan: 0 };
       sdObj[sdNama] = {
-        pagu: currSd.pagu + pagu,
-        paguPerubahan: (currSd.paguPerubahan !== null || paguPerubahan !== null) 
-          ? (currSd.paguPerubahan || 0) + (paguPerubahan || 0) 
-          : null
+        paguInduk: currSd.paguInduk + paguInduk,
+        paguRkpd: currSd.paguRkpd + paguRkpd,
+        paguPerubahan: currSd.paguPerubahan + paguPerubahan
       };
 
-      const currTotal = allSubTotalMap.get(sId) || { pagu: 0, paguPerubahan: null };
+      const currTotal = allSubTotalMap.get(sId) || { paguInduk: 0, paguRkpd: 0, paguPerubahan: 0 };
       allSubTotalMap.set(sId, {
-        pagu: currTotal.pagu + pagu,
-        paguPerubahan: (currTotal.paguPerubahan !== null || paguPerubahan !== null)
-          ? (currTotal.paguPerubahan || 0) + (paguPerubahan || 0)
-          : null
+        paguInduk: currTotal.paguInduk + paguInduk,
+        paguRkpd: currTotal.paguRkpd + paguRkpd,
+        paguPerubahan: currTotal.paguPerubahan + paguPerubahan
       });
     }
 
-    // 3. Assemble the tree in memory
     const progMap = new Map<number, any[]>();
     const kegMap = new Map<number, any[]>();
     const subKegMap = new Map<number, any[]>();
@@ -97,19 +103,36 @@ export async function GET(request: Request) {
       sdRelMap.get(rel.subKegiatanId)!.push(rel);
     }
 
+    // Build realisasi map per sub kegiatan
+    const realisasiMap = new Map<number, { realisasi: number, alokasiRealisasi: number }>();
+    for (const r of realisasiPerSub) {
+      realisasiMap.set(r.subKegiatanId, {
+        realisasi: Number(r._sum.nominal || 0),
+        alokasiRealisasi: Number(r._sum.alokasiRealisasi || 0)
+      });
+    }
+
     for (const sub of subKegiatansFlat) {
-      const subTotal = allSubTotalMap.get(sub.id) || { pagu: 0, paguPerubahan: null };
+      const subTotal = allSubTotalMap.get(sub.id) || { paguInduk: 0, paguRkpd: 0, paguPerubahan: 0 };
       const subSds = subPaguSdMap.get(sub.id) || {};
       const rels = sdRelMap.get(sub.id) || [];
       const isLocked = rels.some(r => r.isLocked);
       
+      const realData = realisasiMap.get(sub.id) || { realisasi: 0, alokasiRealisasi: 0 };
+      
       const subNode = {
         ...sub,
-        totalPagu: subTotal.pagu,
+        pagu: subTotal.paguInduk,
+        totalPaguInduk: subTotal.paguInduk,
+        totalPaguRkpd: subTotal.paguRkpd,
         totalPaguPerubahan: subTotal.paguPerubahan,
+        totalRealisasi: realData.realisasi,
+        totalAlokasiRealisasi: realData.alokasiRealisasi,
         sumberDanas: subSds,
-        is_locked: isLocked
+        is_locked: isLocked,
+        type: 'subKegiatan'
       };
+      
       if (!subKegMap.has(sub.kegiatanId)) subKegMap.set(sub.kegiatanId, []);
       subKegMap.get(sub.kegiatanId)!.push(subNode);
     }
@@ -117,96 +140,128 @@ export async function GET(request: Request) {
     for (const keg of kegiatansFlat) {
       const subKegiatans = subKegMap.get(keg.id) || [];
       
-      let kegTotal = { pagu: 0, paguPerubahan: null as number | null };
-      let kegSdMap: { [key: string]: { pagu: number, paguPerubahan: number | null } } = {};
-
-      for (const sub of subKegiatans) {
-        kegTotal.pagu += sub.totalPagu;
-        if (sub.totalPaguPerubahan !== null) {
-          kegTotal.paguPerubahan = (kegTotal.paguPerubahan || 0) + sub.totalPaguPerubahan;
-        }
-        for (const [sd, vals] of Object.entries(sub.sumberDanas as Record<string, any>)) {
-          if (!kegSdMap[sd]) kegSdMap[sd] = { pagu: 0, paguPerubahan: null };
-          kegSdMap[sd].pagu += vals.pagu;
-          if (vals.paguPerubahan !== null) {
-            kegSdMap[sd].paguPerubahan = (kegSdMap[sd].paguPerubahan || 0) + vals.paguPerubahan;
-          }
-        }
+      let kegTotalInduk = 0;
+      let kegTotalRkpd = 0;
+      let kegTotalPerubahan = 0;
+      let kegTotalRealisasi = 0;
+      
+      let kegSdMap: { [key: string]: { paguInduk: number, paguRkpd: number, paguPerubahan: number } } = {};
+      
+      for (const sk of subKegiatans) {
+        kegTotalInduk += sk.totalPaguInduk;
+        kegTotalRkpd += sk.totalPaguRkpd;
+        kegTotalPerubahan += sk.totalPaguPerubahan;
+        kegTotalRealisasi += sk.totalRealisasi || 0;
+        
+        Object.keys(sk.sumberDanas).forEach(sd => {
+          if (!kegSdMap[sd]) kegSdMap[sd] = { paguInduk: 0, paguRkpd: 0, paguPerubahan: 0 };
+          kegSdMap[sd].paguInduk += sk.sumberDanas[sd].paguInduk;
+          kegSdMap[sd].paguRkpd += sk.sumberDanas[sd].paguRkpd;
+          kegSdMap[sd].paguPerubahan += sk.sumberDanas[sd].paguPerubahan;
+        });
       }
+
+      const isLocked = subKegiatans.some(sk => sk.is_locked);
 
       const kegNode = {
         ...keg,
-        subKegiatans,
-        totalPagu: kegTotal.pagu,
-        totalPaguPerubahan: kegTotal.paguPerubahan,
-        sumberDanas: kegSdMap
+        type: 'kegiatan',
+        pagu: kegTotalInduk,
+        totalPaguInduk: kegTotalInduk,
+        totalPaguRkpd: kegTotalRkpd,
+        totalPaguPerubahan: kegTotalPerubahan,
+        totalRealisasi: kegTotalRealisasi,
+        sumberDanas: kegSdMap,
+        is_locked: isLocked,
+        children: subKegiatans
       };
-      if (!kegMap.has(keg.programId)) kegMap.set(keg.programId, []);
-      kegMap.get(keg.programId)!.push(kegNode);
+
+      if (!progMap.has(keg.programId)) progMap.set(keg.programId, []);
+      progMap.get(keg.programId)!.push(kegNode);
     }
 
-    for (const prog of programsFlat) {
-      const kegiatans = kegMap.get(prog.id) || [];
+    const treeData = programsFlat.map(prog => {
+      const kegiatans = progMap.get(prog.id) || [];
       
-      let progTotal = { pagu: 0, paguPerubahan: null as number | null };
-      let progSdMap: { [key: string]: { pagu: number, paguPerubahan: number | null } } = {};
+      let progTotalInduk = 0;
+      let progTotalRkpd = 0;
+      let progTotalPerubahan = 0;
+      let progTotalRealisasi = 0;
+      
+      let progSdMap: { [key: string]: { paguInduk: number, paguRkpd: number, paguPerubahan: number } } = {};
 
-      for (const keg of kegiatans) {
-        progTotal.pagu += keg.totalPagu;
-        if (keg.totalPaguPerubahan !== null) {
-          progTotal.paguPerubahan = (progTotal.paguPerubahan || 0) + keg.totalPaguPerubahan;
-        }
-        for (const [sd, vals] of Object.entries(keg.sumberDanas as Record<string, any>)) {
-          if (!progSdMap[sd]) progSdMap[sd] = { pagu: 0, paguPerubahan: null };
-          progSdMap[sd].pagu += vals.pagu;
-          if (vals.paguPerubahan !== null) {
-            progSdMap[sd].paguPerubahan = (progSdMap[sd].paguPerubahan || 0) + vals.paguPerubahan;
-          }
-        }
+      for (const k of kegiatans) {
+        progTotalInduk += k.totalPaguInduk;
+        progTotalRkpd += k.totalPaguRkpd;
+        progTotalPerubahan += k.totalPaguPerubahan;
+        progTotalRealisasi += k.totalRealisasi || 0;
+        
+        Object.keys(k.sumberDanas).forEach(sd => {
+          if (!progSdMap[sd]) progSdMap[sd] = { paguInduk: 0, paguRkpd: 0, paguPerubahan: 0 };
+          progSdMap[sd].paguInduk += k.sumberDanas[sd].paguInduk;
+          progSdMap[sd].paguRkpd += k.sumberDanas[sd].paguRkpd;
+          progSdMap[sd].paguPerubahan += k.sumberDanas[sd].paguPerubahan;
+        });
       }
 
-      const progNode = {
-        ...prog,
-        kegiatans,
-        totalPagu: progTotal.pagu,
-        totalPaguPerubahan: progTotal.paguPerubahan,
-        sumberDanas: progSdMap
-      };
-      if (!progMap.has(prog.skpdId)) progMap.set(prog.skpdId, []);
-      progMap.get(prog.skpdId)!.push(progNode);
-    }
-
-    const result = skpdsFlat.map(skpd => {
-      const programs = progMap.get(skpd.id) || [];
-      
-      let skpdTotal = { pagu: 0, paguPerubahan: null as number | null };
-      let skpdSdMap: { [key: string]: { pagu: number, paguPerubahan: number | null } } = {};
-
-      for (const prog of programs) {
-        skpdTotal.pagu += prog.totalPagu;
-        if (prog.totalPaguPerubahan !== null) {
-          skpdTotal.paguPerubahan = (skpdTotal.paguPerubahan || 0) + prog.totalPaguPerubahan;
-        }
-        for (const [sd, vals] of Object.entries(prog.sumberDanas as Record<string, any>)) {
-          if (!skpdSdMap[sd]) skpdSdMap[sd] = { pagu: 0, paguPerubahan: null };
-          skpdSdMap[sd].pagu += vals.pagu;
-          if (vals.paguPerubahan !== null) {
-            skpdSdMap[sd].paguPerubahan = (skpdSdMap[sd].paguPerubahan || 0) + vals.paguPerubahan;
-          }
-        }
-      }
+      const isLocked = kegiatans.some(k => k.is_locked);
 
       return {
-        ...skpd,
-        programs,
-        totalPagu: skpdTotal.pagu,
-        totalPaguPerubahan: skpdTotal.paguPerubahan,
-        sumberDanas: skpdSdMap
+        ...prog,
+        type: 'program',
+        pagu: progTotalInduk,
+        totalPaguInduk: progTotalInduk,
+        totalPaguRkpd: progTotalRkpd,
+        totalPaguPerubahan: progTotalPerubahan,
+        totalRealisasi: progTotalRealisasi,
+        sumberDanas: progSdMap,
+        is_locked: isLocked,
+        children: kegiatans
       };
     });
 
-    return NextResponse.json(result);
+    const finalData = skpds.map(skpd => {
+      const skpdPrograms = treeData.filter((p: any) => p.skpdId === skpd.id);
+      
+      let totalInduk = 0;
+      let totalRkpd = 0;
+      let totalPerubahan = 0;
+      let totalRealisasi = 0;
+      let sdMap: { [key: string]: { paguInduk: number, paguRkpd: number, paguPerubahan: number } } = {};
+      
+      skpdPrograms.forEach(p => {
+         totalInduk += p.totalPaguInduk;
+         totalRkpd += p.totalPaguRkpd;
+         totalPerubahan += p.totalPaguPerubahan;
+         totalRealisasi += p.totalRealisasi || 0;
+         Object.keys(p.sumberDanas).forEach(sd => {
+           if (!sdMap[sd]) sdMap[sd] = { paguInduk: 0, paguRkpd: 0, paguPerubahan: 0 };
+           sdMap[sd].paguInduk += p.sumberDanas[sd].paguInduk;
+           sdMap[sd].paguRkpd += p.sumberDanas[sd].paguRkpd;
+           sdMap[sd].paguPerubahan += p.sumberDanas[sd].paguPerubahan;
+         });
+      });
+      
+      return {
+        ...skpd,
+        type: 'skpd',
+        pagu: totalInduk,
+        totalPaguInduk: totalInduk,
+        totalPaguRkpd: totalRkpd,
+        totalPaguPerubahan: totalPerubahan,
+        totalRealisasi: totalRealisasi,
+        sumberDanas: sdMap,
+        programs: skpdPrograms
+      };
+    });
+
+    return NextResponse.json(finalData);
+
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error('API Error:', error);
+    return NextResponse.json(
+      { error: 'Terjadi kesalahan sistem', details: error.message },
+      { status: 500 }
+    );
   }
 }

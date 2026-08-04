@@ -24,6 +24,7 @@ model TahunAnggaran {
   realisasiGajis    RealisasiGaji[]
   KontrolGaji       KontrolGaji[]
   KontrolJasaTarget KontrolJasaTarget[]
+  realisasiBelanjas RealisasiBelanja[]
 }
 
 model Urusan {
@@ -55,6 +56,7 @@ model Skpd {
   realisasiGajis    RealisasiGaji[]
   KontrolGaji       KontrolGaji[]
   KontrolJasaTarget KontrolJasaTarget[]
+  realisasiBelanjas RealisasiBelanja[]
 
   @@unique([kode, kodeSubUnit, tahunId])
 }
@@ -97,6 +99,7 @@ model SubKegiatan {
 
   rincianBelanjas        RincianBelanja[]
   subKegiatanSumberDanas SubKegiatanSumberDana[]
+  realisasiBelanjas      RealisasiBelanja[]
 
   @@unique([kode, kegiatanId])
 }
@@ -109,6 +112,7 @@ model SumberDana {
   rincianBelanjas        RincianBelanja[]
   subKegiatanSumberDanas SubKegiatanSumberDana[]
   paguSumberDanas        PaguSumberDana[]
+  realisasiBelanjas      RealisasiBelanja[]
 }
 
 model SubKegiatanSumberDana {
@@ -130,7 +134,8 @@ model Rekening {
   kode String @unique
   nama String
 
-  rincianBelanjas RincianBelanja[]
+  rincianBelanjas   RincianBelanja[]
+  realisasiBelanjas RealisasiBelanja[]
 }
 
 model RincianBelanja {
@@ -150,9 +155,13 @@ model RincianBelanja {
 
   tipePaket   String
   namaPaket   String
-  pagu        Decimal @db.Decimal(15, 2)
-  volume      Int     @default(1)
-  hargaSatuan Decimal @db.Decimal(15, 2)
+  paguInduk        Decimal @db.Decimal(15, 2)
+  volumeInduk      Int     @default(1)
+  hargaSatuanInduk Decimal @db.Decimal(15, 2)
+
+  volumeRkpd           Int?     
+  hargaSatuanRkpd      Decimal? @db.Decimal(15, 2)
+  paguRkpd             Decimal? @db.Decimal(15, 2)
 
   volumePerubahan      Int?
   hargaSatuanPerubahan Decimal? @db.Decimal(15, 2)
@@ -180,7 +189,9 @@ model SshSbu {
 
 model PaguCeiling {
   id            Int     @id @default(autoincrement())
-  ceilingAmount Decimal @db.Decimal(15, 2)
+  paguInduk     Decimal @db.Decimal(15, 2)
+  paguRkpd      Decimal? @db.Decimal(15, 2)
+  paguPerubahan Decimal? @db.Decimal(15, 2)
 
   skpdId Int
   skpd   Skpd @relation(fields: [skpdId], references: [id])
@@ -193,7 +204,9 @@ model PaguCeiling {
 
 model PaguSumberDana {
   id            Int     @id @default(autoincrement())
-  ceilingAmount Decimal @db.Decimal(15, 2)
+  paguInduk     Decimal @db.Decimal(15, 2)
+  paguRkpd      Decimal? @db.Decimal(15, 2)
+  paguPerubahan Decimal? @db.Decimal(15, 2)
 
   skpdId Int
   skpd   Skpd @relation(fields: [skpdId], references: [id])
@@ -321,4 +334,25 @@ model RealisasiGaji {
   nominal       Decimal @db.Decimal(15, 2)
 
   @@unique([skpdId, tahunId, bulan, uraianBelanja, kategori])
+}
+
+model RealisasiBelanja {
+  id            Int         @id @default(autoincrement())
+  skpdId        Int
+  tahunId       Int
+  subKegiatanId Int
+  sumberDanaId  Int
+  rekeningId    Int
+  bulan         Int
+  nominal       Decimal     @db.Decimal(15, 2)
+  alokasiRealisasi Decimal? @db.Decimal(15, 2)
+  keterangan    String?
+
+  skpd        Skpd          @relation(fields: [skpdId], references: [id])
+  tahun       TahunAnggaran @relation(fields: [tahunId], references: [id])
+  subKegiatan SubKegiatan   @relation(fields: [subKegiatanId], references: [id])
+  sumberDana  SumberDana    @relation(fields: [sumberDanaId], references: [id])
+  rekening    Rekening      @relation(fields: [rekeningId], references: [id])
+
+  @@unique([skpdId, subKegiatanId, sumberDanaId, rekeningId, bulan])
 }

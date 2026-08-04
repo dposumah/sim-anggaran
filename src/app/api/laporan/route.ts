@@ -51,7 +51,10 @@ export async function GET(request: Request) {
         }
       },
       select: {
-        pagu: true,
+        subKegiatanId: true,
+        paguInduk: true,
+        paguRkpd: true,
+        paguPerubahan: true,
         subKegiatan: {
           select: {
             kegiatan: {
@@ -66,8 +69,10 @@ export async function GET(request: Request) {
 
     const paguByProgram: Record<number, number> = {};
     rincian.forEach(r => {
+      const valueInduk = r.paguInduk ? Number(r.paguInduk) : 0;
+      const valuePerubahan = r.paguPerubahan !== null ? Number(r.paguPerubahan) : valueInduk;
       const pid = r.subKegiatan.kegiatan.programId;
-      paguByProgram[pid] = (paguByProgram[pid] || 0) + Number(r.pagu);
+      paguByProgram[pid] = (paguByProgram[pid] || 0) + valuePerubahan;
     });
 
     const laporanData = programs.map(p => ({

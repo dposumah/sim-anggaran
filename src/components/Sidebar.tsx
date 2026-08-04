@@ -17,7 +17,14 @@ import {
   Wallet,
   Menu,
   ChevronDown,
-  ChevronRight
+  ChevronRight,
+  Activity,
+  Settings,
+  Banknote,
+  Briefcase,
+  CreditCard,
+  ShieldCheck,
+  CheckCircle
 } from 'lucide-react'
 
 const navigation = [
@@ -33,14 +40,15 @@ const navigation = [
     name: 'Menu Lainnya',
     icon: Menu,
     children: [
-      { name: 'Kebutuhan Gaji', href: '/kebutuhan-gaji', icon: Users },
-      { name: 'Kontrol Gaji', href: '/kontrol-gaji', icon: Calculator },
-      { name: 'Kontrol Pagu', href: '/pagu', icon: ShieldAlert },
-      { name: 'Sumber Dana', href: '/sumber-dana', icon: Database },
+      { name: 'Kebutuhan Gaji', href: '/kebutuhan-gaji', icon: Calculator },
+      { name: 'Kontrol Gaji', href: '/kontrol-gaji', icon: Activity },
+      { name: 'Kontrol Pagu', href: '/pagu', icon: Settings },
+      { name: 'Sumber Dana', href: '/sumber-dana', icon: Banknote },
       { name: 'Standar Harga', href: '/standar-harga', icon: Tags },
-      { name: 'Master Jabatan', href: '/master-jabatan', icon: Users },
-      { name: 'Master Gaji', href: '/master-gaji', icon: Database },
-      { name: 'Control Sumber Dana', href: '/control-sumber-dana', icon: ShieldAlert },
+      { name: 'Master Jabatan', href: '/master-jabatan', icon: Briefcase },
+      { name: 'Master Gaji', href: '/master-gaji', icon: CreditCard },
+      { name: 'Kontrol Sumber Dana', href: '/control-sumber-dana', icon: ShieldCheck },
+      { name: 'Realisasi Anggaran', href: '/realisasi', icon: CheckCircle },
     ]
   }
 ]

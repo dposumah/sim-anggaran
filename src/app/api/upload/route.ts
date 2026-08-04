@@ -9,7 +9,7 @@ export async function POST(request: Request) {
     const file = formData.get('file') as File;
     const type = formData.get('type') as string;
     const tahunStr = formData.get('tahun') as string;
-    const isPerubahan = formData.get('isPerubahan') === 'true';
+    const paguType = formData.get('paguType') as string || 'induk';
     const tahun = parseInt(tahunStr || '2026', 10);
 
     if (!file) {
@@ -202,9 +202,9 @@ export async function POST(request: Request) {
           rekeningId: rekId,
           tipePaket: String(r['PAKET/KELOMPOK'] || '').trim() || '-',
           namaPaket: String(r['NAMA PAKET/KELOMPOK'] || '').trim() || '-',
-          volume: vol,
-          hargaSatuan: pagu,
-          pagu: pagu
+          volumeInduk: vol,
+          hargaSatuanInduk: pagu,
+          paguInduk: pagu
         });
       }
     });
@@ -212,7 +212,7 @@ export async function POST(request: Request) {
     if (rincianList.length > 0) {
       const skpdIdsInUpload = Array.from(sIdMap.values()) as number[];
       
-      if (isPerubahan) {
+      if (paguType !== 'induk') {
         const existingRincian = await prisma.rincianBelanja.findMany({
           where: { subKegiatan: { kegiatan: { program: { skpdId: { in: skpdIdsInUpload } } } } }
         });
@@ -233,22 +233,27 @@ export async function POST(request: Request) {
           if (existArr && existArr.length > 0) {
             const exist = existArr.shift();
             const { id, ...rest } = exist;
-            mergedRincian.push({
-              ...rest,
-              volumePerubahan: item.volume,
-              hargaSatuanPerubahan: item.hargaSatuan,
-              paguPerubahan: item.pagu
-            });
+            const updatedRincian = { ...rest };
+            if (paguType === 'rkpd') {
+              updatedRincian.volumeRkpd = item.volumeInduk;
+              updatedRincian.hargaSatuanRkpd = item.hargaSatuanInduk;
+              updatedRincian.paguRkpd = item.paguInduk;
+            } else if (paguType === 'perubahan') {
+              updatedRincian.volumePerubahan = item.volumeInduk;
+              updatedRincian.hargaSatuanPerubahan = item.hargaSatuanInduk;
+              updatedRincian.paguPerubahan = item.paguInduk;
+            }
+            mergedRincian.push(updatedRincian);
           } else {
-            mergedRincian.push({
-              ...item,
-              pagu: 0,
-              volume: 1,
-              hargaSatuan: 0,
-              volumePerubahan: item.volume,
-              hargaSatuanPerubahan: item.hargaSatuan,
-              paguPerubahan: item.pagu
-            });
+            const newRincian = { ...item };
+            if (paguType === 'rkpd') {
+              newRincian.paguInduk = 0; newRincian.volumeInduk = 1; newRincian.hargaSatuanInduk = 0;
+              newRincian.volumeRkpd = item.volumeInduk; newRincian.hargaSatuanRkpd = item.hargaSatuanInduk; newRincian.paguRkpd = item.paguInduk;
+            } else if (paguType === 'perubahan') {
+              newRincian.paguInduk = 0; newRincian.volumeInduk = 1; newRincian.hargaSatuanInduk = 0;
+              newRincian.volumePerubahan = item.volumeInduk; newRincian.hargaSatuanPerubahan = item.hargaSatuanInduk; newRincian.paguPerubahan = item.paguInduk;
+            }
+            mergedRincian.push(newRincian);
           }
         }
         

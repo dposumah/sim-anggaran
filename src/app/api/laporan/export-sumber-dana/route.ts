@@ -52,7 +52,7 @@ export async function GET(request: Request) {
       const rekKey = (r.rekening?.kode || 'Tanpa Kode') + '|' + (r.rekening?.nama || 'Tanpa Rekening');
       const paketKey = r.namaPaket;
       
-      const nilaiInduk = Number(r.pagu);
+      const nilaiInduk = r.paguInduk ? Number(r.paguInduk) : 0;
       const nilaiPerubahan = r.paguPerubahan !== null ? Number(r.paguPerubahan) : nilaiInduk;
 
       if (!tree[skpdKey]) tree[skpdKey] = { induk: 0, perubahan: 0, progs: {} };

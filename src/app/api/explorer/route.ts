@@ -38,20 +38,27 @@ export async function GET(request: Request) {
         const paguPerSubSkpd = await prisma.rincianBelanja.groupBy({
           by: ['subKegiatanId'],
           where: { subKegiatanId: { in: subKegiatansSkpd.map(s => s.id) } },
-          _sum: { pagu: true }
+          _sum: { paguInduk: true, paguRkpd: true, paguPerubahan: true }
         });
 
-        const paguBySkpd: Record<number, number> = {};
-        const subPaguMapSkpd = new Map(paguPerSubSkpd.map(p => [p.subKegiatanId, p._sum.pagu || 0]));
+        const paguBySkpd: Record<number, { paguInduk: number, paguRkpd: number, paguPerubahan: number }> = {};
+        const subPaguMapSkpd = new Map(paguPerSubSkpd.map(p => [p.subKegiatanId, p._sum]));
 
         subKegiatansSkpd.forEach(sub => {
           const sid = sub.kegiatan.program.skpdId;
-          paguBySkpd[sid] = (paguBySkpd[sid] || 0) + Number(subPaguMapSkpd.get(sub.id) || 0);
+          const current = subPaguMapSkpd.get(sub.id) || { paguInduk: 0, paguRkpd: 0, paguPerubahan: 0 };
+          const acc = paguBySkpd[sid] || { paguInduk: 0, paguRkpd: 0, paguPerubahan: 0 };
+          
+          paguBySkpd[sid] = {
+            paguInduk: acc.paguInduk + Number(current.paguInduk || 0),
+            paguRkpd: acc.paguRkpd + Number(current.paguRkpd || 0),
+            paguPerubahan: acc.paguPerubahan + Number(current.paguPerubahan || 0),
+          };
         });
 
         const enhancedSkpds = skpds.map(s => ({
           ...s,
-          totalPagu: paguBySkpd[s.id] || 0
+          ...(paguBySkpd[s.id] || { paguInduk: 0, paguRkpd: 0, paguPerubahan: 0 })
         }));
         
         return NextResponse.json(enhancedSkpds);
@@ -73,18 +80,24 @@ export async function GET(request: Request) {
         const paguPerSubProg = await prisma.rincianBelanja.groupBy({
           by: ['subKegiatanId'],
           where: { subKegiatanId: { in: subKegiatansProg.map(s => s.id) } },
-          _sum: { pagu: true }
+          _sum: { paguInduk: true, paguRkpd: true, paguPerubahan: true }
         });
 
-        const paguByProg: Record<number, number> = {};
-        const subPaguMapProg = new Map(paguPerSubProg.map(p => [p.subKegiatanId, p._sum.pagu || 0]));
+        const paguByProg: Record<number, { paguInduk: number, paguRkpd: number, paguPerubahan: number }> = {};
+        const subPaguMapProg = new Map(paguPerSubProg.map(p => [p.subKegiatanId, p._sum]));
 
         subKegiatansProg.forEach(sub => {
           const pid = sub.kegiatan.programId;
-          paguByProg[pid] = (paguByProg[pid] || 0) + Number(subPaguMapProg.get(sub.id) || 0);
+          const current = subPaguMapProg.get(sub.id) || { paguInduk: 0, paguRkpd: 0, paguPerubahan: 0 };
+          const acc = paguByProg[pid] || { paguInduk: 0, paguRkpd: 0, paguPerubahan: 0 };
+          paguByProg[pid] = {
+            paguInduk: acc.paguInduk + Number(current.paguInduk || 0),
+            paguRkpd: acc.paguRkpd + Number(current.paguRkpd || 0),
+            paguPerubahan: acc.paguPerubahan + Number(current.paguPerubahan || 0),
+          };
         });
 
-        return NextResponse.json(programs.map(p => ({ ...p, totalPagu: paguByProg[p.id] || 0 })));
+        return NextResponse.json(programs.map(p => ({ ...p, ...(paguByProg[p.id] || { paguInduk: 0, paguRkpd: 0, paguPerubahan: 0 }) })));
 
       case 'kegiatan':
         const programId = searchParams.get('programId');
@@ -103,18 +116,24 @@ export async function GET(request: Request) {
         const paguPerSubKeg = await prisma.rincianBelanja.groupBy({
           by: ['subKegiatanId'],
           where: { subKegiatanId: { in: subKegiatansKeg.map(s => s.id) } },
-          _sum: { pagu: true }
+          _sum: { paguInduk: true, paguRkpd: true, paguPerubahan: true }
         });
 
-        const paguByKeg: Record<number, number> = {};
-        const subPaguMapKeg = new Map(paguPerSubKeg.map(p => [p.subKegiatanId, p._sum.pagu || 0]));
+        const paguByKeg: Record<number, { paguInduk: number, paguRkpd: number, paguPerubahan: number }> = {};
+        const subPaguMapKeg = new Map(paguPerSubKeg.map(p => [p.subKegiatanId, p._sum]));
 
         subKegiatansKeg.forEach(sub => {
           const kid = sub.kegiatanId;
-          paguByKeg[kid] = (paguByKeg[kid] || 0) + Number(subPaguMapKeg.get(sub.id) || 0);
+          const current = subPaguMapKeg.get(sub.id) || { paguInduk: 0, paguRkpd: 0, paguPerubahan: 0 };
+          const acc = paguByKeg[kid] || { paguInduk: 0, paguRkpd: 0, paguPerubahan: 0 };
+          paguByKeg[kid] = {
+            paguInduk: acc.paguInduk + Number(current.paguInduk || 0),
+            paguRkpd: acc.paguRkpd + Number(current.paguRkpd || 0),
+            paguPerubahan: acc.paguPerubahan + Number(current.paguPerubahan || 0),
+          };
         });
 
-        return NextResponse.json(kegiatans.map(k => ({ ...k, totalPagu: paguByKeg[k.id] || 0 })));
+        return NextResponse.json(kegiatans.map(k => ({ ...k, ...(paguByKeg[k.id] || { paguInduk: 0, paguRkpd: 0, paguPerubahan: 0 }) })));
 
       case 'subkegiatan':
         const kegiatanId = searchParams.get('kegiatanId');
@@ -135,15 +154,19 @@ export async function GET(request: Request) {
         const paguPerSubSub = await prisma.rincianBelanja.groupBy({
           by: ['subKegiatanId'],
           where: { subKegiatanId: { in: subkegiatans.map(s => s.id) } },
-          _sum: { pagu: true }
+          _sum: { paguInduk: true, paguRkpd: true, paguPerubahan: true }
         });
 
-        const paguBySub: Record<number, number> = {};
+        const paguBySub: Record<number, { paguInduk: number, paguRkpd: number, paguPerubahan: number }> = {};
         paguPerSubSub.forEach(p => {
-          paguBySub[p.subKegiatanId] = Number(p._sum.pagu || 0);
+          paguBySub[p.subKegiatanId] = {
+            paguInduk: Number(p._sum.paguInduk || 0),
+            paguRkpd: Number(p._sum.paguRkpd || 0),
+            paguPerubahan: Number(p._sum.paguPerubahan || 0),
+          };
         });
 
-        return NextResponse.json(subkegiatans.map(s => ({ ...s, totalPagu: paguBySub[s.id] || 0 })));
+        return NextResponse.json(subkegiatans.map(s => ({ ...s, ...(paguBySub[s.id] || { paguInduk: 0, paguRkpd: 0, paguPerubahan: 0 }) })));
 
       case 'rincian':
         const subKegiatanId = searchParams.get('subKegiatanId');

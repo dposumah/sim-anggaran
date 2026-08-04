@@ -46,7 +46,7 @@ export async function GET(request: Request) {
     const rincianAgg = await prisma.rincianBelanja.groupBy({
       by: ['subKegiatanId'],
       where: whereClause,
-      _sum: { pagu: true }
+      _sum: { paguInduk: true, paguRkpd: true, paguPerubahan: true }
     });
 
     const subKegs = await prisma.subKegiatan.findMany({
@@ -60,7 +60,7 @@ export async function GET(request: Request) {
         id: agg.subKegiatanId,
         kode: sub?.kode || 'Unknown',
         nama: sub?.nama || 'Unknown',
-        pagu: Number(agg._sum.pagu || 0)
+        pagu: agg._sum?.paguInduk ? Number(agg._sum.paguInduk) : 0
       };
     }).sort((a, b) => b.pagu - a.pagu);
 

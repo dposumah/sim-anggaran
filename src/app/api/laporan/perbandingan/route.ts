@@ -67,7 +67,7 @@ export async function GET(request: Request) {
       const sub = r.subKegiatan;
       const rek = r.rekening;
 
-      const nilaiInduk = Number(r.pagu) || 0;
+      const nilaiInduk = r.paguInduk ? Number(r.paguInduk) : 0;
       const nilaiPerubahan = r.paguPerubahan !== null ? Number(r.paguPerubahan) : nilaiInduk;
 
       paguIndukTotal += nilaiInduk;
