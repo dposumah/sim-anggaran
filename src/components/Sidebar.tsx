@@ -31,7 +31,6 @@ const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'Budget Explorer', href: '/explorer', icon: FolderTree },
   { name: 'Laporan & Rekapitulasi', href: '/laporan', icon: FileText },
-  { name: 'Perbandingan Anggaran', href: '/laporan/perbandingan', icon: FileText },
   { name: 'Upload Data', href: '/upload', icon: Upload },
   { name: 'Export Laporan', href: '/export', icon: FileDown },
   { name: 'Manajemen User', href: '/users', icon: Users },

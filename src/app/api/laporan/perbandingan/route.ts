@@ -118,8 +118,17 @@ export async function GET(request: Request) {
       if (!subKegRealisasiMap[sub.id]) {
         subKegRealisasiMap[sub.id] = { nama: sub.nama, kode: sub.kode, paguInduk: 0, paguPerubahan: 0, realisasi: 0 };
       }
-      subKegRealisasiMap[sub.id].paguInduk += nilaiInduk;
-      subKegRealisasiMap[sub.id].paguPerubahan += nilaiPerubahan;
+      
+      const subUpper = (sub.nama || '').toUpperCase();
+      const rekUpper = (rek.nama || '').toUpperCase();
+      const isBosp = subUpper.includes('BOS') || subUpper.includes('BOP');
+      const isGaji = subUpper.includes('GAJI DAN TUNJANGAN ASN');
+      const isParuhWaktu = subUpper.includes('PENYEDIAAN JASA PELAYANAN UMUM KANTOR') && rekUpper.includes('PARUH WAKTU');
+      
+      if (!isBosp && !isGaji && !isParuhWaktu) {
+        subKegRealisasiMap[sub.id].paguInduk += nilaiInduk;
+        subKegRealisasiMap[sub.id].paguPerubahan += nilaiPerubahan;
+      }
 
       if (!rekRealisasiMap[rek.id]) {
         rekRealisasiMap[rek.id] = { nama: rek.nama, kode: rek.kode, paguInduk: 0, paguPerubahan: 0, realisasi: 0 };
@@ -127,10 +136,7 @@ export async function GET(request: Request) {
       rekRealisasiMap[rek.id].paguInduk += nilaiInduk;
       rekRealisasiMap[rek.id].paguPerubahan += nilaiPerubahan;
 
-      const subUpper = (sub.nama || '').toUpperCase();
-      const rekUpper = (rek.nama || '').toUpperCase();
-      const isBosp = subUpper.includes('BOS') || subUpper.includes('BOP');
-      const isGaji = subUpper.includes('GAJI DAN TUNJANGAN ASN');
+
 
       // PNS & PPPK
       if (isGaji) {
@@ -213,17 +219,21 @@ export async function GET(request: Request) {
 
       realisasiTotal += nilai;
 
-      if (subKegRealisasiMap[sub.id]) {
-        subKegRealisasiMap[sub.id].realisasi += nilai;
-      }
-      if (rekRealisasiMap[rek.id]) {
-        rekRealisasiMap[rek.id].realisasi += nilai;
-      }
-
       const subUpper = (sub.nama || '').toUpperCase();
       const rekUpper = (rek.nama || '').toUpperCase();
       const isBosp = subUpper.includes('BOS') || subUpper.includes('BOP');
       const isGaji = subUpper.includes('GAJI DAN TUNJANGAN ASN');
+      const isParuhWaktu = subUpper.includes('PENYEDIAAN JASA PELAYANAN UMUM KANTOR') && rekUpper.includes('PARUH WAKTU');
+
+      if (!isBosp && !isGaji && !isParuhWaktu) {
+        if (subKegRealisasiMap[sub.id]) {
+          subKegRealisasiMap[sub.id].realisasi += nilai;
+        }
+      }
+
+      if (rekRealisasiMap[rek.id]) {
+        rekRealisasiMap[rek.id].realisasi += nilai;
+      }
 
       if (isGaji) {
         const isExcluded = rekUpper.includes('PNSD') || rekUpper.includes('TUNJANGAN PROFESI GURU') || rekUpper.includes('TAMBAHAN PENGHASILAN') || rekUpper.includes('TAMSIL');
@@ -294,10 +304,12 @@ export async function GET(request: Request) {
       const sub = r.subKegiatan;
       const rek = r.rekening;
       const subUpper = (sub.nama || '').toUpperCase();
+      const rekUpper = (rek.nama || '').toUpperCase();
       const isBosp = subUpper.includes('BOS') || subUpper.includes('BOP');
       const isGaji = subUpper.includes('GAJI DAN TUNJANGAN ASN');
+      const isParuhWaktu = subUpper.includes('PENYEDIAAN JASA PELAYANAN UMUM KANTOR') && rekUpper.includes('PARUH WAKTU');
       
-      if (!isBosp && !isGaji) {
+      if (!isBosp && !isGaji && !isParuhWaktu) {
         if (!rekFilteredMap[rek.id]) {
           rekFilteredMap[rek.id] = { nama: rek.nama, kode: rek.kode, paguInduk: 0, paguPerubahan: 0, realisasi: 0 };
         }
@@ -312,10 +324,12 @@ export async function GET(request: Request) {
       const sub = r.subKegiatan;
       const rek = r.rekening;
       const subUpper = (sub.nama || '').toUpperCase();
+      const rekUpper = (rek.nama || '').toUpperCase();
       const isBosp = subUpper.includes('BOS') || subUpper.includes('BOP');
       const isGaji = subUpper.includes('GAJI DAN TUNJANGAN ASN');
+      const isParuhWaktu = subUpper.includes('PENYEDIAAN JASA PELAYANAN UMUM KANTOR') && rekUpper.includes('PARUH WAKTU');
       
-      if (!isBosp && !isGaji) {
+      if (!isBosp && !isGaji && !isParuhWaktu) {
         if (rekFilteredMap[rek.id]) {
           rekFilteredMap[rek.id].realisasi += Number(r.nominal || 0);
         }

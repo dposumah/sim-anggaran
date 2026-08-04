@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { useYear } from '@/contexts/YearContext';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, AreaChart, Area, ComposedChart, Line } from 'recharts';
-import { Building, Folder, FileText, FileJson, Package, Activity, TrendingUp, TrendingDown, Minus, Briefcase, GraduationCap, Banknote, X } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, AreaChart, Area, ComposedChart } from 'recharts';
+import { Building, Package, Activity, TrendingUp, TrendingDown, Minus, Briefcase, GraduationCap, Banknote, X, Table } from 'lucide-react';
 
 const COLORS = ['#dc2626', '#b91c1c', '#f87171', '#fca5a5', '#ef4444', '#991b1b', '#7f1d1d'];
 
@@ -13,6 +13,7 @@ export default function LaporanEksekutif() {
   const [loading, setLoading] = useState(true);
   const [activeChartTab, setActiveChartTab] = useState<'subkegiatan' | 'rekening'>('subkegiatan');
   const [selectedBosp, setSelectedBosp] = useState<{ title: string, data: any } | null>(null);
+  const [selectedChartData, setSelectedChartData] = useState<{ title: string, type: 'subkegiatan' | 'rekening', data: any } | null>(null);
 
   useEffect(() => {
     setLoading(true);
@@ -27,13 +28,6 @@ export default function LaporanEksekutif() {
 
   const formatCurrency = (number: number) => {
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(number);
-  };
-
-  const renderTrend = (induk: number, perubahan: number) => {
-    const diff = perubahan - induk;
-    if (diff > 0) return <span className="text-blue-600 flex items-center text-xs font-medium"><TrendingUp className="w-3 h-3 mr-1" /> Naik</span>;
-    if (diff < 0) return <span className="text-red-600 flex items-center text-xs font-medium"><TrendingDown className="w-3 h-3 mr-1" /> Turun</span>;
-    return <span className="text-gray-500 flex items-center text-xs font-medium"><Minus className="w-3 h-3 mr-1" /> Tetap</span>;
   };
 
   const formatSelisih = (induk: number, perubahan: number) => {
@@ -58,8 +52,8 @@ export default function LaporanEksekutif() {
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       return (
-        <div className="bg-white/90 backdrop-blur-md p-3 border border-red-100 shadow-lg rounded-xl text-sm">
-          <p className="font-bold text-gray-800 mb-2 border-b border-red-100 pb-1">{label}</p>
+        <div className="bg-white p-3 border border-gray-100 shadow-lg rounded-xl text-sm z-50">
+          <p className="font-bold text-gray-800 mb-2 border-b border-gray-100 pb-1">{label}</p>
           {payload.map((entry: any, index: number) => (
             <div key={index} className="flex justify-between gap-4 py-0.5">
               <span style={{ color: entry.color }}>{entry.name}:</span>
@@ -74,40 +68,40 @@ export default function LaporanEksekutif() {
 
   const ScoreCard = ({ title, item, icon: Icon, isBosp = false }: any) => (
     <div 
-      className={`bg-white/80 backdrop-blur-md p-4 rounded-2xl border border-red-50 shadow-sm transition-all relative overflow-hidden group ${isBosp ? 'cursor-pointer hover:shadow-md hover:border-red-200' : ''}`}
+      className={`bg-white p-5 rounded-2xl border border-gray-100 shadow-sm transition-all relative overflow-hidden group ${isBosp ? 'cursor-pointer hover:shadow-md hover:border-red-200' : ''}`}
       onClick={() => isBosp && setSelectedBosp({ title, data: item })}
     >
       <div className="absolute -right-4 -top-4 opacity-[0.03] group-hover:opacity-10 transition-opacity">
         <Icon className="w-24 h-24 text-primary" />
       </div>
-      <h3 className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2 relative z-10">
-        <div className="p-1.5 bg-red-50 rounded-lg text-primary">
+      <h3 className="text-sm font-bold text-gray-700 mb-4 flex items-center gap-2 relative z-10">
+        <div className="p-2 bg-red-50 rounded-lg text-primary">
           <Icon className="w-4 h-4" />
         </div>
         {title}
-        {isBosp && <span className="ml-auto text-[10px] bg-red-100 text-red-700 px-2 py-0.5 rounded-full font-medium">Klik untuk rincian</span>}
+        {isBosp && <span className="ml-auto text-[10px] bg-red-100 text-red-700 px-2 py-0.5 rounded-full font-medium">Lihat Rincian</span>}
       </h3>
-      <div className="flex justify-between items-end mb-1 relative z-10">
+      <div className="flex justify-between items-end mb-2 relative z-10">
         <span className="text-xs text-gray-500 font-medium">Pagu Induk</span>
         <span className="text-sm font-semibold text-gray-600">{formatCurrency(item.induk)}</span>
       </div>
-      <div className="flex justify-between items-end mb-2 relative z-10">
+      <div className="flex justify-between items-end mb-3 relative z-10">
         <span className="text-xs text-primary font-medium">Pagu Perubahan</span>
-        <span className="text-[15px] font-bold text-primary">{formatCurrency(item.perubahan)}</span>
+        <span className="text-base font-bold text-primary">{formatCurrency(item.perubahan)}</span>
       </div>
-      <div className="flex justify-between items-end mb-3 pt-2 border-t border-gray-100 relative z-10">
+      <div className="flex justify-between items-end mb-3 pt-3 border-t border-gray-100 relative z-10">
         <span className="text-xs text-green-600 font-medium">Realisasi</span>
         <span className="text-sm font-bold text-green-700">{formatCurrency(item.realisasi)}</span>
       </div>
       
       <div className="w-full bg-gray-100 rounded-full h-1.5 mt-2 overflow-hidden relative z-10">
         <div 
-          className="bg-gradient-to-r from-green-400 to-green-500 h-1.5 rounded-full" 
+          className="bg-green-500 h-1.5 rounded-full" 
           style={{ width: `${item.perubahan > 0 ? Math.min(100, (item.realisasi / item.perubahan) * 100) : 0}%` }}
         ></div>
       </div>
-      <div className="flex justify-between mt-1 relative z-10">
-        <span className="text-[10px] text-gray-500">Selisih: {formatSelisih(item.induk, item.perubahan)}</span>
+      <div className="flex justify-between mt-2 relative z-10">
+        <span className="text-[10px] font-medium text-gray-500">Selisih: {formatSelisih(item.induk, item.perubahan)}</span>
         <span className="text-[10px] text-gray-500 font-bold">
           {item.perubahan > 0 ? ((item.realisasi / item.perubahan) * 100).toFixed(1) : 0}% Serap
         </span>
@@ -119,17 +113,17 @@ export default function LaporanEksekutif() {
     <div className="space-y-6">
       {/* Overview Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-gradient-to-br from-primary to-primary-hover p-5 rounded-2xl text-white shadow-lg relative overflow-hidden group">
-          <div className="absolute -right-4 -top-4 opacity-10 group-hover:opacity-20 transition-opacity">
-            <Building className="w-24 h-24" />
+        <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm relative overflow-hidden group">
+          <div className="absolute -right-4 -top-4 opacity-[0.03] group-hover:opacity-10 transition-opacity">
+            <Building className="w-24 h-24 text-primary" />
           </div>
-          <p className="text-white/80 text-sm font-medium mb-1">Total Pagu Induk</p>
-          <h3 className="text-2xl font-bold mb-4">{formatCurrency(summary.pagu.induk)}</h3>
-          <p className="text-white/80 text-sm font-medium mb-1 pt-3 border-t border-white/20">Total Pagu Perubahan</p>
-          <h3 className="text-2xl font-bold">{formatCurrency(summary.pagu.perubahan)}</h3>
-          <div className="mt-4 pt-3 border-t border-white/20 flex justify-between items-center">
-            <span className="text-sm text-white/90">Total Realisasi</span>
-            <span className="font-bold text-white bg-black/20 px-2 py-1 rounded-lg">{formatCurrency(summary.pagu.realisasi)}</span>
+          <p className="text-gray-500 text-sm font-medium mb-1">Total Pagu Induk</p>
+          <h3 className="text-2xl font-bold text-gray-800 mb-4">{formatCurrency(summary.pagu.induk)}</h3>
+          <p className="text-primary text-sm font-medium mb-1 pt-3 border-t border-gray-100">Total Pagu Perubahan</p>
+          <h3 className="text-2xl font-bold text-primary">{formatCurrency(summary.pagu.perubahan)}</h3>
+          <div className="mt-4 pt-3 border-t border-gray-100 flex justify-between items-center">
+            <span className="text-sm font-medium text-green-600">Total Realisasi</span>
+            <span className="font-bold text-green-700 bg-green-50 px-2 py-1 rounded-lg">{formatCurrency(summary.pagu.realisasi)}</span>
           </div>
         </div>
 
@@ -147,7 +141,7 @@ export default function LaporanEksekutif() {
 
       {/* Main Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white/80 backdrop-blur-md p-5 rounded-2xl shadow-sm border border-red-50">
+        <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
           <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
             <Banknote className="w-5 h-5 text-primary" />
             Distribusi Sumber Dana
@@ -171,7 +165,7 @@ export default function LaporanEksekutif() {
           </div>
         </div>
 
-        <div className="bg-white/80 backdrop-blur-md p-5 rounded-2xl shadow-sm border border-red-50">
+        <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
           <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
             <Package className="w-5 h-5 text-primary" />
             Top 10 Uraian Paket
@@ -181,7 +175,7 @@ export default function LaporanEksekutif() {
               <BarChart data={topPaket} layout="vertical" margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#f1f5f9" />
                 <XAxis type="number" tickFormatter={(value) => `${(value / 1000000).toFixed(0)}Jt`} style={{ fontSize: '11px' }} />
-                <YAxis dataKey="name" type="category" width={120} style={{ fontSize: '10px' }} tick={{ fill: '#475569' }} />
+                <YAxis dataKey="nama" type="category" width={120} style={{ fontSize: '10px' }} tick={{ fill: '#475569' }} />
                 <RechartsTooltip content={<CustomTooltip />} />
                 <Bar dataKey="perubahan" name="Pagu Perubahan" fill="#fca5a5" radius={[0, 4, 4, 0]} barSize={20} />
               </BarChart>
@@ -191,8 +185,8 @@ export default function LaporanEksekutif() {
       </div>
 
       {/* Tabs for Top 15 Sub Kegiatan / Rekening */}
-      <div className="bg-white/80 backdrop-blur-md p-5 rounded-2xl shadow-sm border border-red-50">
-        <div className="flex flex-col sm:flex-row justify-between items-center mb-6 border-b border-red-100 pb-3">
+      <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
+        <div className="flex flex-col sm:flex-row justify-between items-center mb-6 border-b border-gray-100 pb-3">
           <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2 mb-3 sm:mb-0">
             <Activity className="w-5 h-5 text-primary" />
             Perbandingan Pagu vs Realisasi
@@ -217,28 +211,130 @@ export default function LaporanEksekutif() {
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart 
               data={activeChartTab === 'subkegiatan' ? topSubKegiatan : topRekening} 
-              layout="vertical" 
-              margin={{ top: 5, right: 30, left: 10, bottom: 5 }}
+              layout="horizontal" 
+              margin={{ top: 20, right: 10, left: 10, bottom: 90 }}
             >
-              <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#f1f5f9" />
-              <XAxis type="number" tickFormatter={(value) => `${(value / 1000000000).toFixed(1)}M`} style={{ fontSize: '11px' }} />
-              <YAxis dataKey="nama" type="category" width={180} style={{ fontSize: '10px' }} tick={{ fill: '#475569' }} />
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+              <XAxis 
+                dataKey="nama" 
+                angle={-45} 
+                textAnchor="end" 
+                height={90} 
+                interval={0} 
+                style={{ fontSize: '9px' }} 
+                tick={{ fill: '#475569' }} 
+              />
+              <YAxis 
+                tickFormatter={(value) => `${(value / 1000000000).toFixed(1)}M`} 
+                style={{ fontSize: '11px' }} 
+              />
               <RechartsTooltip content={<CustomTooltip />} />
               <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} />
-              <Bar dataKey="paguInduk" name="Pagu Induk" fill="#fca5a5" radius={[0, 4, 4, 0]} barSize={12} />
-              <Bar dataKey="paguPerubahan" name="Pagu Perubahan" fill="#dc2626" radius={[0, 4, 4, 0]} barSize={12} />
-              <Bar dataKey="realisasi" name="Realisasi" fill="#10b981" radius={[0, 4, 4, 0]} barSize={12} />
+              <Bar 
+                dataKey="paguInduk" 
+                name="Pagu Induk" 
+                fill="#fca5a5" 
+                radius={[4, 4, 0, 0]} 
+                barSize={12} 
+                onClick={(data: any) => setSelectedChartData({ title: data.payload?.nama || data.nama, type: activeChartTab, data: data.payload || data })} 
+                cursor="pointer"
+              />
+              <Bar 
+                dataKey="paguPerubahan" 
+                name="Pagu Perubahan" 
+                fill="#dc2626" 
+                radius={[4, 4, 0, 0]} 
+                barSize={12} 
+                onClick={(data: any) => setSelectedChartData({ title: data.payload?.nama || data.nama, type: activeChartTab, data: data.payload || data })}
+                cursor="pointer"
+              />
+              <Bar 
+                dataKey="realisasi" 
+                name="Realisasi" 
+                fill="#10b981" 
+                radius={[4, 4, 0, 0]} 
+                barSize={12} 
+                onClick={(data: any) => setSelectedChartData({ title: data.payload?.nama || data.nama, type: activeChartTab, data: data.payload || data })}
+                cursor="pointer"
+              />
             </ComposedChart>
           </ResponsiveContainer>
         </div>
-        <p className="text-xs text-gray-400 mt-2 text-center italic">* Data Gaji & Tunjangan serta BOSP disembunyikan dari grafik ini.</p>
+        <p className="text-xs text-gray-400 mt-4 text-center italic">* Klik pada batang grafik (bar) untuk melihat tabel rincian data. Data Gaji & Tunjangan, PPPK Paruh Waktu, serta BOSP disembunyikan dari grafik ini.</p>
       </div>
+
+      {/* Chart Detail Modal */}
+      {selectedChartData && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden border border-gray-100">
+            <div className="bg-gray-50 px-6 py-4 border-b border-gray-100 flex justify-between items-center">
+              <h3 className="font-bold text-lg text-gray-800 flex items-center gap-2">
+                <Table className="w-5 h-5 text-primary" />
+                Rincian {selectedChartData.type === 'subkegiatan' ? 'Sub Kegiatan' : 'Rekening'}
+              </h3>
+              <button 
+                onClick={() => setSelectedChartData(null)}
+                className="text-gray-400 hover:text-gray-600 bg-white p-1 rounded-full shadow-sm"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            
+            <div className="p-6">
+              <h4 className="font-semibold text-primary mb-4">{selectedChartData.title}</h4>
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200 text-sm">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-3 text-left font-bold text-gray-600">Uraian</th>
+                      <th className="px-4 py-3 text-right font-bold text-gray-600">Nilai (Rp)</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200 bg-white">
+                    <tr className="hover:bg-gray-50">
+                      <td className="px-4 py-3 font-medium text-gray-600">Pagu Induk</td>
+                      <td className="px-4 py-3 text-right font-semibold text-gray-800">{formatCurrency(selectedChartData.data.paguInduk)}</td>
+                    </tr>
+                    <tr className="hover:bg-red-50">
+                      <td className="px-4 py-3 font-medium text-primary">Pagu Perubahan</td>
+                      <td className="px-4 py-3 text-right font-bold text-primary">{formatCurrency(selectedChartData.data.paguPerubahan)}</td>
+                    </tr>
+                    <tr className="hover:bg-green-50">
+                      <td className="px-4 py-3 font-medium text-green-600">Realisasi</td>
+                      <td className="px-4 py-3 text-right font-bold text-green-700">{formatCurrency(selectedChartData.data.realisasi)}</td>
+                    </tr>
+                    <tr className="hover:bg-gray-50 border-t-2 border-gray-200">
+                      <td className="px-4 py-3 font-medium text-gray-500 text-xs">Selisih (Perubahan - Induk)</td>
+                      <td className="px-4 py-3 text-right font-semibold text-sm">{formatSelisih(selectedChartData.data.paguInduk, selectedChartData.data.paguPerubahan)}</td>
+                    </tr>
+                    <tr className="hover:bg-gray-50">
+                      <td className="px-4 py-3 font-medium text-gray-500 text-xs">Persentase Serapan</td>
+                      <td className="px-4 py-3 text-right font-semibold text-sm text-gray-600">
+                        {selectedChartData.data.paguPerubahan > 0 ? ((selectedChartData.data.realisasi / selectedChartData.data.paguPerubahan) * 100).toFixed(2) : 0}%
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            
+            <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 text-right">
+              <button 
+                onClick={() => setSelectedChartData(null)}
+                className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 shadow-sm transition-colors"
+              >
+                Tutup
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* BOSP Modal */}
       {selectedBosp && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden border border-red-100">
-            <div className="bg-red-50 px-6 py-4 border-b border-red-100 flex justify-between items-center">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden border border-gray-100">
+            <div className="bg-gray-50 px-6 py-4 border-b border-gray-100 flex justify-between items-center">
               <h3 className="font-bold text-lg text-primary flex items-center gap-2">
                 <GraduationCap className="w-5 h-5" />
                 Rincian {selectedBosp.title}
@@ -260,7 +356,7 @@ export default function LaporanEksekutif() {
                     <p className="text-xs text-gray-500 mb-1">Pagu Induk</p>
                     <p className="font-bold text-gray-700 text-sm">{formatCurrency(selectedBosp.data.reguler.induk)}</p>
                   </div>
-                  <div className="bg-red-50 p-3 rounded-lg border border-red-100">
+                  <div className="bg-red-50 p-3 rounded-lg border border-red-50">
                     <p className="text-xs text-primary mb-1">Pagu Perubahan</p>
                     <p className="font-bold text-primary text-sm">{formatCurrency(selectedBosp.data.reguler.perubahan)}</p>
                   </div>
@@ -279,7 +375,7 @@ export default function LaporanEksekutif() {
                     <p className="text-xs text-gray-500 mb-1">Pagu Induk</p>
                     <p className="font-bold text-gray-700 text-sm">{formatCurrency(selectedBosp.data.kinerja.induk)}</p>
                   </div>
-                  <div className="bg-red-50 p-3 rounded-lg border border-red-100">
+                  <div className="bg-red-50 p-3 rounded-lg border border-red-50">
                     <p className="text-xs text-primary mb-1">Pagu Perubahan</p>
                     <p className="font-bold text-primary text-sm">{formatCurrency(selectedBosp.data.kinerja.perubahan)}</p>
                   </div>
