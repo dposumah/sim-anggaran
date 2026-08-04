@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import * as XLSX from 'xlsx';
 
+export const maxDuration = 300; // 5 minutes limit
+
+
 // Flexible header detection: find the row that contains these keywords
 const REQUIRED_HEADERS = [
   'Kode Sub Kegiatan',
