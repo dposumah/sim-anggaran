@@ -48,22 +48,49 @@ export async function GET(request: Request) {
       },
     });
 
-    let paguIndukTotal = 0;
-    let paguPerubahanTotal = 0;
-    let gajiAsnInduk = 0;
-    let gajiAsnPerubahan = 0;
-    let gajiPppkParuhWaktuInduk = 0;
-    let gajiPppkParuhWaktuPerubahan = 0;
-    let honorPelayananUmumInduk = 0;
-    let honorPelayananUmumPerubahan = 0;
+    const realisasiList = await prisma.realisasiBelanja.findMany({
+      where: {
+        subKegiatan: {
+          kegiatan: {
+            program: {
+              skpd: {
+                tahunId: tahunData.id,
+                nama: { contains: 'PENDIDIKAN', mode: 'insensitive' }
+              }
+            }
+          }
+        }
+      },
+      include: {
+        rekening: true,
+        subKegiatan: true
+      }
+    });
 
-    const dauTree: any = {};
-    const sumDanaMap: Record<string, { induk: number, perubahan: number }> = {};
+    let paguIndukTotal = 0; let paguPerubahanTotal = 0; let realisasiTotal = 0;
+    
+    // Gaji
+    let gajiPnsInduk = 0; let gajiPnsPerubahan = 0; let gajiPnsRealisasi = 0;
+    let gajiPppkInduk = 0; let gajiPppkPerubahan = 0; let gajiPppkRealisasi = 0;
+    let pppkParuhWaktuInduk = 0; let pppkParuhWaktuPerubahan = 0; let pppkParuhWaktuRealisasi = 0;
+    
+    // TPP & TPG
+    let tppInduk = 0; let tppPerubahan = 0; let tppRealisasi = 0;
+    let tpgInduk = 0; let tpgPerubahan = 0; let tpgRealisasi = 0;
+    
+    // BOSP
+    let bospSdInduk = 0; let bospSdPerubahan = 0; let bospSdRealisasi = 0;
+    let bospSmpInduk = 0; let bospSmpPerubahan = 0; let bospSmpRealisasi = 0;
+    let bospPaudInduk = 0; let bospPaudPerubahan = 0; let bospPaudRealisasi = 0;
+    let bospKesetaraanInduk = 0; let bospKesetaraanPerubahan = 0; let bospKesetaraanRealisasi = 0;
+    
+    // Maps
+    const paketMap: Record<string, { nama: string, induk: number, perubahan: number }> = {};
+    const subKegRealisasiMap: Record<number, { nama: string, kode: string, paguInduk: number, paguPerubahan: number, realisasi: number }> = {};
+    const sumDanaMap: Record<string, { induk: number, perubahan: number, realisasi: number }> = {};
 
     rincianList.forEach(r => {
-      const skpd = r.subKegiatan.kegiatan.program.skpd;
       const prog = r.subKegiatan.kegiatan.program;
-      const keg = r.subKegiatan.kegiatan;
       const sub = r.subKegiatan;
       const rek = r.rekening;
 
@@ -73,63 +100,111 @@ export async function GET(request: Request) {
       paguIndukTotal += nilaiInduk;
       paguPerubahanTotal += nilaiPerubahan;
 
-      const isParuhWaktu = (rek.nama || '').toUpperCase().includes('PARUH WAKTU');
-      if (isParuhWaktu) {
-        gajiPppkParuhWaktuInduk += nilaiInduk;
-        gajiPppkParuhWaktuPerubahan += nilaiPerubahan;
+      if (!subKegRealisasiMap[sub.id]) {
+        subKegRealisasiMap[sub.id] = { nama: sub.nama, kode: sub.kode, paguInduk: 0, paguPerubahan: 0, realisasi: 0 };
+      }
+      subKegRealisasiMap[sub.id].paguInduk += nilaiInduk;
+      subKegRealisasiMap[sub.id].paguPerubahan += nilaiPerubahan;
+
+      // PNS & PPPK
+      if ((sub.nama || '').toUpperCase().includes('GAJI DAN TUNJANGAN ASN')) {
+        if ((rek.nama || '').toUpperCase().includes('PNS')) {
+          gajiPnsInduk += nilaiInduk;
+          gajiPnsPerubahan += nilaiPerubahan;
+        } else if ((rek.nama || '').toUpperCase().includes('PPPK')) {
+          gajiPppkInduk += nilaiInduk;
+          gajiPppkPerubahan += nilaiPerubahan;
+        }
       }
 
-      if ((sub.nama || '').toUpperCase().includes('PENYEDIAAN GAJI DAN TUNJANGAN ASN') && !isParuhWaktu) {
-        gajiAsnInduk += nilaiInduk;
-        gajiAsnPerubahan += nilaiPerubahan;
+      // Paruh Waktu
+      if ((sub.nama || '').toUpperCase().includes('PENYEDIAAN JASA PELAYANAN UMUM KANTOR') && (rek.nama || '').toUpperCase().includes('PARUH WAKTU')) {
+        pppkParuhWaktuInduk += nilaiInduk;
+        pppkParuhWaktuPerubahan += nilaiPerubahan;
       }
 
-      if ((sub.nama || '').toUpperCase().includes('JASA PELAYANAN UMUM KANTOR') && (rek.nama || '').toUpperCase().includes('HONORARIUM')) {
-        honorPelayananUmumInduk += nilaiInduk;
-        honorPelayananUmumPerubahan += nilaiPerubahan;
+      // TPP & TPG
+      if ((rek.nama || '').toUpperCase().includes('TAMBAHAN PENGHASILAN BERDASARKAN BEBAN KERJA PNS')) {
+        tppInduk += nilaiInduk;
+        tppPerubahan += nilaiPerubahan;
+      }
+      if ((rek.nama || '').toUpperCase().includes('TUNJANGAN PROFESI GURU')) {
+        tpgInduk += nilaiInduk;
+        tpgPerubahan += nilaiPerubahan;
       }
 
-      const sdNama = r.sumberDana.nama;
-      if (!sumDanaMap[sdNama]) sumDanaMap[sdNama] = { induk: 0, perubahan: 0 };
+      // BOSP
+      const subUpper = (sub.nama || '').toUpperCase();
+      if (subUpper.includes('PENGELOLAAN DANA BOS SEKOLAH DASAR')) {
+        bospSdInduk += nilaiInduk;
+        bospSdPerubahan += nilaiPerubahan;
+      } else if (subUpper.includes('PENGELOLAAN DANA BOS SEKOLAH MENENGAH PERTAMA')) {
+        bospSmpInduk += nilaiInduk;
+        bospSmpPerubahan += nilaiPerubahan;
+      } else if (subUpper.includes('PENGELOLAAN DANA BOP PAUD')) {
+        bospPaudInduk += nilaiInduk;
+        bospPaudPerubahan += nilaiPerubahan;
+      } else if (subUpper.includes('PENGELOLAAN DANA BOP SEKOLAH NONFORMAL/KESETARAAN')) {
+        bospKesetaraanInduk += nilaiInduk;
+        bospKesetaraanPerubahan += nilaiPerubahan;
+      }
+
+      // Uraian Paket (Exclude Program Penunjang)
+      if (r.namaPaket && !(prog.nama || '').toUpperCase().includes('PROGRAM PENUNJANG URUSAN PEMERINTAHAN DAERAH KABUPATEN/KOTA')) {
+        if (!paketMap[r.namaPaket]) paketMap[r.namaPaket] = { nama: r.namaPaket, induk: 0, perubahan: 0 };
+        paketMap[r.namaPaket].induk += nilaiInduk;
+        paketMap[r.namaPaket].perubahan += nilaiPerubahan;
+      }
+
+      const sdNama = r.sumberDana.nama || 'Tidak Ada Sumber Dana';
+      if (!sumDanaMap[sdNama]) sumDanaMap[sdNama] = { induk: 0, perubahan: 0, realisasi: 0 };
       sumDanaMap[sdNama].induk += nilaiInduk;
       sumDanaMap[sdNama].perubahan += nilaiPerubahan;
+    });
 
-      if ((sdNama || '').toUpperCase().includes('DAU YANG DITENTUKAN PENGGUNAANNYA BIDANG PENDIDIKAN')) {
-        const skpdKey = `${skpd.kode} - ${skpd.nama}`;
-        const progKey = `${prog.kode}|${prog.nama}`;
-        const kegKey = `${keg.kode}|${keg.nama}`;
-        const subKey = `${sub.kode}|${sub.nama}`;
-        const rekKey = `${rek.kode}|${rek.nama}`;
-        const paketKey = r.namaPaket;
+    realisasiList.forEach(r => {
+      const sub = r.subKegiatan;
+      const rek = r.rekening;
+      const nilai = Number(r.nominal || 0);
 
-        if (!dauTree[skpdKey]) dauTree[skpdKey] = { induk: 0, perubahan: 0, progs: {} };
-        dauTree[skpdKey].induk += nilaiInduk;
-        dauTree[skpdKey].perubahan += nilaiPerubahan;
+      realisasiTotal += nilai;
 
-        const skpdNode = dauTree[skpdKey];
-        if (!skpdNode.progs[progKey]) skpdNode.progs[progKey] = { induk: 0, perubahan: 0, kegs: {} };
-        skpdNode.progs[progKey].induk += nilaiInduk;
-        skpdNode.progs[progKey].perubahan += nilaiPerubahan;
+      if (subKegRealisasiMap[sub.id]) {
+        subKegRealisasiMap[sub.id].realisasi += nilai;
+      }
 
-        const progNode = skpdNode.progs[progKey];
-        if (!progNode.kegs[kegKey]) progNode.kegs[kegKey] = { induk: 0, perubahan: 0, subs: {} };
-        progNode.kegs[kegKey].induk += nilaiInduk;
-        progNode.kegs[kegKey].perubahan += nilaiPerubahan;
+      // PNS & PPPK
+      if ((sub.nama || '').toUpperCase().includes('GAJI DAN TUNJANGAN ASN')) {
+        if ((rek.nama || '').toUpperCase().includes('PNS')) {
+          gajiPnsRealisasi += nilai;
+        } else if ((rek.nama || '').toUpperCase().includes('PPPK')) {
+          gajiPppkRealisasi += nilai;
+        }
+      }
 
-        const kegNode = progNode.kegs[kegKey];
-        if (!kegNode.subs[subKey]) kegNode.subs[subKey] = { induk: 0, perubahan: 0, reks: {} };
-        kegNode.subs[subKey].induk += nilaiInduk;
-        kegNode.subs[subKey].perubahan += nilaiPerubahan;
+      // Paruh Waktu
+      if ((sub.nama || '').toUpperCase().includes('PENYEDIAAN JASA PELAYANAN UMUM KANTOR') && (rek.nama || '').toUpperCase().includes('PARUH WAKTU')) {
+        pppkParuhWaktuRealisasi += nilai;
+      }
 
-        const subNode = kegNode.subs[subKey];
-        if (!subNode.reks[rekKey]) subNode.reks[rekKey] = { induk: 0, perubahan: 0, pakets: {} };
-        subNode.reks[rekKey].induk += nilaiInduk;
-        subNode.reks[rekKey].perubahan += nilaiPerubahan;
+      // TPP & TPG
+      if ((rek.nama || '').toUpperCase().includes('TAMBAHAN PENGHASILAN BERDASARKAN BEBAN KERJA PNS')) {
+        tppRealisasi += nilai;
+      }
+      if ((rek.nama || '').toUpperCase().includes('TUNJANGAN PROFESI GURU')) {
+        tpgRealisasi += nilai;
+      }
 
-        const rekNode = subNode.reks[rekKey];
-        if (!rekNode.pakets[paketKey]) rekNode.pakets[paketKey] = { induk: 0, perubahan: 0 };
-        rekNode.pakets[paketKey].induk += nilaiInduk;
-        rekNode.pakets[paketKey].perubahan += nilaiPerubahan;
+      // BOSP
+      const subUpper = (sub.nama || '').toUpperCase();
+      if (subUpper.includes('PENGELOLAAN DANA BOS SEKOLAH DASAR')) {
+        bospSdRealisasi += nilai;
+      } else if (subUpper.includes('PENGELOLAAN DANA BOS SEKOLAH MENENGAH PERTAMA')) {
+        bospSmpRealisasi += nilai;
+      } else if (subUpper.includes('PENGELOLAAN DANA BOP PAUD')) {
+        bospPaudRealisasi += nilai;
+      } else if (subUpper.includes('PENGELOLAAN DANA BOP SEKOLAH NONFORMAL/KESETARAAN')) {
+        bospKesetaraanRealisasi += nilai;
       }
     });
 
@@ -137,18 +212,33 @@ export async function GET(request: Request) {
       name: k,
       induk: sumDanaMap[k].induk,
       perubahan: sumDanaMap[k].perubahan,
-    })).sort((a, b) => b.induk - a.induk);
+      realisasi: sumDanaMap[k].realisasi
+    })).sort((a, b) => b.perubahan - a.perubahan);
+
+    const topPaket = Object.values(paketMap)
+      .sort((a, b) => b.perubahan - a.perubahan)
+      .slice(0, 10);
+
+    const topSubKegiatan = Object.values(subKegRealisasiMap)
+      .sort((a, b) => b.paguPerubahan - a.paguPerubahan)
+      .slice(0, 15); // Top 15 Sub Kegiatan
 
     return NextResponse.json({
       summary: {
-        pagu: { induk: paguIndukTotal, perubahan: paguPerubahanTotal },
-        gajiAsn: { induk: gajiAsnInduk, perubahan: gajiAsnPerubahan },
-        gajiPppkParuhWaktu: { induk: gajiPppkParuhWaktuInduk, perubahan: gajiPppkParuhWaktuPerubahan },
-        honorPelayananUmum: { induk: honorPelayananUmumInduk, perubahan: honorPelayananUmumPerubahan },
-        sumberDana: sumDanaMap
+        pagu: { induk: paguIndukTotal, perubahan: paguPerubahanTotal, realisasi: realisasiTotal },
+        gajiPns: { induk: gajiPnsInduk, perubahan: gajiPnsPerubahan, realisasi: gajiPnsRealisasi },
+        gajiPppk: { induk: gajiPppkInduk, perubahan: gajiPppkPerubahan, realisasi: gajiPppkRealisasi },
+        gajiPppkParuhWaktu: { induk: pppkParuhWaktuInduk, perubahan: pppkParuhWaktuPerubahan, realisasi: pppkParuhWaktuRealisasi },
+        tpp: { induk: tppInduk, perubahan: tppPerubahan, realisasi: tppRealisasi },
+        tpg: { induk: tpgInduk, perubahan: tpgPerubahan, realisasi: tpgRealisasi },
+        bospSd: { induk: bospSdInduk, perubahan: bospSdPerubahan, realisasi: bospSdRealisasi },
+        bospSmp: { induk: bospSmpInduk, perubahan: bospSmpPerubahan, realisasi: bospSmpRealisasi },
+        bospPaud: { induk: bospPaudInduk, perubahan: bospPaudPerubahan, realisasi: bospPaudRealisasi },
+        bospKesetaraan: { induk: bospKesetaraanInduk, perubahan: bospKesetaraanPerubahan, realisasi: bospKesetaraanRealisasi },
       },
       chartData,
-      tree: dauTree
+      topPaket,
+      topSubKegiatan
     });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });

@@ -2,14 +2,15 @@
 
 import React, { useState, useEffect } from 'react';
 import { useYear } from '@/contexts/YearContext';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer } from 'recharts';
-import { Building, Folder, FileText, FileJson, Package, Activity, FileSpreadsheet, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, AreaChart, Area, ComposedChart, Line } from 'recharts';
+import { Building, Folder, FileText, FileJson, Package, Activity, FileSpreadsheet, TrendingUp, TrendingDown, Minus, Briefcase, GraduationCap, Banknote } from 'lucide-react';
+
+const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d', '#ffc658', '#a4de6c', '#d0ed57', '#ffc0cb'];
 
 export default function PerbandinganPage() {
   const { tahun } = useYear();
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     setLoading(true);
@@ -17,25 +18,10 @@ export default function PerbandinganPage() {
       .then(res => res.json())
       .then(res => {
         setData(res);
-        if (res.tree) {
-          const newExpanded = new Set<string>();
-          Object.keys(res.tree).forEach(k => newExpanded.add(`skpd_${k}`));
-          setExpandedNodes(newExpanded);
-        }
         setLoading(false);
       })
       .catch(() => setLoading(false));
   }, [tahun]);
-
-  const toggleExpand = (id: string) => {
-    const newExpanded = new Set(expandedNodes);
-    if (newExpanded.has(id)) {
-      newExpanded.delete(id);
-    } else {
-      newExpanded.add(id);
-    }
-    setExpandedNodes(newExpanded);
-  };
 
   const formatCurrency = (number: number) => {
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(number);
@@ -52,260 +38,224 @@ export default function PerbandinganPage() {
     return <div className="flex justify-center items-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div></div>;
   }
 
-  if (!data) return <div>Error loading data</div>;
+  if (!data || data.error) return <div>Error loading data: {data?.error || 'Unknown error'}</div>;
 
-  const { summary, chartData, tree } = data;
+  const { summary, chartData, topPaket, topSubKegiatan } = data;
+
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-white p-3 border border-gray-200 shadow-md rounded-lg text-sm">
+          <p className="font-bold text-gray-800 mb-2 border-b pb-1">{label}</p>
+          {payload.map((entry: any, index: number) => (
+            <div key={index} className="flex justify-between gap-4 py-0.5">
+              <span style={{ color: entry.color }}>{entry.name}:</span>
+              <span className="font-semibold">{formatCurrency(entry.value)}</span>
+            </div>
+          ))}
+        </div>
+      );
+    }
+    return null;
+  };
+
+  const ScoreCard = ({ title, item, icon: Icon }: any) => (
+    <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
+      <div className="absolute -right-4 -top-4 opacity-5 group-hover:opacity-10 transition-opacity">
+        <Icon className="w-24 h-24" />
+      </div>
+      <h3 className="text-sm font-bold text-gray-600 mb-3 flex items-center gap-2">
+        <Icon className="w-4 h-4 text-primary" /> {title}
+      </h3>
+      <div className="flex justify-between items-end mb-1">
+        <span className="text-xs text-gray-500 font-medium">Pagu Induk</span>
+        <span className="text-sm font-semibold text-gray-600">{formatCurrency(item.induk)}</span>
+      </div>
+      <div className="flex justify-between items-end mb-2">
+        <span className="text-xs text-blue-600 font-medium">Pagu Perubahan</span>
+        <span className="text-[15px] font-bold text-blue-800">{formatCurrency(item.perubahan)}</span>
+      </div>
+      <div className="flex justify-between items-end mb-3 pt-2 border-t border-gray-100">
+        <span className="text-xs text-green-600 font-medium">Realisasi</span>
+        <span className="text-sm font-bold text-green-700">{formatCurrency(item.realisasi)}</span>
+      </div>
+      
+      <div className="w-full bg-gray-100 rounded-full h-1.5 mt-2 overflow-hidden">
+        <div 
+          className="bg-green-500 h-1.5 rounded-full" 
+          style={{ width: `${item.perubahan > 0 ? Math.min(100, (item.realisasi / item.perubahan) * 100) : 0}%` }}
+        ></div>
+      </div>
+      <div className="flex justify-between mt-1">
+        <span className="text-[10px] text-gray-400">Selisih Pagu: {formatCurrency(item.perubahan - item.induk)}</span>
+        <span className="text-[10px] text-gray-500 font-bold">
+          {item.perubahan > 0 ? ((item.realisasi / item.perubahan) * 100).toFixed(1) : 0}% Serap
+        </span>
+      </div>
+    </div>
+  );
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="space-y-6 pb-12">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
         <div>
           <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-            <Activity className="w-6 h-6 text-primary" /> Ringkasan Perbandingan Anggaran
+            <Activity className="w-7 h-7 text-primary" /> Laporan Eksekutif Anggaran
           </h1>
-          <p className="text-sm text-secondary">Ringkasan Eksekutif APBD Induk dan Perubahan Tahun {tahun}.</p>
+          <p className="text-sm text-secondary mt-1">Dashboard analisis komparatif Pagu Induk, Perubahan, dan Realisasi Tahun {tahun}.</p>
         </div>
         <button 
           onClick={() => window.open(`/api/laporan/perbandingan/export?tahun=${tahun}`, '_blank')}
-          className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-colors shadow-sm"
+          className="flex items-center gap-2 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white px-5 py-2.5 rounded-xl font-semibold transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
         >
           <FileSpreadsheet className="w-5 h-5" />
-          Export Laporan Excel
+          Export Excel Lengkap
         </button>
       </div>
 
-      {/* Scorecards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
-          <h3 className="text-sm font-medium text-gray-500 mb-2">Total Pagu Anggaran</h3>
-          <div className="flex justify-between items-end mb-1">
-            <span className="text-xs text-gray-500">Induk</span>
-            <span className="font-semibold text-gray-700">{formatCurrency(summary.pagu.induk)}</span>
+      {/* Global Total */}
+      <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-6 shadow-lg text-white">
+        <h2 className="text-lg font-bold text-slate-300 mb-6 flex items-center gap-2">
+          <Building className="w-5 h-5" /> Total Keseluruhan APBD Pendidikan
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 divide-y md:divide-y-0 md:divide-x divide-slate-700">
+          <div className="px-2">
+            <p className="text-slate-400 text-sm font-medium mb-1">Total Pagu Induk</p>
+            <p className="text-3xl font-bold">{formatCurrency(summary.pagu.induk)}</p>
           </div>
-          <div className="flex justify-between items-end mb-2">
-            <span className="text-xs text-gray-500">Perubahan</span>
-            <span className="font-semibold text-gray-900">{formatCurrency(summary.pagu.perubahan)}</span>
+          <div className="px-2 md:px-6 pt-4 md:pt-0">
+            <p className="text-blue-300 text-sm font-medium mb-1">Total Pagu Perubahan</p>
+            <p className="text-3xl font-bold text-blue-100">{formatCurrency(summary.pagu.perubahan)}</p>
+            <p className="text-xs text-slate-400 mt-2 flex items-center gap-1">
+              Selisih: <span className={summary.pagu.perubahan >= summary.pagu.induk ? 'text-green-400' : 'text-red-400'}>
+                {formatCurrency(summary.pagu.perubahan - summary.pagu.induk)}
+              </span>
+            </p>
           </div>
-          <div className="pt-2 border-t flex justify-between items-center">
-            <span className="text-xs text-gray-500">Selisih</span>
-            <span className="text-sm font-bold text-blue-600">{formatCurrency(summary.pagu.perubahan - summary.pagu.induk)}</span>
-          </div>
-        </div>
-
-        <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
-          <h3 className="text-sm font-medium text-gray-500 mb-2">Gaji PNS dan PPPK</h3>
-          <div className="flex justify-between items-end mb-1">
-            <span className="text-xs text-gray-500">Induk</span>
-            <span className="font-semibold text-gray-700">{formatCurrency(summary.gajiAsn.induk)}</span>
-          </div>
-          <div className="flex justify-between items-end mb-2">
-            <span className="text-xs text-gray-500">Perubahan</span>
-            <span className="font-semibold text-gray-900">{formatCurrency(summary.gajiAsn.perubahan)}</span>
-          </div>
-          <div className="pt-2 border-t flex justify-between items-center">
-            <span className="text-xs text-gray-500">Selisih</span>
-            <span className="text-sm font-bold text-blue-600">{formatCurrency(summary.gajiAsn.perubahan - summary.gajiAsn.induk)}</span>
-          </div>
-        </div>
-
-        <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
-          <h3 className="text-sm font-medium text-gray-500 mb-2">Gaji PPPK Paruh Waktu</h3>
-          <div className="flex justify-between items-end mb-1">
-            <span className="text-xs text-gray-500">Induk</span>
-            <span className="font-semibold text-gray-700">{formatCurrency(summary.gajiPppkParuhWaktu.induk)}</span>
-          </div>
-          <div className="flex justify-between items-end mb-2">
-            <span className="text-xs text-gray-500">Perubahan</span>
-            <span className="font-semibold text-gray-900">{formatCurrency(summary.gajiPppkParuhWaktu.perubahan)}</span>
-          </div>
-          <div className="pt-2 border-t flex justify-between items-center">
-            <span className="text-xs text-gray-500">Selisih</span>
-            <span className="text-sm font-bold text-blue-600">{formatCurrency(summary.gajiPppkParuhWaktu.perubahan - summary.gajiPppkParuhWaktu.induk)}</span>
-          </div>
-        </div>
-        
-        <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
-          <h3 className="text-sm font-medium text-gray-500 mb-2">Honor Pelayanan Umum</h3>
-          <div className="flex justify-between items-end mb-1">
-            <span className="text-xs text-gray-500">Induk</span>
-            <span className="font-semibold text-gray-700">{formatCurrency(summary.honorPelayananUmum.induk)}</span>
-          </div>
-          <div className="flex justify-between items-end mb-2">
-            <span className="text-xs text-gray-500">Perubahan</span>
-            <span className="font-semibold text-gray-900">{formatCurrency(summary.honorPelayananUmum.perubahan)}</span>
-          </div>
-          <div className="pt-2 border-t flex justify-between items-center">
-            <span className="text-xs text-gray-500">Selisih</span>
-            <span className="text-sm font-bold text-blue-600">{formatCurrency(summary.honorPelayananUmum.perubahan - summary.honorPelayananUmum.induk)}</span>
+          <div className="px-2 md:px-6 pt-4 md:pt-0">
+            <p className="text-green-400 text-sm font-medium mb-1">Total Realisasi</p>
+            <p className="text-3xl font-bold text-green-100">{formatCurrency(summary.pagu.realisasi)}</p>
+            <div className="w-full bg-slate-700 rounded-full h-2 mt-3 overflow-hidden">
+              <div 
+                className="bg-green-400 h-2 rounded-full" 
+                style={{ width: `${summary.pagu.perubahan > 0 ? Math.min(100, (summary.pagu.realisasi / summary.pagu.perubahan) * 100) : 0}%` }}
+              ></div>
+            </div>
+            <p className="text-xs text-right mt-1 text-slate-400">
+              {summary.pagu.perubahan > 0 ? ((summary.pagu.realisasi / summary.pagu.perubahan) * 100).toFixed(2) : 0}% Terserap
+            </p>
           </div>
         </div>
       </div>
 
-      {/* Charts */}
-      <div className="bg-white p-4 sm:p-6 rounded-xl border border-gray-100 shadow-sm">
-        <h3 className="text-lg font-bold text-gray-900 mb-4">Pagu per Sumber Dana</h3>
-        <div className="h-80">
+      {/* Komponen Gaji & Tunjangan */}
+      <div className="mt-8">
+        <h2 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+          <Briefcase className="w-5 h-5 text-blue-600" /> Komponen Gaji & Tunjangan
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <ScoreCard title="Total Gaji PNS" item={summary.gajiPns} icon={Banknote} />
+          <ScoreCard title="Total Gaji PPPK" item={summary.gajiPppk} icon={Banknote} />
+          <ScoreCard title="Gaji PPPK Paruh Waktu" item={summary.gajiPppkParuhWaktu} icon={Banknote} />
+          <ScoreCard title="TPP (Beban Kerja PNS)" item={summary.tpp} icon={Banknote} />
+        </div>
+      </div>
+
+      {/* Komponen Pendidikan */}
+      <div className="mt-8">
+        <h2 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+          <GraduationCap className="w-5 h-5 text-emerald-600" /> Komponen Pendidikan (BOSP & TPG)
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+          <ScoreCard title="TPG (Profesi Guru)" item={summary.tpg} icon={GraduationCap} />
+          <ScoreCard title="BOSP SD" item={summary.bospSd} icon={GraduationCap} />
+          <ScoreCard title="BOSP SMP" item={summary.bospSmp} icon={GraduationCap} />
+          <ScoreCard title="BOSP PAUD" item={summary.bospPaud} icon={GraduationCap} />
+          <ScoreCard title="BOSP Kesetaraan" item={summary.bospKesetaraan} icon={GraduationCap} />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
+        {/* Top 10 Uraian Paket */}
+        <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
+          <h3 className="text-md font-bold text-gray-800 mb-4 flex items-center gap-2">
+            <Package className="w-5 h-5 text-orange-500" /> Top 10 Uraian Paket Terbesar
+          </h3>
+          <div className="h-96">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={topPaket}
+                layout="vertical"
+                margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={true} opacity={0.3} />
+                <XAxis type="number" tickFormatter={(val) => `${val / 1000000000}M`} />
+                <YAxis dataKey="nama" type="category" width={150} tick={{fontSize: 10}} />
+                <RechartsTooltip content={<CustomTooltip />} />
+                <Legend />
+                <Bar dataKey="induk" name="Induk" fill="#94a3b8" radius={[0, 4, 4, 0]} />
+                <Bar dataKey="perubahan" name="Perubahan" fill="#3b82f6" radius={[0, 4, 4, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+          <p className="text-xs text-gray-400 mt-2 italic">*Mengecualikan Program Penunjang Pemerintahan Daerah</p>
+        </div>
+
+        {/* Komposisi Sumber Dana */}
+        <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
+          <h3 className="text-md font-bold text-gray-800 mb-4 flex items-center gap-2">
+            <Folder className="w-5 h-5 text-purple-500" /> Proporsi Sumber Dana (Pagu Perubahan)
+          </h3>
+          <div className="h-96">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={chartData}
+                  dataKey="perubahan"
+                  nameKey="name"
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={80}
+                  outerRadius={130}
+                  paddingAngle={2}
+                  label={({ name, percent = 0 }: any) => `${(percent * 100).toFixed(1)}%`}
+                >
+                  {chartData.map((entry: any, index: number) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <RechartsTooltip content={<CustomTooltip />} />
+                <Legend layout="horizontal" verticalAlign="bottom" align="center" wrapperStyle={{ fontSize: '11px' }} />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      </div>
+
+      {/* Tren Realisasi Sub Kegiatan */}
+      <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 mt-8">
+        <h3 className="text-md font-bold text-gray-800 mb-4 flex items-center gap-2">
+          <TrendingUp className="w-5 h-5 text-green-500" /> Perbandingan Pagu vs Realisasi (Top 15 Sub Kegiatan Terbesar)
+        </h3>
+        <div className="h-[400px]">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart
-              data={chartData}
-              margin={{ top: 20, right: 30, left: 40, bottom: 5 }}
+            <ComposedChart
+              data={topSubKegiatan}
+              margin={{ top: 20, right: 30, left: 20, bottom: 80 }}
             >
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
-              <XAxis dataKey="name" tick={{fontSize: 12, fill: '#6b7280'}} axisLine={false} tickLine={false} />
-              <YAxis tickFormatter={(val) => `Rp${(val / 1000000000).toFixed(1)}M`} tick={{fontSize: 12, fill: '#6b7280'}} axisLine={false} tickLine={false} />
-              <RechartsTooltip formatter={(val: any) => formatCurrency(Number(val))} cursor={{fill: '#f3f4f6'}} />
-              <Legend wrapperStyle={{paddingTop: '20px'}} />
-              <Bar dataKey="induk" name="Pagu Induk" fill="#94a3b8" radius={[4, 4, 0, 0]} maxBarSize={50} />
-              <Bar dataKey="perubahan" name="Pagu Perubahan" fill="#3b82f6" radius={[4, 4, 0, 0]} maxBarSize={50} />
-            </BarChart>
+              <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+              <XAxis dataKey="nama" tick={{fontSize: 10}} angle={-45} textAnchor="end" height={80} />
+              <YAxis tickFormatter={(val) => `${val / 1000000000}M`} />
+              <RechartsTooltip content={<CustomTooltip />} />
+              <Legend verticalAlign="top" />
+              <Area type="monotone" dataKey="paguPerubahan" name="Pagu Perubahan" fill="#dbeafe" stroke="#3b82f6" />
+              <Bar dataKey="paguInduk" name="Pagu Induk" barSize={20} fill="#94a3b8" />
+              <Line type="monotone" dataKey="realisasi" name="Total Realisasi" stroke="#10b981" strokeWidth={3} dot={{ r: 4 }} />
+            </ComposedChart>
           </ResponsiveContainer>
         </div>
       </div>
 
-      {/* Tabel Perbandingan Hierarkis - Khusus DAU Pendidikan */}
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-        <div className="p-4 border-b border-gray-100 bg-gray-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <h2 className="text-lg font-bold text-gray-900">Breakdown Khusus Sumber Dana DAU Bidang Pendidikan</h2>
-            <p className="text-sm text-gray-500 mt-1">Menampilkan rincian hierarki untuk DAU yang Ditentukan Penggunaannya Bidang Pendidikan.</p>
-          </div>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-100 text-gray-600 font-medium">
-              <tr>
-                <th className="py-3 px-4 text-left border-b w-1/2">Uraian</th>
-                <th className="py-3 px-4 text-right border-b whitespace-nowrap">Pagu Induk</th>
-                <th className="py-3 px-4 text-right border-b whitespace-nowrap">Pagu Perubahan</th>
-                <th className="py-3 px-4 text-right border-b whitespace-nowrap">Selisih</th>
-                <th className="py-3 px-4 text-center border-b w-24">Trend</th>
-              </tr>
-            </thead>
-            <tbody>
-              {Object.keys(tree).map((skpdKey) => {
-                const skpd = tree[skpdKey];
-                const skpdId = `skpd_${skpdKey}`;
-                const skpdExpanded = expandedNodes.has(skpdId);
-                return (
-                  <React.Fragment key={skpdKey}>
-                    <tr className="border-b bg-gray-50 hover:bg-gray-100 cursor-pointer transition-colors" onClick={() => toggleExpand(skpdId)}>
-                      <td className="py-3 px-4 font-bold flex items-center">
-                        <Building className="w-4 h-4 mr-2 text-primary" /> {skpdKey}
-                      </td>
-                      <td className="py-3 px-4 text-right font-bold">{formatCurrency(skpd.induk)}</td>
-                      <td className="py-3 px-4 text-right font-bold">{formatCurrency(skpd.perubahan)}</td>
-                      <td className={`py-3 px-4 text-right font-bold ${skpd.perubahan - skpd.induk !== 0 ? 'text-blue-600' : ''}`}>{formatCurrency(skpd.perubahan - skpd.induk)}</td>
-                      <td className="py-3 px-4 text-center">{renderTrend(skpd.induk, skpd.perubahan)}</td>
-                    </tr>
-                    
-                    {skpdExpanded && Object.keys(skpd.progs).map((progKey) => {
-                      const prog = skpd.progs[progKey];
-                      const progId = `prog_${progKey}`;
-                      const progExpanded = expandedNodes.has(progId);
-                      const [pKode, pNama] = progKey.split('|');
-                      return (
-                        <React.Fragment key={progKey}>
-                          <tr className="border-b hover:bg-gray-50 cursor-pointer transition-colors" onClick={() => toggleExpand(progId)}>
-                            <td className="py-2 px-4 pl-10 font-semibold flex items-center">
-                              <Folder className="w-4 h-4 mr-2 text-blue-500" /> {pKode} - {pNama}
-                            </td>
-                            <td className="py-2 px-4 text-right font-semibold">{formatCurrency(prog.induk)}</td>
-                            <td className="py-2 px-4 text-right font-semibold">{formatCurrency(prog.perubahan)}</td>
-                            <td className={`py-2 px-4 text-right font-semibold ${prog.perubahan - prog.induk !== 0 ? 'text-blue-600' : ''}`}>{formatCurrency(prog.perubahan - prog.induk)}</td>
-                            <td className="py-2 px-4 text-center">{renderTrend(prog.induk, prog.perubahan)}</td>
-                          </tr>
-                          
-                          {progExpanded && Object.keys(prog.kegs).map((kegKey) => {
-                            const keg = prog.kegs[kegKey];
-                            const kegId = `keg_${kegKey}`;
-                            const kegExpanded = expandedNodes.has(kegId);
-                            const [kKode, kNama] = kegKey.split('|');
-                            return (
-                              <React.Fragment key={kegKey}>
-                                <tr className="border-b hover:bg-gray-50 cursor-pointer transition-colors" onClick={() => toggleExpand(kegId)}>
-                                  <td className="py-2 px-4 pl-16 flex items-center text-gray-800">
-                                    <FileText className="w-3.5 h-3.5 mr-2 text-green-500" /> {kKode} - {kNama}
-                                  </td>
-                                  <td className="py-2 px-4 text-right text-gray-800">{formatCurrency(keg.induk)}</td>
-                                  <td className="py-2 px-4 text-right text-gray-800">{formatCurrency(keg.perubahan)}</td>
-                                  <td className={`py-2 px-4 text-right ${keg.perubahan - keg.induk !== 0 ? 'text-blue-600 font-medium' : 'text-gray-800'}`}>{formatCurrency(keg.perubahan - keg.induk)}</td>
-                                  <td className="py-2 px-4 text-center">{renderTrend(keg.induk, keg.perubahan)}</td>
-                                </tr>
-                                
-                                {kegExpanded && Object.keys(keg.subs).map((subKey) => {
-                                  const sub = keg.subs[subKey];
-                                  const subId = `sub_${subKey}`;
-                                  const subExpanded = expandedNodes.has(subId);
-                                  const [sKode, sNama] = subKey.split('|');
-                                  return (
-                                    <React.Fragment key={subKey}>
-                                      <tr className="border-b hover:bg-gray-50 cursor-pointer transition-colors" onClick={() => toggleExpand(subId)}>
-                                        <td className="py-2 px-4 pl-24 flex items-center text-gray-700 text-xs font-medium">
-                                          <FileJson className="w-3.5 h-3.5 mr-2 text-orange-500 shrink-0" /> {sKode} - {sNama}
-                                        </td>
-                                        <td className="py-2 px-4 text-right text-gray-700 text-xs">{formatCurrency(sub.induk)}</td>
-                                        <td className="py-2 px-4 text-right text-gray-700 text-xs">{formatCurrency(sub.perubahan)}</td>
-                                        <td className={`py-2 px-4 text-right text-xs ${sub.perubahan - sub.induk !== 0 ? 'text-blue-600 font-medium' : 'text-gray-700'}`}>{formatCurrency(sub.perubahan - sub.induk)}</td>
-                                        <td className="py-2 px-4 text-center">{renderTrend(sub.induk, sub.perubahan)}</td>
-                                      </tr>
-                                      
-                                      {subExpanded && Object.keys(sub.reks).map((rekKey) => {
-                                        const rek = sub.reks[rekKey];
-                                        const rekId = `rek_${subId}_${rekKey}`;
-                                        const rekExpanded = expandedNodes.has(rekId);
-                                        const [rKode, rNama] = rekKey.split('|');
-                                        return (
-                                          <React.Fragment key={rekKey}>
-                                            <tr className="border-b hover:bg-gray-50 cursor-pointer transition-colors" onClick={() => toggleExpand(rekId)}>
-                                              <td className="py-2 px-4 pl-32 text-gray-600 text-xs flex items-center">
-                                                - Rek: {rKode} - {rNama}
-                                              </td>
-                                              <td className="py-2 px-4 text-right text-gray-600 text-xs">{formatCurrency(rek.induk)}</td>
-                                              <td className="py-2 px-4 text-right text-gray-600 text-xs">{formatCurrency(rek.perubahan)}</td>
-                                              <td className={`py-2 px-4 text-right text-xs ${rek.perubahan - rek.induk !== 0 ? 'text-blue-600 font-medium' : 'text-gray-600'}`}>{formatCurrency(rek.perubahan - rek.induk)}</td>
-                                              <td className="py-2 px-4 text-center">{renderTrend(rek.induk, rek.perubahan)}</td>
-                                            </tr>
-
-                                            {rekExpanded && Object.keys(rek.pakets).map((paketKey) => {
-                                              const paket = rek.pakets[paketKey];
-                                              const isNew = paket.induk === 0 && paket.perubahan > 0;
-                                              const isRemoved = paket.induk > 0 && paket.perubahan === 0;
-                                              return (
-                                                <tr key={paketKey} className={`border-b bg-gray-50/50 hover:bg-gray-100 ${isNew ? 'bg-green-50/30' : isRemoved ? 'bg-red-50/30' : ''}`}>
-                                                  <td className="py-2 px-4 pl-40 text-gray-500 text-xs flex items-center">
-                                                    <Package className={`w-3 h-3 mr-1 ${isNew ? 'text-green-500' : isRemoved ? 'text-red-500' : 'text-gray-400'}`} /> 
-                                                    <span className={isNew ? 'text-green-700 font-medium' : isRemoved ? 'text-red-700 line-through' : ''}>
-                                                      {paketKey}
-                                                    </span>
-                                                    {isNew && <span className="ml-2 text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded">Baru</span>}
-                                                    {isRemoved && <span className="ml-2 text-[10px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded">Dihapus</span>}
-                                                  </td>
-                                                  <td className="py-2 px-4 text-right text-gray-500 text-xs font-medium">{formatCurrency(paket.induk)}</td>
-                                                  <td className="py-2 px-4 text-right text-gray-500 text-xs font-medium">{formatCurrency(paket.perubahan)}</td>
-                                                  <td className={`py-2 px-4 text-right text-xs font-medium ${paket.perubahan - paket.induk !== 0 ? 'text-blue-600' : 'text-gray-500'}`}>{formatCurrency(paket.perubahan - paket.induk)}</td>
-                                                  <td className="py-2 px-4 text-center">{renderTrend(paket.induk, paket.perubahan)}</td>
-                                                </tr>
-                                              );
-                                            })}
-                                          </React.Fragment>
-                                        );
-                                      })}
-                                    </React.Fragment>
-                                  );
-                                })}
-                              </React.Fragment>
-                            );
-                          })}
-                        </React.Fragment>
-                      );
-                    })}
-                  </React.Fragment>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </div>
     </div>
   );
 }
