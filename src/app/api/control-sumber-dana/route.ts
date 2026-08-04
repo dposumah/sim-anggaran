@@ -81,12 +81,12 @@ export async function GET() {
     // Gabungkan
     const result = sumberDanas.map(sd => {
       const pagu = paguList.find(p => p.sumberDanaId === sd.id);
-      const paguInduk = pagu ? Number(pagu.paguInduk) : 0;
+      const ceilingAmount = pagu ? Number(pagu.paguPerubahan !== null ? pagu.paguPerubahan : pagu.paguInduk) : 0;
       return {
         sumberDanaId: sd.id,
         kode: sd.kode,
         nama: sd.nama,
-        paguInduk: paguInduk,
+        ceilingAmount: ceilingAmount,
         excelAmount: rincianTotals.get(sd.id) || 0,
         breakdown: rincianBreakdowns.get(sd.id) || []
       };
@@ -111,9 +111,9 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { skpdId, tahunId, sumberDanaId, paguInduk } = body;
+    const { skpdId, tahunId, sumberDanaId, ceilingAmount } = body;
 
-    if (!skpdId || !tahunId || !sumberDanaId || paguInduk === undefined) {
+    if (!skpdId || !tahunId || !sumberDanaId || ceilingAmount === undefined) {
       return NextResponse.json({ error: 'Data tidak lengkap' }, { status: 400 });
     }
 
@@ -126,13 +126,15 @@ export async function POST(request: Request) {
         }
       },
       update: {
-        paguInduk: Number(paguInduk)
+        paguPerubahan: Number(ceilingAmount)
       },
       create: {
         skpdId: Number(skpdId),
         sumberDanaId: Number(sumberDanaId),
         tahunId: Number(tahunId),
-        paguInduk: Number(paguInduk)
+        paguInduk: 0,
+        paguRkpd: 0,
+        paguPerubahan: Number(ceilingAmount)
       }
     });
 

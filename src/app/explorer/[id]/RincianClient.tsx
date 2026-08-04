@@ -53,11 +53,12 @@ export default function RincianClient({ subKegiatanId, isLocked, parentInfo }: {
 
   // Aggregate Rekap Rekening
   const rekapRekening = useMemo(() => {
-    const map = new Map<string, { kode: string, nama: string, pagu: number }>();
+    const map = new Map<string, { kode: string, nama: string, pagu: number, realisasi: number }>();
     rincianList.forEach(r => {
       const k = r.rekening?.kode || 'Unknown';
-      const ext = map.get(k) || { kode: k, nama: r.rekening?.nama || 'Unknown', pagu: 0 };
+      const ext = map.get(k) || { kode: k, nama: r.rekening?.nama || 'Unknown', pagu: 0, realisasi: 0 };
       ext.pagu += Number(r.paguPerubahan || 0);
+      ext.realisasi += Number(r.realisasi || 0);
       map.set(k, ext);
     });
     return Array.from(map.values()).sort((a, b) => b.pagu - a.pagu);
@@ -65,11 +66,12 @@ export default function RincianClient({ subKegiatanId, isLocked, parentInfo }: {
 
   // Aggregate Rekap Paket
   const rekapPaket = useMemo(() => {
-    const map = new Map<string, { nama: string, pagu: number }>();
+    const map = new Map<string, { nama: string, pagu: number, realisasi: number }>();
     rincianList.forEach(r => {
       const k = r.namaPaket || 'Unknown';
-      const ext = map.get(k) || { nama: k, pagu: 0 };
+      const ext = map.get(k) || { nama: k, pagu: 0, realisasi: 0 };
       ext.pagu += Number(r.paguPerubahan || 0);
+      ext.realisasi += Number(r.realisasi || 0);
       map.set(k, ext);
     });
     return Array.from(map.values()).sort((a, b) => b.pagu - a.pagu);
@@ -189,18 +191,35 @@ export default function RincianClient({ subKegiatanId, isLocked, parentInfo }: {
                     <th className="px-6 py-3 text-left font-semibold text-gray-900">Kode Rekening</th>
                     <th className="px-6 py-3 text-left font-semibold text-gray-900">Nama Rekening</th>
                     <th className="px-6 py-3 text-right font-semibold text-gray-900">Total Pagu Perubahan</th>
+                    <th className="px-6 py-3 text-right font-semibold text-gray-900">Total Realisasi</th>
+                    <th className="px-6 py-3 text-right font-semibold text-gray-900">Status</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
-                  {rekapRekening.map((r, i) => (
-                    <tr key={i} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 text-gray-700">{r.kode}</td>
-                      <td className="px-6 py-4 text-gray-700">{r.nama}</td>
-                      <td className="px-6 py-4 text-right font-semibold text-blue-700">{formatRupiah(r.pagu)}</td>
-                    </tr>
-                  ))}
+                  {rekapRekening.map((r, i) => {
+                    const isWarning = r.realisasi > r.pagu;
+                    return (
+                      <tr key={i} className={`hover:bg-gray-50 ${isWarning ? 'bg-red-50' : ''}`}>
+                        <td className="px-6 py-4 text-gray-700">{r.kode}</td>
+                        <td className="px-6 py-4 text-gray-700">{r.nama}</td>
+                        <td className="px-6 py-4 text-right font-semibold text-blue-700">{formatRupiah(r.pagu)}</td>
+                        <td className="px-6 py-4 text-right font-semibold text-purple-700">{formatRupiah(r.realisasi)}</td>
+                        <td className="px-6 py-4 text-right font-semibold">
+                          {isWarning ? (
+                            <span className="inline-flex items-center rounded-md bg-red-100 px-2 py-1 text-[10px] font-medium text-red-700 ring-1 ring-inset ring-red-600/10">
+                              Overbudget {formatRupiah(r.realisasi - r.pagu)}
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center rounded-md bg-green-50 px-2 py-1 text-[10px] font-medium text-green-700 ring-1 ring-inset ring-green-600/20">
+                              Aman (Sisa {formatRupiah(r.pagu - r.realisasi)})
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
                   {rekapRekening.length === 0 && (
-                    <tr><td colSpan={3} className="px-6 py-4 text-center text-gray-500 italic">Data kosong</td></tr>
+                    <tr><td colSpan={5} className="px-6 py-4 text-center text-gray-500 italic">Data kosong</td></tr>
                   )}
                 </tbody>
                 {rekapRekening.length > 0 && (
@@ -208,6 +227,8 @@ export default function RincianClient({ subKegiatanId, isLocked, parentInfo }: {
                     <tr>
                       <th colSpan={2} className="px-6 py-3 text-right font-bold text-gray-900">Total Keseluruhan</th>
                       <th className="px-6 py-3 text-right font-bold text-blue-800">{formatRupiah(totalPaguPerubahan)}</th>
+                      <th className="px-6 py-3 text-right font-bold text-purple-800">{formatRupiah(totalRealisasi)}</th>
+                      <th className="px-6 py-3"></th>
                     </tr>
                   </tfoot>
                 )}
