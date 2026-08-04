@@ -8,7 +8,11 @@ import {
   FileText,
   FileJson,
   X,
-  Loader2
+  Loader2,
+  Search,
+  CheckCircle,
+  Banknote,
+  TrendingUp
 } from 'lucide-react';
 import { useYear } from '@/contexts/YearContext';
 
@@ -16,6 +20,9 @@ export default function Dashboard() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const { tahun } = useYear();
+  const [viewMode, setViewMode] = useState<'induk' | 'perubahan'>('perubahan');
+  const [searchSd, setSearchSd] = useState('');
+  const [searchRek, setSearchRek] = useState('');
 
   // Modal State
   const [selectedItem, setSelectedItem] = useState<{ type: 'sumber_dana' | 'rekening', id: number, name: string } | null>(null);
@@ -89,55 +96,91 @@ export default function Dashboard() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
         <div className="flex items-center rounded-xl bg-surface p-6 shadow-sm border border-border">
-          <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10 text-primary">
+          <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-blue-100 text-blue-600">
             <Wallet className="h-6 w-6" />
           </div>
           <div className="ml-4">
-            <h3 className="text-sm font-medium text-secondary">Total Pagu</h3>
-            <p className="text-xl font-bold text-foreground">{formatRupiah(data.summary.totalPagu)}</p>
+            <h3 className="text-sm font-medium text-secondary">Total Pagu Induk</h3>
+            <p className="text-xl font-bold text-foreground">{formatRupiah(data.summary.totalPaguInduk)}</p>
           </div>
         </div>
         
         <div className="flex items-center rounded-xl bg-surface p-6 shadow-sm border border-border">
-          <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-success/10 text-success">
-            <Building2 className="h-6 w-6" />
+          <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-blue-100 text-blue-600">
+            <Banknote className="h-6 w-6" />
           </div>
           <div className="ml-4">
-            <h3 className="text-sm font-medium text-secondary">SKPD</h3>
-            <p className="text-xl font-bold text-foreground">{data.summary.skpdCount}</p>
-          </div>
-        </div>
-        
-        <div className="flex items-center rounded-xl bg-surface p-6 shadow-sm border border-border">
-          <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-accent/10 text-accent">
-            <Target className="h-6 w-6" />
-          </div>
-          <div className="ml-4">
-            <h3 className="text-sm font-medium text-secondary">Program</h3>
-            <p className="text-xl font-bold text-foreground">{data.summary.programCount}</p>
+            <h3 className="text-sm font-medium text-secondary">Total Pagu Perubahan</h3>
+            <p className="text-xl font-bold text-foreground">{formatRupiah(data.summary.totalPaguPerubahan)}</p>
           </div>
         </div>
 
-        <div className="flex items-center rounded-xl bg-surface p-6 shadow-sm border border-border">
-          <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-amber-500/10 text-amber-600">
-            <FileText className="h-6 w-6" />
+        <div className="flex items-center justify-between rounded-xl bg-surface p-6 shadow-sm border border-border">
+          <div className="flex items-center">
+            <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-purple-100 text-purple-600">
+              <CheckCircle className="h-6 w-6" />
+            </div>
+            <div className="ml-4">
+              <h3 className="text-sm font-medium text-secondary">Total Realisasi</h3>
+              <p className="text-xl font-bold text-foreground">{formatRupiah(data.summary.totalRealisasi)}</p>
+            </div>
           </div>
-          <div className="ml-4">
-            <h3 className="text-sm font-medium text-secondary">Kegiatan</h3>
-            <p className="text-xl font-bold text-foreground">{data.summary.kegiatanCount}</p>
+          <div className="text-right">
+            <div className="text-sm font-semibold text-purple-700">
+              {((data.summary.totalRealisasi / (data.summary.totalPaguPerubahan || 1)) * 100).toFixed(1)}%
+            </div>
+            <div className="text-[10px] text-gray-500">Terserap</div>
           </div>
         </div>
+      </div>
 
-        <div className="flex items-center rounded-xl bg-surface p-6 shadow-sm border border-border">
-          <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-purple-500/10 text-purple-600">
-            <FileJson className="h-6 w-6" />
+      <div className="grid grid-cols-1 gap-6 sm:grid-cols-4 lg:grid-cols-4">
+        <div className="flex items-center rounded-xl bg-surface p-4 shadow-sm border border-border">
+          <Building2 className="h-5 w-5 text-success/70" />
+          <div className="ml-3">
+            <h3 className="text-xs font-medium text-secondary">SKPD</h3>
+            <p className="text-lg font-bold text-foreground">{data.summary.skpdCount}</p>
           </div>
-          <div className="ml-4">
-            <h3 className="text-sm font-medium text-secondary">Sub Kegiatan</h3>
-            <p className="text-xl font-bold text-foreground">{data.summary.subKegiatanCount}</p>
+        </div>
+        <div className="flex items-center rounded-xl bg-surface p-4 shadow-sm border border-border">
+          <Target className="h-5 w-5 text-accent/70" />
+          <div className="ml-3">
+            <h3 className="text-xs font-medium text-secondary">Program</h3>
+            <p className="text-lg font-bold text-foreground">{data.summary.programCount}</p>
           </div>
+        </div>
+        <div className="flex items-center rounded-xl bg-surface p-4 shadow-sm border border-border">
+          <FileText className="h-5 w-5 text-amber-500/70" />
+          <div className="ml-3">
+            <h3 className="text-xs font-medium text-secondary">Kegiatan</h3>
+            <p className="text-lg font-bold text-foreground">{data.summary.kegiatanCount}</p>
+          </div>
+        </div>
+        <div className="flex items-center rounded-xl bg-surface p-4 shadow-sm border border-border">
+          <FileJson className="h-5 w-5 text-purple-500/70" />
+          <div className="ml-3">
+            <h3 className="text-xs font-medium text-secondary">Sub Kegiatan</h3>
+            <p className="text-lg font-bold text-foreground">{data.summary.subKegiatanCount}</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex justify-end mb-2">
+        <div className="inline-flex rounded-lg border border-gray-200 bg-white p-1">
+          <button
+            onClick={() => setViewMode('induk')}
+            className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${viewMode === 'induk' ? 'bg-blue-100 text-blue-700' : 'text-gray-500 hover:text-gray-900'}`}
+          >
+            Pagu Induk
+          </button>
+          <button
+            onClick={() => setViewMode('perubahan')}
+            className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${viewMode === 'perubahan' ? 'bg-blue-100 text-blue-700' : 'text-gray-500 hover:text-gray-900'}`}
+          >
+            Pagu Perubahan
+          </button>
         </div>
       </div>
 
@@ -145,19 +188,35 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* Tabel Sumber Dana */}
         <div className="rounded-xl bg-surface p-6 shadow-sm border border-border">
-          <h3 className="text-lg font-semibold text-foreground mb-4">Rekapitulasi per Sumber Dana</h3>
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-semibold text-foreground">Rekapitulasi per Sumber Dana</h3>
+            <div className="relative w-48">
+              <input
+                type="text"
+                placeholder="Cari..."
+                className="w-full pl-8 pr-3 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 outline-none"
+                value={searchSd}
+                onChange={(e) => setSearchSd(e.target.value)}
+              />
+              <Search className="w-4 h-4 text-gray-400 absolute left-2.5 top-2" />
+            </div>
+          </div>
           <div className="overflow-x-auto h-96 relative border rounded-lg">
             <table className="w-full text-left text-sm text-gray-700">
               <thead className="bg-gray-50 border-b sticky top-0 z-10">
                 <tr>
                   <th className="px-4 py-3 font-semibold text-gray-900">Sumber Dana</th>
                   <th className="px-4 py-3 font-semibold text-gray-900 text-right">Total Pagu (Rp)</th>
-                  <th className="px-4 py-3 font-semibold text-gray-900 text-right">%</th>
+                  <th className="px-4 py-3 font-semibold text-gray-900 text-right">Realisasi (Rp)</th>
+                  <th className="px-4 py-3 font-semibold text-gray-900 text-right">% Serap</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {data.sumberDanaChart?.map((item: any, index: number) => {
-                  const percentage = ((item.value / data.summary.totalPagu) * 100).toFixed(1);
+                {data.sumberDanaChart?.filter((i:any) => i.name.toLowerCase().includes(searchSd.toLowerCase())).map((item: any, index: number) => {
+                  const pagu = viewMode === 'induk' ? item.paguInduk : item.paguPerubahan;
+                  const totalPaguContext = viewMode === 'induk' ? data.summary.totalPaguInduk : data.summary.totalPaguPerubahan;
+                  const percentage = totalPaguContext > 0 ? ((pagu / totalPaguContext) * 100).toFixed(1) : '0.0';
+                  const realisasiPercent = pagu > 0 ? ((item.realisasi / pagu) * 100).toFixed(1) : '0.0';
                   return (
                     <tr 
                       key={index} 
@@ -165,18 +224,24 @@ export default function Dashboard() {
                       onClick={() => handleRowClick('sumber_dana', item.id, item.name)}
                     >
                       <td className="px-4 py-3 font-medium text-gray-800">{item.name}</td>
-                      <td className="px-4 py-3 text-right text-gray-900">{formatRupiah(item.value)}</td>
+                      <td className="px-4 py-3 text-right text-gray-900">
+                        {formatRupiah(pagu)}
+                        <div className="text-[10px] text-gray-500">{percentage}% dr Total</div>
+                      </td>
+                      <td className="px-4 py-3 text-right text-purple-700 font-medium">
+                        {formatRupiah(item.realisasi || 0)}
+                      </td>
                       <td className="px-4 py-3 text-right">
-                        <span className="inline-block bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-xs font-medium">
-                          {percentage}%
+                        <span className="inline-block bg-purple-100 text-purple-700 px-2 py-0.5 rounded text-xs font-medium">
+                          {realisasiPercent}%
                         </span>
                       </td>
                     </tr>
                   );
                 })}
-                {(!data.sumberDanaChart || data.sumberDanaChart.length === 0) && (
+                {(!data.sumberDanaChart || data.sumberDanaChart.filter((i:any) => i.name.toLowerCase().includes(searchSd.toLowerCase())).length === 0) && (
                   <tr>
-                    <td colSpan={3} className="px-4 py-8 text-center text-gray-500">
+                    <td colSpan={4} className="px-4 py-8 text-center text-gray-500">
                       Tidak ada data sumber dana.
                     </td>
                   </tr>
@@ -189,19 +254,35 @@ export default function Dashboard() {
 
         {/* Tabel Rekening */}
         <div className="rounded-xl bg-surface p-6 shadow-sm border border-border">
-          <h3 className="text-lg font-semibold text-foreground mb-4">Rekapitulasi per Rekening Belanja</h3>
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-semibold text-foreground">Rekapitulasi per Rekening Belanja</h3>
+            <div className="relative w-48">
+              <input
+                type="text"
+                placeholder="Cari..."
+                className="w-full pl-8 pr-3 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 outline-none"
+                value={searchRek}
+                onChange={(e) => setSearchRek(e.target.value)}
+              />
+              <Search className="w-4 h-4 text-gray-400 absolute left-2.5 top-2" />
+            </div>
+          </div>
           <div className="overflow-x-auto h-96 relative border rounded-lg">
             <table className="w-full text-left text-sm text-gray-700">
               <thead className="bg-gray-50 border-b sticky top-0 z-10">
                 <tr>
                   <th className="px-4 py-3 font-semibold text-gray-900">Rekening</th>
                   <th className="px-4 py-3 font-semibold text-gray-900 text-right">Total Pagu (Rp)</th>
-                  <th className="px-4 py-3 font-semibold text-gray-900 text-right">%</th>
+                  <th className="px-4 py-3 font-semibold text-gray-900 text-right">Realisasi (Rp)</th>
+                  <th className="px-4 py-3 font-semibold text-gray-900 text-right">% Serap</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {data.rekeningChart?.map((item: any, index: number) => {
-                  const percentage = ((item.value / data.summary.totalPagu) * 100).toFixed(1);
+                {data.rekeningChart?.filter((i:any) => i.nama.toLowerCase().includes(searchRek.toLowerCase()) || i.kode.includes(searchRek)).map((item: any, index: number) => {
+                  const pagu = viewMode === 'induk' ? item.paguInduk : item.paguPerubahan;
+                  const totalPaguContext = viewMode === 'induk' ? data.summary.totalPaguInduk : data.summary.totalPaguPerubahan;
+                  const percentage = totalPaguContext > 0 ? ((pagu / totalPaguContext) * 100).toFixed(1) : '0.0';
+                  const realisasiPercent = pagu > 0 ? ((item.realisasi / pagu) * 100).toFixed(1) : '0.0';
                   return (
                     <tr 
                       key={index} 
@@ -212,18 +293,24 @@ export default function Dashboard() {
                         <div className="font-medium text-gray-800 line-clamp-2" title={item.nama}>{item.nama}</div>
                         <div className="text-xs text-gray-500 mt-0.5">{item.kode}</div>
                       </td>
-                      <td className="px-4 py-3 text-right text-gray-900 whitespace-nowrap">{formatRupiah(item.value)}</td>
+                      <td className="px-4 py-3 text-right text-gray-900 whitespace-nowrap">
+                        {formatRupiah(pagu)}
+                        <div className="text-[10px] text-gray-500">{percentage}% dr Total</div>
+                      </td>
+                      <td className="px-4 py-3 text-right text-purple-700 font-medium whitespace-nowrap">
+                        {formatRupiah(item.realisasi || 0)}
+                      </td>
                       <td className="px-4 py-3 text-right">
-                        <span className="inline-block bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-xs font-medium">
-                          {percentage}%
+                        <span className="inline-block bg-purple-100 text-purple-700 px-2 py-0.5 rounded text-xs font-medium">
+                          {realisasiPercent}%
                         </span>
                       </td>
                     </tr>
                   );
                 })}
-                {(!data.rekeningChart || data.rekeningChart.length === 0) && (
+                {(!data.rekeningChart || data.rekeningChart.filter((i:any) => i.nama.toLowerCase().includes(searchRek.toLowerCase()) || i.kode.includes(searchRek)).length === 0) && (
                   <tr>
-                    <td colSpan={3} className="px-4 py-8 text-center text-gray-500">
+                    <td colSpan={4} className="px-4 py-8 text-center text-gray-500">
                       Tidak ada data rekening.
                     </td>
                   </tr>

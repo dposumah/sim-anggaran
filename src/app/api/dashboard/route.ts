@@ -42,6 +42,12 @@ export async function GET(request: Request) {
       prisma.subKegiatan.count({ where: { kegiatan: { program: { skpdId: { in: skpdIdList } } } } })
     ]);
 
+    const totalRealisasiAgg = await prisma.realisasiBelanja.aggregate({
+      _sum: { nominal: true },
+      where: { subKegiatan: { kegiatan: { program: { skpdId: { in: skpdIdList } } } } }
+    });
+    const totalRealisasi = Number(totalRealisasiAgg._sum.nominal || 0);
+
     const totalPagu = Number(totalPaguAgg._sum.paguInduk || 0); // fallback for backward compat
     const totalPaguInduk = Number(totalPaguAgg._sum.paguInduk || 0);
     const totalPaguRkpd = Number(totalPaguAgg._sum.paguRkpd || 0);
@@ -113,6 +119,13 @@ export async function GET(request: Request) {
       orderBy: { _sum: { paguInduk: 'desc' } }
     });
 
+    const realisasiSDAgg = await prisma.realisasiBelanja.groupBy({
+      by: ['sumberDanaId'],
+      where: { subKegiatan: { kegiatan: { program: { skpdId: { in: skpdIdList } } } } },
+      _sum: { nominal: true }
+    });
+    const realisasiSDMap = new Map(realisasiSDAgg.map(a => [a.sumberDanaId, Number(a._sum.nominal || 0)]));
+
     const sumberDanas = await prisma.sumberDana.findMany({
       where: { id: { in: sumberDanaAgg.map(a => a.sumberDanaId).filter(Boolean) as number[] } }
     });
@@ -124,7 +137,8 @@ export async function GET(request: Request) {
       value: Number(agg._sum.paguInduk || 0), // backward compat
       paguInduk: Number(agg._sum.paguInduk || 0),
       paguRkpd: Number(agg._sum.paguRkpd || 0),
-      paguPerubahan: Number(agg._sum.paguPerubahan || 0)
+      paguPerubahan: Number(agg._sum.paguPerubahan || 0),
+      realisasi: realisasiSDMap.get(agg.sumberDanaId || 0) || 0
     })).sort((a, b) => b.paguInduk - a.paguInduk);
 
     // 2. Rekapitulasi per Rekening Belanja
@@ -138,6 +152,13 @@ export async function GET(request: Request) {
       },
       orderBy: { _sum: { paguInduk: 'desc' } }
     });
+
+    const realisasiRekAgg = await prisma.realisasiBelanja.groupBy({
+      by: ['rekeningId'],
+      where: { subKegiatan: { kegiatan: { program: { skpdId: { in: skpdIdList } } } } },
+      _sum: { nominal: true }
+    });
+    const realisasiRekMap = new Map(realisasiRekAgg.map(a => [a.rekeningId, Number(a._sum.nominal || 0)]));
 
     const rekenings = await prisma.rekening.findMany({
       where: { id: { in: rekeningAgg.map(r => r.rekeningId) } }
@@ -153,7 +174,8 @@ export async function GET(request: Request) {
         value: Number(agg._sum.paguInduk || 0), // backward compat
         paguInduk: Number(agg._sum.paguInduk || 0),
         paguRkpd: Number(agg._sum.paguRkpd || 0),
-        paguPerubahan: Number(agg._sum.paguPerubahan || 0)
+        paguPerubahan: Number(agg._sum.paguPerubahan || 0),
+        realisasi: realisasiRekMap.get(agg.rekeningId || 0) || 0
       };
     });
 
@@ -163,6 +185,7 @@ export async function GET(request: Request) {
         totalPaguInduk,
         totalPaguRkpd,
         totalPaguPerubahan,
+        totalRealisasi,
         skpdCount,
         programCount,
         kegiatanCount,
