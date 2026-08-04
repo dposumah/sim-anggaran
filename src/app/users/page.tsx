@@ -6,7 +6,6 @@ import { useYear } from '@/contexts/YearContext';
 export default function UsersPage() {
   const { tahun } = useYear();
   const [users, setUsers] = useState<any[]>([]);
-  const [skpds, setSkpds] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<any>(null);
@@ -17,7 +16,6 @@ export default function UsersPage() {
     namaLengkap: '',
     role: 'STAF',
     password: '',
-    skpdId: '',
     isActive: true,
   });
 
@@ -28,14 +26,6 @@ export default function UsersPage() {
       const data = await res.json();
       if (data.data) {
         setUsers(data.data);
-      }
-
-      if (tahun) {
-        const resSkpd = await fetch(`/api/skpd?tahunId=${tahun}`);
-        const dataSkpd = await resSkpd.json();
-        if (dataSkpd.data) {
-          setSkpds(dataSkpd.data);
-        }
       }
     } catch (err) {
       console.error(err);
@@ -98,7 +88,6 @@ export default function UsersPage() {
       namaLengkap: '',
       role: 'STAF',
       password: '',
-      skpdId: '',
       isActive: true,
     });
     setIsModalOpen(true);
@@ -112,7 +101,6 @@ export default function UsersPage() {
       namaLengkap: user.namaLengkap,
       role: user.role,
       password: '', // do not show existing password
-      skpdId: user.skpdId ? String(user.skpdId) : '',
       isActive: user.isActive,
     });
     setIsModalOpen(true);
@@ -155,7 +143,6 @@ export default function UsersPage() {
               <th className="px-6 py-3 text-left font-medium text-gray-500">Email</th>
               <th className="px-6 py-3 text-left font-medium text-gray-500">Nama Lengkap</th>
               <th className="px-6 py-3 text-left font-medium text-gray-500">Role</th>
-              <th className="px-6 py-3 text-left font-medium text-gray-500">SKPD</th>
               <th className="px-6 py-3 text-center font-medium text-gray-500">Status</th>
               <th className="px-6 py-3 text-right font-medium text-gray-500">Aksi</th>
             </tr>
@@ -187,9 +174,6 @@ export default function UsersPage() {
                     }`}>
                       {user.role}
                     </span>
-                  </td>
-                  <td className="px-6 py-4 text-gray-700 truncate max-w-xs">
-                    {user.skpd?.nama || '-'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-center">
                     <button 
@@ -291,25 +275,6 @@ export default function UsersPage() {
                   />
                 </div>
               </div>
-
-              {formData.role !== 'ADMIN' && (
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700">SKPD (Untuk Staf) *</label>
-                  <select
-                    required={formData.role !== 'ADMIN'}
-                    className="w-full px-3 py-2 border rounded-md text-sm bg-white"
-                    value={formData.skpdId}
-                    onChange={(e) => setFormData({ ...formData, skpdId: e.target.value })}
-                  >
-                    <option value="">-- Pilih SKPD --</option>
-                    {skpds.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.kode} - {s.nama}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
 
               <div className="pt-4 flex justify-end gap-3">
                 <button

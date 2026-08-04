@@ -23,8 +23,13 @@ export default function ClientLayoutWrapper({ children }: { children: React.Reac
       <Sidebar />
       <div className="flex flex-1 flex-col overflow-hidden">
         <Header />
-        <main className="flex-1 overflow-y-auto p-6">
-          {children}
+        <main className="flex-1 overflow-y-auto p-6 flex flex-col">
+          <div className="flex-1">
+            {children}
+          </div>
+          <footer className="mt-auto pt-6 pb-2 text-center text-sm text-gray-500">
+            &copy; 2026 [DN] Sekretariat Dikbud Tomohon
+          </footer>
         </main>
       </div>
     </div>

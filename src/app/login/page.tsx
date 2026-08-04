@@ -109,10 +109,6 @@ export default function LoginPage() {
               Google SSO
             </button>
           </div>
-          
-          <div className="text-xs text-center text-gray-500 mt-4">
-             Hubungi Administrator BKAD jika Anda belum memiliki akun.
-          </div>
         </form>
       </div>
     </div>
