@@ -14,7 +14,9 @@ export async function GET(request: Request) {
     const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
     
     if (supabaseUrl && supabaseKey) {
-      await fetch(`${supabaseUrl}/rest/v1/`, {
+      // Must query an actual table so PostgREST registers it as activity. 
+      // Fetching the root /rest/v1/ (OpenAPI spec) might not count.
+      await fetch(`${supabaseUrl}/rest/v1/TahunAnggaran?select=id&limit=1`, {
         headers: {
           'apikey': supabaseKey,
           'Authorization': `Bearer ${supabaseKey}`
