@@ -15,6 +15,7 @@ export default function LaporanEksekutif() {
   const [selectedBosp, setSelectedBosp] = useState<{ title: string, data: any } | null>(null);
   const [selectedChartData, setSelectedChartData] = useState<{ title: string, type: 'subkegiatan' | 'rekening' | 'sumberdana', data: any } | null>(null);
   const [selectedPaket, setSelectedPaket] = useState<{ title: string, rincian: any[] } | null>(null);
+  const [showAllSumberDana, setShowAllSumberDana] = useState(false);
 
   useEffect(() => {
     setLoading(true);
@@ -153,10 +154,18 @@ export default function LaporanEksekutif() {
       {/* Main Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
-          <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
-            <Banknote className="w-5 h-5 text-primary" />
-            Distribusi Sumber Dana
-          </h3>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+              <Banknote className="w-5 h-5 text-primary" />
+              Distribusi Sumber Dana
+            </h3>
+            <button 
+              onClick={() => setShowAllSumberDana(true)}
+              className="text-xs bg-red-100 text-red-700 px-3 py-1 rounded-full font-medium hover:bg-red-200 transition-colors"
+            >
+              Lihat Detail
+            </button>
+          </div>
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart 
@@ -474,6 +483,97 @@ export default function LaporanEksekutif() {
             <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 text-right">
               <button 
                 onClick={() => setSelectedBosp(null)}
+                className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 shadow-sm transition-colors"
+              >
+                Tutup
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {showAllSumberDana && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl overflow-hidden border border-gray-100 flex flex-col max-h-[90vh]">
+            <div className="bg-gray-50 px-6 py-4 border-b border-gray-100 flex justify-between items-center shrink-0">
+              <h3 className="font-bold text-lg text-gray-800 flex items-center gap-2">
+                <Banknote className="w-5 h-5 text-primary" />
+                Semua Sumber Dana
+              </h3>
+              <button 
+                onClick={() => setShowAllSumberDana(false)}
+                className="text-gray-400 hover:text-gray-600 bg-white p-1 rounded-full shadow-sm"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            
+            <div className="p-6 overflow-y-auto">
+              <div className="overflow-x-auto rounded-lg border border-gray-200">
+                <table className="min-w-full divide-y divide-gray-200 text-sm">
+                  <thead className="bg-gray-50 sticky top-0 z-10">
+                    <tr>
+                      <th className="px-4 py-3 text-left font-semibold text-gray-600">No</th>
+                      <th className="px-4 py-3 text-left font-semibold text-gray-600">Sumber Dana</th>
+                      <th className="px-4 py-3 text-right font-semibold text-gray-600">Pagu Induk</th>
+                      <th className="px-4 py-3 text-right font-semibold text-primary">Pagu Perubahan</th>
+                      <th className="px-4 py-3 text-right font-semibold text-green-600">Realisasi</th>
+                      <th className="px-4 py-3 text-right font-semibold text-gray-600">Selisih Pagu</th>
+                      <th className="px-4 py-3 text-right font-semibold text-gray-600">% Serapan</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-100">
+                    {chartData.map((sd: any, idx: number) => (
+                      <tr key={idx} className="hover:bg-gray-50/50 transition-colors">
+                        <td className="px-4 py-3 text-gray-500">{idx + 1}</td>
+                        <td className="px-4 py-3 font-medium text-gray-800">{sd.name}</td>
+                        <td className="px-4 py-3 text-right font-semibold text-gray-800">{formatCurrency(sd.paguInduk)}</td>
+                        <td className="px-4 py-3 text-right font-bold text-primary">{formatCurrency(sd.perubahan)}</td>
+                        <td className="px-4 py-3 text-right font-bold text-green-700">{formatCurrency(sd.realisasi)}</td>
+                        <td className="px-4 py-3 text-right font-semibold text-sm">
+                          {formatSelisih(sd.paguInduk, sd.perubahan)}
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                            {sd.perubahan > 0 ? ((sd.realisasi / sd.perubahan) * 100).toFixed(2) : 0}%
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot className="bg-gray-50 sticky bottom-0 border-t border-gray-200">
+                    <tr>
+                      <td colSpan={2} className="px-4 py-3 text-right text-gray-700 font-bold">Total:</td>
+                      <td className="px-4 py-3 text-right text-gray-800 font-bold">
+                        {formatCurrency(chartData.reduce((acc: number, curr: any) => acc + (curr.paguInduk || 0), 0))}
+                      </td>
+                      <td className="px-4 py-3 text-right text-primary font-bold">
+                        {formatCurrency(chartData.reduce((acc: number, curr: any) => acc + (curr.perubahan || 0), 0))}
+                      </td>
+                      <td className="px-4 py-3 text-right text-green-700 font-bold">
+                        {formatCurrency(chartData.reduce((acc: number, curr: any) => acc + (curr.realisasi || 0), 0))}
+                      </td>
+                      <td className="px-4 py-3 text-right font-bold">
+                        {formatSelisih(
+                          chartData.reduce((acc: number, curr: any) => acc + (curr.paguInduk || 0), 0),
+                          chartData.reduce((acc: number, curr: any) => acc + (curr.perubahan || 0), 0)
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-right font-bold text-gray-800">
+                        {(() => {
+                          const totalRealisasi = chartData.reduce((acc: number, curr: any) => acc + (curr.realisasi || 0), 0);
+                          const totalPerubahan = chartData.reduce((acc: number, curr: any) => acc + (curr.perubahan || 0), 0);
+                          return totalPerubahan > 0 ? ((totalRealisasi / totalPerubahan) * 100).toFixed(2) : 0;
+                        })()}%
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </div>
+            
+            <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 text-right shrink-0">
+              <button 
+                onClick={() => setShowAllSumberDana(false)}
                 className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 shadow-sm transition-colors"
               >
                 Tutup
