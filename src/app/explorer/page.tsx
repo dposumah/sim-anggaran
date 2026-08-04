@@ -12,6 +12,7 @@ import {
   Search
 } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useYear } from '@/contexts/YearContext';
 
 export default function ExplorerPage() {
@@ -22,6 +23,8 @@ export default function ExplorerPage() {
   const [rincianData, setRincianData] = useState<Record<string, any[]>>({});
   const { tahun } = useYear();
   const [searchTerm, setSearchTerm] = useState('');
+  const [navigatingId, setNavigatingId] = useState<number | null>(null);
+  const router = useRouter();
 
   useEffect(() => {
     setLoading(true);
@@ -243,9 +246,23 @@ export default function ExplorerPage() {
             {type === 'kegiatan' && item.children?.map((s: any) => renderRow(s, 'subKegiatan', depth + 1, currentInfo))}
             {(type === 'subkegiatan' || type === 'subKegiatan') && (
               <div className="bg-gray-50 border-b border-gray-200 shadow-inner p-4 flex justify-center">
-                <Link href={`/explorer/${item.id}`} className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ring-offset-background bg-blue-600 text-white hover:bg-blue-700 h-10 py-2 px-4">
-                  Buka Halaman Rincian
-                </Link>
+                <button 
+                  onClick={() => {
+                    setNavigatingId(item.id);
+                    router.push(`/explorer/${item.id}`);
+                  }}
+                  disabled={navigatingId === item.id}
+                  className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ring-offset-background bg-blue-600 text-white hover:bg-blue-700 h-10 py-2 px-4"
+                >
+                  {navigatingId === item.id ? (
+                    <span className="flex items-center gap-2">
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      Memuat rincian...
+                    </span>
+                  ) : (
+                    "Buka Halaman Rincian"
+                  )}
+                </button>
               </div>
             )}
           </div>

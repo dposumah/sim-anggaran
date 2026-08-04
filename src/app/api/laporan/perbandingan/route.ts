@@ -108,12 +108,16 @@ export async function GET(request: Request) {
 
       // PNS & PPPK
       if ((sub.nama || '').toUpperCase().includes('GAJI DAN TUNJANGAN ASN')) {
-        if ((rek.nama || '').toUpperCase().includes('PNS')) {
-          gajiPnsInduk += nilaiInduk;
-          gajiPnsPerubahan += nilaiPerubahan;
-        } else if ((rek.nama || '').toUpperCase().includes('PPPK')) {
-          gajiPppkInduk += nilaiInduk;
-          gajiPppkPerubahan += nilaiPerubahan;
+        const rekUpper = (rek.nama || '').toUpperCase();
+        const isExcluded = rekUpper.includes('PNSD') || rekUpper.includes('TUNJANGAN PROFESI GURU') || rekUpper.includes('TAMBAHAN PENGHASILAN') || rekUpper.includes('TAMSIL');
+        if (!isExcluded) {
+          if (rekUpper.includes('PNS')) {
+            gajiPnsInduk += nilaiInduk;
+            gajiPnsPerubahan += nilaiPerubahan;
+          } else if (rekUpper.includes('PPPK')) {
+            gajiPppkInduk += nilaiInduk;
+            gajiPppkPerubahan += nilaiPerubahan;
+          }
         }
       }
 
@@ -149,8 +153,9 @@ export async function GET(request: Request) {
         bospKesetaraanPerubahan += nilaiPerubahan;
       }
 
-      // Uraian Paket (Exclude Program Penunjang)
-      if (r.namaPaket && !(prog.nama || '').toUpperCase().includes('PROGRAM PENUNJANG URUSAN PEMERINTAHAN DAERAH KABUPATEN/KOTA')) {
+      // Uraian Paket (Exclude Program Penunjang and BOSP)
+      const isBosp = subUpper.includes('BOS') || subUpper.includes('BOP');
+      if (r.namaPaket && !(prog.nama || '').toUpperCase().includes('PROGRAM PENUNJANG URUSAN PEMERINTAHAN DAERAH KABUPATEN/KOTA') && !isBosp) {
         if (!paketMap[r.namaPaket]) paketMap[r.namaPaket] = { nama: r.namaPaket, induk: 0, perubahan: 0 };
         paketMap[r.namaPaket].induk += nilaiInduk;
         paketMap[r.namaPaket].perubahan += nilaiPerubahan;
@@ -175,10 +180,14 @@ export async function GET(request: Request) {
 
       // PNS & PPPK
       if ((sub.nama || '').toUpperCase().includes('GAJI DAN TUNJANGAN ASN')) {
-        if ((rek.nama || '').toUpperCase().includes('PNS')) {
-          gajiPnsRealisasi += nilai;
-        } else if ((rek.nama || '').toUpperCase().includes('PPPK')) {
-          gajiPppkRealisasi += nilai;
+        const rekUpper = (rek.nama || '').toUpperCase();
+        const isExcluded = rekUpper.includes('PNSD') || rekUpper.includes('TUNJANGAN PROFESI GURU') || rekUpper.includes('TAMBAHAN PENGHASILAN') || rekUpper.includes('TAMSIL');
+        if (!isExcluded) {
+          if (rekUpper.includes('PNS')) {
+            gajiPnsRealisasi += nilai;
+          } else if (rekUpper.includes('PPPK')) {
+            gajiPppkRealisasi += nilai;
+          }
         }
       }
 
