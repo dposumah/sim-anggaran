@@ -1,23 +1,13 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { unstable_cache } from 'next/cache';
 
-export async function GET(request: Request) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const tahun = parseInt(searchParams.get('tahun') || '2026', 10);
-
-    const tahunData = await prisma.tahunAnggaran.findUnique({
-      where: { tahun }
-    });
-
-    if (!tahunData) {
-      return NextResponse.json({ error: 'Tahun anggaran tidak ditemukan' }, { status: 404 });
-    }
-
+const getCachedDashboard = unstable_cache(
+  async (tahun: number, tahunId: number) => {
     // Only Pendidikan
     const skpds = await prisma.skpd.findMany({
       where: { 
-        tahunId: tahunData.id,
+        tahunId: tahunId,
         nama: { contains: 'PENDIDIKAN', mode: 'insensitive' }
       },
       include: { pagus: true }
@@ -179,7 +169,7 @@ export async function GET(request: Request) {
       };
     });
 
-    return NextResponse.json({
+    return {
       summary: {
         totalPagu,
         totalPaguInduk,
@@ -194,8 +184,27 @@ export async function GET(request: Request) {
       top10Skpd,
       sumberDanaChart,
       rekeningChart
+    };
+  },
+  ['dashboard-data'],
+  { tags: ['laporanData'], revalidate: false }
+);
+
+export async function GET(request: Request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const tahun = parseInt(searchParams.get('tahun') || '2026', 10);
+
+    const tahunData = await prisma.tahunAnggaran.findUnique({
+      where: { tahun }
     });
 
+    if (!tahunData) {
+      return NextResponse.json({ error: 'Tahun anggaran tidak ditemukan' }, { status: 404 });
+    }
+
+    const data = await getCachedDashboard(tahun, tahunData.id);
+    return NextResponse.json(data);
   } catch (error: any) {
     console.error('API Error:', error);
     return NextResponse.json(

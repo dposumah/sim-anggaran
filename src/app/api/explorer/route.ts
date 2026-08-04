@@ -1,26 +1,16 @@
-export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { unstable_cache } from 'next/cache';
 
-export async function GET(request: Request) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const level = searchParams.get('level') || 'skpd';
-    const tahun = parseInt(searchParams.get('tahun') || '2026', 10);
+export const dynamic = 'force-dynamic';
 
-    const tahunData = await prisma.tahunAnggaran.findUnique({
-      where: { tahun }
-    });
-
-    if (!tahunData) {
-      return NextResponse.json({ error: 'Tahun anggaran tidak ditemukan' }, { status: 404 });
-    }
-
+const getCachedExplorer = unstable_cache(
+  async (tahun: number, tahunId: number, level: string, idParam: string | null) => {
     switch (level) {
-      case 'skpd':
+      case 'skpd': {
         const skpds = await prisma.skpd.findMany({
           where: { 
-            tahunId: tahunData.id,
+            tahunId: tahunId,
             nama: { contains: 'PENDIDIKAN', mode: 'insensitive' }
           },
           orderBy: { kode: 'asc' },
@@ -61,11 +51,11 @@ export async function GET(request: Request) {
           ...(paguBySkpd[s.id] || { paguInduk: 0, paguRkpd: 0, paguPerubahan: 0 })
         }));
         
-        return NextResponse.json(enhancedSkpds);
-
-      case 'program':
-        const skpdId = searchParams.get('skpdId');
-        if (!skpdId) return NextResponse.json({ error: 'skpdId required' }, { status: 400 });
+        return enhancedSkpds;
+      }
+      case 'program': {
+        const skpdId = idParam;
+        if (!skpdId) throw new Error('skpdId required');
         
         const programs = await prisma.program.findMany({
           where: { skpdId: parseInt(skpdId, 10) },
@@ -97,11 +87,11 @@ export async function GET(request: Request) {
           };
         });
 
-        return NextResponse.json(programs.map(p => ({ ...p, ...(paguByProg[p.id] || { paguInduk: 0, paguRkpd: 0, paguPerubahan: 0 }) })));
-
-      case 'kegiatan':
-        const programId = searchParams.get('programId');
-        if (!programId) return NextResponse.json({ error: 'programId required' }, { status: 400 });
+        return programs.map(p => ({ ...p, ...(paguByProg[p.id] || { paguInduk: 0, paguRkpd: 0, paguPerubahan: 0 }) }));
+      }
+      case 'kegiatan': {
+        const programId = idParam;
+        if (!programId) throw new Error('programId required');
         
         const kegiatans = await prisma.kegiatan.findMany({
           where: { programId: parseInt(programId, 10) },
@@ -133,11 +123,11 @@ export async function GET(request: Request) {
           };
         });
 
-        return NextResponse.json(kegiatans.map(k => ({ ...k, ...(paguByKeg[k.id] || { paguInduk: 0, paguRkpd: 0, paguPerubahan: 0 }) })));
-
-      case 'subkegiatan':
-        const kegiatanId = searchParams.get('kegiatanId');
-        if (!kegiatanId) return NextResponse.json({ error: 'kegiatanId required' }, { status: 400 });
+        return kegiatans.map(k => ({ ...k, ...(paguByKeg[k.id] || { paguInduk: 0, paguRkpd: 0, paguPerubahan: 0 }) }));
+      }
+      case 'subkegiatan': {
+        const kegiatanId = idParam;
+        if (!kegiatanId) throw new Error('kegiatanId required');
         
         const subkegiatans = await prisma.subKegiatan.findMany({
           where: { kegiatanId: parseInt(kegiatanId, 10) },
@@ -166,11 +156,11 @@ export async function GET(request: Request) {
           };
         });
 
-        return NextResponse.json(subkegiatans.map(s => ({ ...s, ...(paguBySub[s.id] || { paguInduk: 0, paguRkpd: 0, paguPerubahan: 0 }) })));
-
-      case 'rincian':
-        const subKegiatanId = searchParams.get('subKegiatanId');
-        if (!subKegiatanId) return NextResponse.json({ error: 'subKegiatanId required' }, { status: 400 });
+        return subkegiatans.map(s => ({ ...s, ...(paguBySub[s.id] || { paguInduk: 0, paguRkpd: 0, paguPerubahan: 0 }) }));
+      }
+      case 'rincian': {
+        const subKegiatanId = idParam;
+        if (!subKegiatanId) throw new Error('subKegiatanId required');
         
         const rincian = await prisma.rincianBelanja.findMany({
           where: { subKegiatanId: parseInt(subKegiatanId, 10) },
@@ -213,11 +203,44 @@ export async function GET(request: Request) {
           };
         });
 
-        // Any leftover realisasi can be dumped to the last item of that rekening, but this proportional-like cap is usually enough for display
-        return NextResponse.json(enhancedRincian);
-
+        return enhancedRincian;
+      }
       default:
-        return NextResponse.json({ error: 'Invalid level' }, { status: 400 });
+        throw new Error('Invalid level');
+    }
+  },
+  ['explorer-data'],
+  { tags: ['laporanData'], revalidate: false }
+);
+
+export async function GET(request: Request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const level = searchParams.get('level') || 'skpd';
+    const tahun = parseInt(searchParams.get('tahun') || '2026', 10);
+
+    let idParam = null;
+    if (level === 'program') idParam = searchParams.get('skpdId');
+    if (level === 'kegiatan') idParam = searchParams.get('programId');
+    if (level === 'subkegiatan') idParam = searchParams.get('kegiatanId');
+    if (level === 'rincian') idParam = searchParams.get('subKegiatanId');
+
+    const tahunData = await prisma.tahunAnggaran.findUnique({
+      where: { tahun }
+    });
+
+    if (!tahunData) {
+      return NextResponse.json({ error: 'Tahun anggaran tidak ditemukan' }, { status: 404 });
+    }
+
+    try {
+      const data = await getCachedExplorer(tahun, tahunData.id, level, idParam);
+      return NextResponse.json(data);
+    } catch (e: any) {
+      if (e.message.includes('required') || e.message === 'Invalid level') {
+         return NextResponse.json({ error: e.message }, { status: 400 });
+      }
+      throw e;
     }
 
   } catch (error: any) {
@@ -225,4 +248,3 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
-

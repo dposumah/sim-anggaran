@@ -1,21 +1,10 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { unstable_cache } from 'next/cache';
 
-export async function GET(request: Request) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const tahun = parseInt(searchParams.get('tahun') || '2026', 10);
-    const skpdIdParam = searchParams.get('skpdId');
-
-    const tahunData = await prisma.tahunAnggaran.findUnique({
-      where: { tahun }
-    });
-
-    if (!tahunData) {
-      return NextResponse.json({ error: 'Tahun anggaran tidak ditemukan' }, { status: 404 });
-    }
-
-    let skpdFilter: any = { tahunId: tahunData.id };
+const getCachedTree = unstable_cache(
+  async (tahun: number, tahunId: number, skpdIdParam: string | null) => {
+    let skpdFilter: any = { tahunId: tahunId };
     if (skpdIdParam) {
       skpdFilter.id = parseInt(skpdIdParam, 10);
     } else {
@@ -255,7 +244,28 @@ export async function GET(request: Request) {
       };
     });
 
-    return NextResponse.json(finalData);
+    return finalData;
+  },
+  ['explorer-tree-data'],
+  { tags: ['laporanData'], revalidate: false }
+);
+
+export async function GET(request: Request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const tahun = parseInt(searchParams.get('tahun') || '2026', 10);
+    const skpdIdParam = searchParams.get('skpdId');
+
+    const tahunData = await prisma.tahunAnggaran.findUnique({
+      where: { tahun }
+    });
+
+    if (!tahunData) {
+      return NextResponse.json({ error: 'Tahun anggaran tidak ditemukan' }, { status: 404 });
+    }
+
+    const data = await getCachedTree(tahun, tahunData.id, skpdIdParam);
+    return NextResponse.json(data);
 
   } catch (error: any) {
     console.error('API Error:', error);
