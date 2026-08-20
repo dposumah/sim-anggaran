@@ -75,7 +75,7 @@ export async function GET(request: Request) {
 
       if (!excelDataMap.has(skpdId)) {
         excelDataMap.set(skpdId, { 
-          'Gaji PNS': 0, 'Gaji PPPK': 0,
+          'Gaji PNS': 0, 'Gaji PPPK': 0, 'Gaji PPPK Paruh Waktu': 0,
           'TPP': 0, 'TPP BPJS': 0, 'TPP PPH': 0,
           'BPJS PPPK Paruh Waktu': 0, 'JKK/JKM PPPK Paruh Waktu': 0,
           'Bendahara, PPTK/PPKOM/PPK/PBJ': 0, 'Pengurus Barang': 0,
@@ -130,6 +130,8 @@ export async function GET(request: Request) {
       if (paket.includes('TPP BPJS')) stat['TPP BPJS'] += valPerubahan;
       if (paket.includes('TPP PPH')) stat['TPP PPH'] += valPerubahan;
       
+      if (rekNama.toLowerCase().includes('belanja jasa pegawai pemerintah dengan perjanjian kerja') && rekNama.toLowerCase().includes('paruh waktu')) stat['Gaji PPPK Paruh Waktu'] += valPerubahan;
+      
       if (rekNama.includes('Belanja Iuran Jaminan Kesehatan bagi PPPK Paruh Waktu')) stat['BPJS PPPK Paruh Waktu'] += valPerubahan;
       if (rekNama.includes('Belanja Iuran Jaminan Kecelakaan Kerja bagi PPPK Paruh Waktu') || rekNama.includes('Belanja Iuran Jaminan Kematian bagi PPPK Paruh Waktu')) stat['JKK/JKM PPPK Paruh Waktu'] += valPerubahan;
       
@@ -177,7 +179,7 @@ export async function GET(request: Request) {
       const ed = excelDataMap.get(skpd.id) || {};
 
       const categories = [
-        'Gaji PNS', 'Gaji PPPK', 'TPP', 'TPP BPJS', 'TPP PPH',
+        'Gaji PNS', 'Gaji PPPK', 'Gaji PPPK Paruh Waktu', 'TPP', 'TPP BPJS', 'TPP PPH',
         'BPJS PPPK Paruh Waktu', 'JKK/JKM PPPK Paruh Waktu',
         'Bendahara, PPTK/PPKOM/PPK/PBJ', 'Pengurus Barang',
         'Sopir', 'Kebersihan', 'Keamanan',
