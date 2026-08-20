@@ -1,9 +1,10 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import * as XLSX from 'xlsx';
 import { useYear } from '@/contexts/YearContext';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, AreaChart, Area, ComposedChart } from 'recharts';
-import { Building, Package, Activity, TrendingUp, TrendingDown, Minus, Briefcase, GraduationCap, Banknote, X, Table } from 'lucide-react';
+import { Building, Package, Activity, TrendingUp, TrendingDown, Minus, Briefcase, GraduationCap, Banknote, X, Table, Download } from 'lucide-react';
 
 const COLORS = ['#dc2626', '#b91c1c', '#f87171', '#fca5a5', '#ef4444', '#991b1b', '#7f1d1d'];
 
@@ -11,9 +12,9 @@ export default function LaporanEksekutif() {
   const { tahun } = useYear();
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [activeChartTab, setActiveChartTab] = useState<'subkegiatan' | 'rekening'>('subkegiatan');
+  const [activeChartTab, setActiveChartTab] = useState<'subkegiatan' | 'rekening' | 'paket'>('subkegiatan');
   const [selectedBosp, setSelectedBosp] = useState<{ title: string, data: any } | null>(null);
-  const [selectedChartData, setSelectedChartData] = useState<{ title: string, type: 'subkegiatan' | 'rekening' | 'sumberdana', data: any } | null>(null);
+  const [selectedChartData, setSelectedChartData] = useState<{ title: string, type: 'subkegiatan' | 'rekening' | 'sumberdana' | 'paket', data: any } | null>(null);
   const [selectedPaket, setSelectedPaket] = useState<{ title: string, rincian: any[] } | null>(null);
   const [showAllSumberDana, setShowAllSumberDana] = useState(false);
 
@@ -110,6 +111,34 @@ export default function LaporanEksekutif() {
       </div>
     </div>
   );
+
+  const getChartDataForTabs = () => {
+    if (!data) return [];
+    if (activeChartTab === 'subkegiatan') return data.topSubKegiatan;
+    if (activeChartTab === 'rekening') return data.topRekening;
+    return (data.allPaket || data.topPaket).map((p: any) => ({ ...p, paguInduk: p.induk, paguPerubahan: p.perubahan }));
+  };
+
+  const handleExportExcel = () => {
+    if (!data) return;
+    const chartData = getChartDataForTabs();
+    
+    // Format data for excel
+    const excelData = chartData.map((item: any) => ({
+      'Nama': item.nama,
+      'Pagu Induk': item.paguInduk,
+      'Pagu Perubahan': item.paguPerubahan,
+      'Realisasi': item.realisasi,
+      'Sisa Anggaran': item.paguPerubahan - item.realisasi,
+      'Persentase Serapan (%)': item.paguPerubahan > 0 ? ((item.realisasi / item.paguPerubahan) * 100).toFixed(2) : 0
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(excelData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, activeChartTab.toUpperCase());
+    
+    XLSX.writeFile(wb, `Perbandingan_${activeChartTab}_${tahun}.xlsx`);
+  };
 
   return (
     <div className="space-y-6">
@@ -225,31 +254,47 @@ export default function LaporanEksekutif() {
 
       {/* Tabs for Sub Kegiatan / Rekening */}
       <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
-        <div className="flex flex-col sm:flex-row justify-between items-center mb-6 border-b border-gray-100 pb-3">
-          <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2 mb-3 sm:mb-0">
+        <div className="flex flex-col sm:flex-row justify-between items-center mb-6 border-b border-gray-100 pb-3 gap-4">
+          <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
             <Activity className="w-5 h-5 text-primary" />
             Perbandingan Pagu vs Realisasi
           </h3>
-          <div className="flex bg-gray-100 p-1 rounded-lg">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex bg-gray-100 p-1 rounded-lg">
+              <button
+                onClick={() => setActiveChartTab('subkegiatan')}
+                className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${activeChartTab === 'subkegiatan' ? 'bg-white text-primary shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+              >
+                Kegiatan
+              </button>
+              <button
+                onClick={() => setActiveChartTab('rekening')}
+                className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${activeChartTab === 'rekening' ? 'bg-white text-primary shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+              >
+                Rekening
+              </button>
+              <button
+                onClick={() => setActiveChartTab('paket')}
+                className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${activeChartTab === 'paket' ? 'bg-white text-primary shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+              >
+                Uraian Paket
+              </button>
+            </div>
             <button
-              onClick={() => setActiveChartTab('subkegiatan')}
-              className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${activeChartTab === 'subkegiatan' ? 'bg-white text-primary shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+              onClick={handleExportExcel}
+              className="flex items-center gap-2 px-4 py-1.5 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg transition-colors shadow-sm"
+              title="Export Data Grafik ke Excel"
             >
-              Kegiatan
-            </button>
-            <button
-              onClick={() => setActiveChartTab('rekening')}
-              className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${activeChartTab === 'rekening' ? 'bg-white text-primary shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-            >
-              Rekening
+              <Download className="w-4 h-4" />
+              Export Excel
             </button>
           </div>
         </div>
         
-        <div style={{ height: `${Math.max(500, (activeChartTab === 'subkegiatan' ? topSubKegiatan.length : topRekening.length) * 45)}px` }}>
+        <div style={{ height: `${Math.max(500, getChartDataForTabs().length * 45)}px` }}>
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart 
-              data={activeChartTab === 'subkegiatan' ? topSubKegiatan : topRekening} 
+              data={getChartDataForTabs()} 
               layout="vertical" 
               margin={{ top: 5, right: 30, left: 10, bottom: 5 }}
             >
@@ -289,7 +334,7 @@ export default function LaporanEksekutif() {
             <div className="bg-gray-50 px-6 py-4 border-b border-gray-100 flex justify-between items-center">
               <h3 className="font-bold text-lg text-gray-800 flex items-center gap-2">
                 <Table className="w-5 h-5 text-primary" />
-                Rincian {selectedChartData.type === 'subkegiatan' ? 'Sub Kegiatan' : selectedChartData.type === 'sumberdana' ? 'Sumber Dana' : 'Rekening'}
+                Rincian {selectedChartData.type === 'subkegiatan' ? 'Sub Kegiatan' : selectedChartData.type === 'sumberdana' ? 'Sumber Dana' : selectedChartData.type === 'paket' ? 'Uraian Paket' : 'Rekening'}
               </h3>
               <button 
                 onClick={() => setSelectedChartData(null)}

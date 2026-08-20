@@ -292,9 +292,8 @@ const getCachedLaporan = unstable_cache(
       realisasi: sumDanaMap[k].realisasi
     })).sort((a, b) => b.perubahan - a.perubahan);
 
-    const topPaket = Object.values(paketMap)
-      .sort((a, b) => b.perubahan - a.perubahan)
-      .slice(0, 10);
+    const allPaket = Object.values(paketMap).sort((a, b) => b.perubahan - a.perubahan);
+    const topPaket = allPaket.slice(0, 10);
 
     // Get top 15 sub kegiatan terbesar (exclude Gaji dan Tunjangan and BOSP)
     const topSubKegiatan = Object.values(subKegRealisasiMap)
@@ -361,6 +360,7 @@ const getCachedLaporan = unstable_cache(
       },
       chartData,
       topPaket,
+      allPaket,
       topSubKegiatan,
       topRekening
     };
