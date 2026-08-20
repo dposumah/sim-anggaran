@@ -242,6 +242,10 @@ const getCachedLaporan = unstable_cache(
 
       realisasiTotal += nilai;
 
+      const sdNama = r.sumberDana?.nama || 'Tidak Ada Sumber Dana';
+      if (!sumDanaMap[sdNama]) sumDanaMap[sdNama] = { induk: 0, rkpd: 0, perubahan: 0, realisasi: 0 };
+      sumDanaMap[sdNama].realisasi += nilai;
+
       const subUpper = (sub.nama || '').toUpperCase();
       const rekUpper = (rek.nama || '').toUpperCase();
       const isBosp = subUpper.includes('BOS') || subUpper.includes('BOP');
