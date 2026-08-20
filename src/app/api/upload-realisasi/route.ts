@@ -49,28 +49,13 @@ function getColIndex(headerMap: Record<string, number>, ...keywords: string[]): 
 
 export async function POST(request: Request) {
   try {
-    const formData = await request.formData();
-    const file = formData.get('file') as File;
-    const tahunParam = parseInt(formData.get('tahun') as string || '2026', 10);
+    const body = await request.json();
+    const { tahun, filteredData, headerMap } = body;
+    const tahunParam = parseInt(tahun?.toString() || '2026', 10);
 
-    if (!file) {
-      return NextResponse.json({ error: 'File tidak ditemukan' }, { status: 400 });
+    if (!filteredData || !headerMap) {
+      return NextResponse.json({ error: 'Format data tidak valid dari client' }, { status: 400 });
     }
-
-    const buffer = Buffer.from(await file.arrayBuffer());
-    const wb = XLSX.read(buffer, { type: 'buffer' });
-    const ws = wb.Sheets[wb.SheetNames[0]];
-    const rawData: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
-
-    // Find header row flexibly
-    const headerInfo = findHeaderRow(rawData);
-    if (!headerInfo) {
-      return NextResponse.json({ 
-        error: 'Header tidak ditemukan. Pastikan file Excel memiliki kolom: ' + REQUIRED_HEADERS.join(', ')
-      }, { status: 400 });
-    }
-
-    const { headerRowIndex, headerMap } = headerInfo;
 
     // Map column indices
     const colNamaSKPD = getColIndex(headerMap, 'Nama SKPD', 'Nama Sub SKPD');
@@ -137,7 +122,7 @@ export async function POST(request: Request) {
     });
 
     // Process data rows
-    const dataRows = rawData.slice(headerRowIndex + 1);
+    const dataRows = filteredData;
     let successCount = 0;
     let skipCount = 0;
     let errorCount = 0;
@@ -147,15 +132,6 @@ export async function POST(request: Request) {
     for (let i = 0; i < dataRows.length; i++) {
       const row = dataRows[i];
       if (!row || row.length === 0) continue;
-
-      // Filter by SKPD name
-      if (colNamaSKPD >= 0) {
-        const rowSkpdName = String(row[colNamaSKPD] || '').trim().toLowerCase();
-        if (!rowSkpdName || !skpdNamesLower.some(n => rowSkpdName.includes('pendidikan'))) {
-          skipCount++;
-          continue;
-        }
-      }
 
       const kodeSubKegiatan = String(row[colKodeSubKegiatan] || '').trim();
       const kodeRekening = String(row[colKodeRekening] || '').trim();
@@ -173,7 +149,7 @@ export async function POST(request: Request) {
       // Lookup subKegiatan
       const skData = subKegiatanMap.get(kodeSubKegiatan);
       if (!skData) {
-        warnings.push(`Baris ${i + headerRowIndex + 2}: Kode Sub Kegiatan "${kodeSubKegiatan}" tidak ditemukan di database`);
+        warnings.push(`Baris data ke-${i + 1}: Kode Sub Kegiatan "${kodeSubKegiatan}" tidak ditemukan di database`);
         errorCount++;
         continue;
       }
@@ -181,7 +157,7 @@ export async function POST(request: Request) {
       // Lookup rekening
       const rekId = rekeningMap.get(kodeRekening);
       if (!rekId) {
-        warnings.push(`Baris ${i + headerRowIndex + 2}: Kode Rekening "${kodeRekening}" tidak ditemukan di database`);
+        warnings.push(`Baris data ke-${i + 1}: Kode Rekening "${kodeRekening}" tidak ditemukan di database`);
         errorCount++;
         continue;
       }
@@ -201,7 +177,7 @@ export async function POST(request: Request) {
           if (firstSD) {
             sumberDanaId = firstSD.id;
           } else {
-            warnings.push(`Baris ${i + headerRowIndex + 2}: Tidak ditemukan Sumber Dana untuk Sub Kegiatan "${kodeSubKegiatan}"`);
+            warnings.push(`Baris data ke-${i + 1}: Tidak ditemukan Sumber Dana untuk Sub Kegiatan "${kodeSubKegiatan}"`);
             errorCount++;
             continue;
           }

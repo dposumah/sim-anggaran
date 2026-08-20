@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Plus, Trash2, Check, X, FileSpreadsheet, Upload, AlertTriangle, CheckCircle2, BarChart3 } from 'lucide-react';
+import * as XLSX from 'xlsx';
 
 export default function RealisasiPage() {
   const [tahun, setTahun] = useState<number>(2026);
@@ -59,19 +60,76 @@ export default function RealisasiPage() {
     setUploading(true);
     setUploadResult(null);
     try {
-      const fd = new FormData();
-      fd.append('file', uploadFile);
-      fd.append('tahun', tahun.toString());
+      const buffer = await uploadFile.arrayBuffer();
+      const wb = XLSX.read(buffer, { type: 'array' });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rawData: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
 
-      const res = await fetch('/api/upload-realisasi', { method: 'POST', body: fd });
-      const data = await res.json();
+      const REQUIRED_HEADERS = ['Kode Sub Kegiatan', 'Kode Rekening', 'Alokasi Anggaran', 'Realisasi Anggaran'];
+      let headerRowIndex = -1;
+      let headerMap: Record<string, number> = {};
+
+      for (let i = 0; i < Math.min(20, rawData.length); i++) {
+        const row = rawData[i];
+        if (!row) continue;
+        const rowStrings = row.map((cell: any) => String(cell || '').trim());
+        const found = REQUIRED_HEADERS.every(h => rowStrings.some(cell => cell.toLowerCase().includes(h.toLowerCase())));
+        if (found) {
+          headerRowIndex = i;
+          rowStrings.forEach((cell: string, idx: number) => { headerMap[cell] = idx; });
+          break;
+        }
+      }
+
+      if (headerRowIndex < 0) {
+        setUploadResult({ error: 'Header tidak ditemukan. Pastikan ada: ' + REQUIRED_HEADERS.join(', ') });
+        return;
+      }
+
+      let colNamaSKPD = -1;
+      for (const key of Object.keys(headerMap)) {
+        if (key.toLowerCase().includes('nama skpd') || key.toLowerCase().includes('nama sub skpd')) {
+          colNamaSKPD = headerMap[key];
+          break;
+        }
+      }
+
+      const filteredData = [];
+      const dataRows = rawData.slice(headerRowIndex + 1);
+      for (const row of dataRows) {
+        if (!row || row.length === 0) continue;
+        if (colNamaSKPD >= 0) {
+          const rowSkpdName = String(row[colNamaSKPD] || '').trim().toLowerCase();
+          if (!rowSkpdName || !rowSkpdName.includes('pendidikan')) {
+            continue;
+          }
+        }
+        filteredData.push(row);
+      }
+
+      const res = await fetch('/api/upload-realisasi', { 
+        method: 'POST', 
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+           tahun, 
+           filteredData,
+           headerMap
+        }) 
+      });
+
+      let data;
+      try {
+        data = await res.json();
+      } catch (err) {
+        throw new Error('Gagal membaca response server (mungkin file masih terlalu besar).');
+      }
       
       if (res.ok) {
         setUploadResult(data);
         setUploadFile(null);
         loadRealisasi();
       } else {
-        setUploadResult({ error: data.error });
+        setUploadResult({ error: data.error || 'Terjadi kesalahan' });
       }
     } catch (e: any) {
       setUploadResult({ error: e.message });
