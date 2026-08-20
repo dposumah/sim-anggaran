@@ -69,6 +69,7 @@ export async function GET(request: Request) {
 
     // Kalkulasi per SKPD
     const excelDataMap = new Map();
+    const detailsDataMap = new Map();
     
     rincian.forEach(r => {
       const skpdId = r.subKegiatan.kegiatan.program.skpdId;
@@ -89,9 +90,27 @@ export async function GET(request: Request) {
           'Juru Pelihara Cagar Budaya': 0, 'Kegiatan PAUD dan Kebudayaan': 0,
           'Optimalisasi Retribusi': 0, 'Tim Kesenian': 0
         });
+        detailsDataMap.set(skpdId, {});
       }
       
       const stat = excelDataMap.get(skpdId);
+      const details = detailsDataMap.get(skpdId);
+      
+      const addStat = (cat: string, val: number) => {
+        if (!stat[cat]) stat[cat] = 0;
+        stat[cat] += val;
+        
+        if (val !== 0) {
+          if (!details[cat]) details[cat] = [];
+          details[cat].push({
+            subKegiatan: r.subKegiatan?.nama || '-',
+            rekening: r.rekening?.nama || '-',
+            sumberDana: r.sumberDana?.nama || '-',
+            paket: r.namaPaket || '-',
+            pagu: val
+          });
+        }
+      };
       
       const valInduk = Number(r.paguInduk || 0);
       const valPerubahan = Number(r.paguPerubahan !== null ? r.paguPerubahan : valInduk);
@@ -119,46 +138,41 @@ export async function GET(request: Request) {
           }
         }
       }
-      
-      // Force trigger recompilation
-      if (isPns || isPppk) {
-        // console.log(`Found Gaji: ${rekNama} = ${valPerubahan}`);
-      }
 
       const isTppBpjs = paket.includes('TPP BPJS') || paket.includes('TTP BPJS');
       const isTppPph = paket.includes('TPP PPH') || paket.includes('TTP PPH');
 
       // Gaji PNS dikurangi dengan TTP BPJS dan TTP PPH (jangan tambahkan jika itu adalah paket TTP)
-      if (isPns && !isTppBpjs && !isTppPph) stat['Gaji PNS'] += valPerubahan;
-      if (isPppk) stat['Gaji PPPK'] += valPerubahan;
+      if (isPns && !isTppBpjs && !isTppPph) addStat('Gaji PNS', valPerubahan);
+      if (isPppk) addStat('Gaji PPPK', valPerubahan);
 
-      if (rekNama.includes('Tambahan Penghasilan berdasarkan Beban Kerja PNS')) stat['TPP'] += valPerubahan;
+      if (rekNama.includes('Tambahan Penghasilan berdasarkan Beban Kerja PNS')) addStat('TPP', valPerubahan);
       
-      if (isTppBpjs) stat['TPP BPJS'] += valPerubahan;
-      if (isTppPph) stat['TPP PPH'] += valPerubahan;
+      if (isTppBpjs) addStat('TPP BPJS', valPerubahan);
+      if (isTppPph) addStat('TPP PPH', valPerubahan);
       
-      if (rekNama.toLowerCase().includes('belanja jasa pegawai pemerintah dengan perjanjian kerja') && rekNama.toLowerCase().includes('paruh waktu')) stat['Gaji PPPK Paruh Waktu'] += valPerubahan;
+      if (rekNama.toLowerCase().includes('belanja jasa pegawai pemerintah dengan perjanjian kerja') && rekNama.toLowerCase().includes('paruh waktu')) addStat('Gaji PPPK Paruh Waktu', valPerubahan);
       
-      if (rekNama.includes('Belanja Iuran Jaminan Kesehatan bagi PPPK Paruh Waktu')) stat['BPJS PPPK Paruh Waktu'] += valPerubahan;
-      if (rekNama.includes('Belanja Iuran Jaminan Kecelakaan Kerja bagi PPPK Paruh Waktu') || rekNama.includes('Belanja Iuran Jaminan Kematian bagi PPPK Paruh Waktu')) stat['JKK/JKM PPPK Paruh Waktu'] += valPerubahan;
+      if (rekNama.includes('Belanja Iuran Jaminan Kesehatan bagi PPPK Paruh Waktu')) addStat('BPJS PPPK Paruh Waktu', valPerubahan);
+      if (rekNama.includes('Belanja Iuran Jaminan Kecelakaan Kerja bagi PPPK Paruh Waktu') || rekNama.includes('Belanja Iuran Jaminan Kematian bagi PPPK Paruh Waktu')) addStat('JKK/JKM PPPK Paruh Waktu', valPerubahan);
       
-      if (rekNama.includes('Belanja Honorarium Penanggungjawaban Pengelola Keuangan') || rekNama.includes('Belanja Honorarium Pengadaan Barang/Jasa')) stat['Bendahara, PPTK/PPKOM/PPK/PBJ'] += valPerubahan;
-      if (rekNama.includes('Belanja Jasa Pengelolaan BMD yang Tidak Menghasilkan Pendapatan')) stat['Pengurus Barang'] += valPerubahan;
-      if (rekNama.includes('Belanja Jasa Tenaga Supir')) stat['Sopir'] += valPerubahan;
-      if (rekNama.includes('Belanja Jasa Tenaga Kebersihan')) stat['Kebersihan'] += valPerubahan;
-      if (rekNama.includes('Belanja Jasa Tenaga Keamanan')) stat['Keamanan'] += valPerubahan;
+      if (rekNama.includes('Belanja Honorarium Penanggungjawaban Pengelola Keuangan') || rekNama.includes('Belanja Honorarium Pengadaan Barang/Jasa')) addStat('Bendahara, PPTK/PPKOM/PPK/PBJ', valPerubahan);
+      if (rekNama.includes('Belanja Jasa Pengelolaan BMD yang Tidak Menghasilkan Pendapatan')) addStat('Pengurus Barang', valPerubahan);
+      if (rekNama.includes('Belanja Jasa Tenaga Supir')) addStat('Sopir', valPerubahan);
+      if (rekNama.includes('Belanja Jasa Tenaga Kebersihan')) addStat('Kebersihan', valPerubahan);
+      if (rekNama.includes('Belanja Jasa Tenaga Keamanan')) addStat('Keamanan', valPerubahan);
       
-      if (rekNama.includes('Belanja Tagihan Listrik')) stat['Listrik'] += valPerubahan;
-      if (rekNama.includes('Belanja Tagihan Air')) stat['Air'] += valPerubahan;
-      if (rekNama.includes('Belanja Kawat/Faksimili/Internet/TV Berlangganan')) stat['Internet'] += valPerubahan;
+      if (rekNama.includes('Belanja Tagihan Listrik')) addStat('Listrik', valPerubahan);
+      if (rekNama.includes('Belanja Tagihan Air')) addStat('Air', valPerubahan);
+      if (rekNama.includes('Belanja Kawat/Faksimili/Internet/TV Berlangganan')) addStat('Internet', valPerubahan);
       
-      if (sdNama.includes('DAU yang Ditentukan Penggunaannya Bidang Pendidikan')) stat['Dau Pendidikan'] += valPerubahan;
-      if (sdNama.includes('DAK Non Fisik-Dana BOSP-BOS Reguler')) stat['DAK Non Fisik BOS Reguler'] += valPerubahan;
-      if (sdNama.includes('DAK Non Fisik-Dana BOSP-BOS Kinerja')) stat['DAK Non Fisik BOS Kinerja'] += valPerubahan;
-      if (sdNama.includes('DAK Non Fisik-Dana BOSP-BOP PAUD Reguler')) stat['DAK Non Fisik BOP PAUD Reguler'] += valPerubahan;
-      if (sdNama.includes('DAK Non Fisik-Dana BOSP-BOP PAUD Kinerja')) stat['DAK Non Fisik BOP PAUD Kinerja'] += valPerubahan;
-      if (sdNama.includes('DAK Non Fisik-Dana BOSP-BOP Kesetaraan Reguler')) stat['DAK Non Fisik BOP Kesetaraan Reguler'] += valPerubahan;
-      if (sdNama.includes('DAK Non Fisik-Dana BOSP-BOP Kesetaraan Kinerja')) stat['DAK Non Fisik BOP Kesetaraan Kinerja'] += valPerubahan;
+      if (sdNama.includes('DAU yang Ditentukan Penggunaannya Bidang Pendidikan')) addStat('Dau Pendidikan', valPerubahan);
+      if (sdNama.includes('DAK Non Fisik-Dana BOSP-BOS Reguler')) addStat('DAK Non Fisik BOS Reguler', valPerubahan);
+      if (sdNama.includes('DAK Non Fisik-Dana BOSP-BOS Kinerja')) addStat('DAK Non Fisik BOS Kinerja', valPerubahan);
+      if (sdNama.includes('DAK Non Fisik-Dana BOSP-BOP PAUD Reguler')) addStat('DAK Non Fisik BOP PAUD Reguler', valPerubahan);
+      if (sdNama.includes('DAK Non Fisik-Dana BOSP-BOP PAUD Kinerja')) addStat('DAK Non Fisik BOP PAUD Kinerja', valPerubahan);
+      if (sdNama.includes('DAK Non Fisik-Dana BOSP-BOP Kesetaraan Reguler')) addStat('DAK Non Fisik BOP Kesetaraan Reguler', valPerubahan);
+      if (sdNama.includes('DAK Non Fisik-Dana BOSP-BOP Kesetaraan Kinerja')) addStat('DAK Non Fisik BOP Kesetaraan Kinerja', valPerubahan);
       
       const isTPG = rekNama.includes('Belanja Tunjangan Profesi Guru (TPG) PNSD') || rekNama.includes('Belanja Tunjangan Profesi Guru (TPG) PPPK');
       const isTamsil = rekNama.includes('Belanja Tambahan Penghasilan (Tamsil) Guru PPPK') || rekNama.includes('Belanja Tambahan Penghasilan (Tamsil) Guru PNSD');
@@ -167,16 +181,16 @@ export async function GET(request: Request) {
       const isThr = paket.includes('THR dan G13');
       
       if (isTPG) {
-        if (!isCarryOver && !isThr) stat['TPG'] += valPerubahan;
+        if (!isCarryOver && !isThr) addStat('TPG', valPerubahan);
       }
       if (isTamsil) {
-        if (!isCarryOver && !isThr) stat['Tamsil'] += valPerubahan;
+        if (!isCarryOver && !isThr) addStat('Tamsil', valPerubahan);
       }
       
-      if (isCarryOver) stat['TPG/Tamsil Carry Over 2024'] += valPerubahan;
-      if (isThr) stat['TPG/Tamsil THR Guru'] += valPerubahan;
+      if (isCarryOver) addStat('TPG/Tamsil Carry Over 2024', valPerubahan);
+      if (isThr) addStat('TPG/Tamsil THR Guru', valPerubahan);
       
-      if (paketLower.includes('juru pelihara cagar budaya')) stat['Juru Pelihara Cagar Budaya'] += valPerubahan;
+      if (paketLower.includes('juru pelihara cagar budaya')) addStat('Juru Pelihara Cagar Budaya', valPerubahan);
       
       const kegiatanNama = r.subKegiatan?.kegiatan?.nama || '';
       const programNama = r.subKegiatan?.kegiatan?.program?.nama || '';
@@ -194,13 +208,13 @@ export async function GET(request: Request) {
         programUpper.includes('PELESTARIAN DAN PENGELOLAAN CAGAR BUDAYA')
       );
 
-      if (isPaudKebudayaan) stat['Kegiatan PAUD dan Kebudayaan'] += valPerubahan;
+      if (isPaudKebudayaan) addStat('Kegiatan PAUD dan Kebudayaan', valPerubahan);
 
-      if (sdUpper.includes('RETRIBUSI DAERAH') && sdUpper.includes('LRA')) stat['Optimalisasi Retribusi'] += valPerubahan;
+      if (sdUpper.includes('RETRIBUSI DAERAH') && sdUpper.includes('LRA')) addStat('Optimalisasi Retribusi', valPerubahan);
       
       const subKode = r.subKegiatan?.kode || '';
       if (sdUpper.includes('PENDAPATAN TRANSFER ANTAR DAERAH') && subKode.includes('2.22.03.2.01.0001')) {
-        stat['Tim Kesenian'] += valPerubahan;
+        addStat('Tim Kesenian', valPerubahan);
       }
     });
 
@@ -209,6 +223,7 @@ export async function GET(request: Request) {
       const kg = kontrolMap.get(skpd.id);
       const tj = targetMap.get(skpd.id) || {};
       const ed = excelDataMap.get(skpd.id) || {};
+      const dd = detailsDataMap.get(skpd.id) || {};
 
       const categories = [
         'Gaji PNS', 'Gaji PPPK', 'Gaji PPPK Paruh Waktu', 'TPP', 'TPP BPJS', 'TPP PPH',
@@ -233,7 +248,8 @@ export async function GET(request: Request) {
         return {
           kategori: cat,
           target: target,
-          excel: ed[cat] || 0
+          excel: ed[cat] || 0,
+          details: dd[cat] || []
         };
       });
 
