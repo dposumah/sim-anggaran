@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Save, AlertCircle, CheckCircle, Calculator, Info, Loader2 } from 'lucide-react';
+import { Save, AlertCircle, CheckCircle, Calculator, Info, Loader2, Download } from 'lucide-react';
+import * as XLSX from 'xlsx';
 
 interface KontrolGajiItem {
   kategori: string;
@@ -114,6 +115,51 @@ export default function KontrolGajiPage() {
     );
   };
 
+  const handleExportExcel = () => {
+    if (data.length === 0) return;
+
+    const wb = XLSX.utils.book_new();
+
+    data.forEach((skpd) => {
+      // Setup rows for this SKPD
+      const wsData: any[][] = [
+        ['Kontrol Anggaran', '', '', ''],
+        ['SKPD:', skpd.nama, '', ''],
+        ['Kode:', skpd.kode, '', ''],
+        ['', '', '', ''],
+        ['Kategori', 'Target Pagu (Manual)', 'APBD Excel (Perubahan)', 'Selisih (Excel - Target)']
+      ];
+
+      skpd.items.forEach((item) => {
+        const selisih = item.excel - item.target;
+        wsData.push([
+          item.kategori,
+          item.target,
+          item.excel,
+          selisih
+        ]);
+      });
+
+      const ws = XLSX.utils.aoa_to_sheet(wsData);
+      
+      // Column width
+      ws['!cols'] = [
+        { wch: 40 }, // Kategori
+        { wch: 25 }, // Target
+        { wch: 25 }, // Excel
+        { wch: 25 }, // Selisih
+      ];
+
+      // Use a safe sheet name (max 31 chars)
+      let sheetName = skpd.kode.replace(/[^a-zA-Z0-9.\- ]/g, '').substring(0, 31);
+      if (!sheetName) sheetName = `SKPD_${skpd.skpdId}`;
+      
+      XLSX.utils.book_append_sheet(wb, ws, sheetName);
+    });
+
+    XLSX.writeFile(wb, `Kontrol_Gaji_Target_vs_APBD.xlsx`);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -123,18 +169,28 @@ export default function KontrolGajiPage() {
           </h1>
           <p className="text-sm text-secondary">Input Pagu Target Manual untuk dibandingkan dengan Hasil Upload Excel (APBD).</p>
         </div>
-        <button
-          onClick={fetchSystemData}
-          disabled={isLoading || isSaving}
-          className="px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 flex items-center gap-2 transition-colors disabled:opacity-50"
-        >
-          {isLoading ? (
-            <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
-          ) : (
-            <Info className="w-4 h-4" />
-          )}
-          Refresh Data
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleExportExcel}
+            disabled={isLoading || data.length === 0}
+            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2 transition-colors disabled:opacity-50"
+          >
+            <Download className="w-4 h-4" />
+            Export Excel
+          </button>
+          <button
+            onClick={fetchSystemData}
+            disabled={isLoading || isSaving}
+            className="px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 flex items-center gap-2 transition-colors disabled:opacity-50"
+          >
+            {isLoading ? (
+              <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <Info className="w-4 h-4" />
+            )}
+            Refresh Data
+          </button>
+        </div>
       </div>
 
       {error && (
