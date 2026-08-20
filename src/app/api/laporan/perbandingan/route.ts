@@ -148,7 +148,7 @@ const getCachedLaporan = unstable_cache(
       }
 
       // Paruh Waktu
-      if ((sub.nama || '').toUpperCase().includes('PENYEDIAAN JASA PELAYANAN UMUM KANTOR') && rekUpper.includes('PARUH WAKTU')) {
+      if (rekUpper.includes('BELANJA JASA PEGAWAI PEMERINTAH DENGAN PERJANJIAN KERJA') && rekUpper.includes('PARUH WAKTU')) {
         pppkParuhWaktuInduk += nilaiInduk;
         pppkParuhWaktuRkpd += nilaiRkpd;
         pppkParuhWaktuPerubahan += nilaiPerubahan;
@@ -246,7 +246,7 @@ const getCachedLaporan = unstable_cache(
       const rekUpper = (rek.nama || '').toUpperCase();
       const isBosp = subUpper.includes('BOS') || subUpper.includes('BOP');
       const isGaji = subUpper.includes('GAJI DAN TUNJANGAN ASN');
-      const isParuhWaktu = subUpper.includes('PENYEDIAAN JASA PELAYANAN UMUM KANTOR') && rekUpper.includes('PARUH WAKTU');
+      const isParuhWaktu = rekUpper.includes('BELANJA JASA PEGAWAI PEMERINTAH DENGAN PERJANJIAN KERJA') && rekUpper.includes('PARUH WAKTU');
 
       if (!isBosp && !isGaji && !isParuhWaktu) {
         if (subKegRealisasiMap[sub.id]) {
@@ -269,7 +269,7 @@ const getCachedLaporan = unstable_cache(
         }
       }
 
-      if ((sub.nama || '').toUpperCase().includes('PENYEDIAAN JASA PELAYANAN UMUM KANTOR') && rekUpper.includes('PARUH WAKTU')) {
+      if (rekUpper.includes('BELANJA JASA PEGAWAI PEMERINTAH DENGAN PERJANJIAN KERJA') && rekUpper.includes('PARUH WAKTU')) {
         pppkParuhWaktuRealisasi += nilai;
       }
 

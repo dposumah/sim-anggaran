@@ -217,6 +217,15 @@ export default function LaporanPerbandingan() {
               <h3 className="text-2xl font-bold text-primary">{formatCurrency(summary.pagu.perubahan)}</h3>
             </div>
           )}
+          <div className="flex-1 text-center md:text-left border-b md:border-b-0 md:border-r border-gray-100 pb-4 md:pb-0 px-0 md:px-6">
+            <p className="text-gray-500 text-sm font-medium mb-1">Selisih Pagu</p>
+            <h3 className="text-xl font-bold text-gray-700">
+              {formatSelisih(
+                compMode === 'induk-rkpd' ? summary.pagu.induk : compMode === 'rkpd-perubahan' ? summary.pagu.rkpd : summary.pagu.induk,
+                compMode === 'induk-rkpd' ? summary.pagu.rkpd : summary.pagu.perubahan
+              )}
+            </h3>
+          </div>
           <div className="flex-1 text-center md:text-left pl-0 md:pl-6">
             <p className="text-sm font-medium text-green-600 mb-1">Total Realisasi</p>
             <h3 className="text-2xl font-bold text-green-700">{formatCurrency(summary.pagu.realisasi)}</h3>
