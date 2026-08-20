@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import RincianTable from '@/components/RincianTable';
-import { Layers, FileText, Folder, CheckSquare, Wallet } from 'lucide-react';
+import { Layers, FileText, Folder, CheckSquare, Wallet, X } from 'lucide-react';
 
 const formatRupiah = (number: number) => {
   return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(number);
@@ -12,6 +12,12 @@ export default function RincianClient({ subKegiatanId, isLocked, parentInfo }: {
   const [rincianList, setRincianList] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('rincian');
+  const [selectedPaket, setSelectedPaket] = useState<string | null>(null);
+
+  const rincianForSelectedPaket = useMemo(() => {
+    if (!selectedPaket) return [];
+    return rincianList.filter(r => (r.namaPaket || 'Unknown') === selectedPaket);
+  }, [rincianList, selectedPaket]);
 
   const fetchRincian = () => {
     setLoading(true);
@@ -252,7 +258,13 @@ export default function RincianClient({ subKegiatanId, isLocked, parentInfo }: {
                   {rekapPaket.map((r, i) => (
                     <tr key={i} className="hover:bg-gray-50">
                       <td className="px-6 py-4 text-gray-700 max-w-sm whitespace-normal break-words">{r.nama}</td>
-                      <td className="px-6 py-4 text-right font-semibold text-blue-700">{formatRupiah(r.pagu)}</td>
+                      <td 
+                        className="px-6 py-4 text-right font-semibold text-blue-700 cursor-pointer hover:underline"
+                        onClick={() => setSelectedPaket(r.nama)}
+                        title="Klik untuk melihat rincian pagu"
+                      >
+                        {formatRupiah(r.pagu)}
+                      </td>
                     </tr>
                   ))}
                   {rekapPaket.length === 0 && (
@@ -272,6 +284,68 @@ export default function RincianClient({ subKegiatanId, isLocked, parentInfo }: {
           </div>
         )}
       </div>
+
+      {selectedPaket && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-gray-50">
+              <h3 className="text-lg font-bold text-gray-900">Rincian Paket: <span className="text-blue-700">{selectedPaket}</span></h3>
+              <button onClick={() => setSelectedPaket(null)} className="text-gray-400 hover:text-gray-600 bg-white p-1 rounded-full border border-gray-200 shadow-sm">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-0 overflow-y-auto">
+               <table className="min-w-full divide-y divide-gray-200 text-sm">
+                  <thead className="bg-white sticky top-0 shadow-sm">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-gray-700 font-semibold bg-gray-50">Sumber Dana</th>
+                      <th className="px-6 py-3 text-left text-gray-700 font-semibold bg-gray-50">Rekening</th>
+                      <th className="px-6 py-3 text-left text-gray-700 font-semibold bg-gray-50">Spesifikasi</th>
+                      <th className="px-6 py-3 text-center text-gray-700 font-semibold bg-gray-50">Koefisien</th>
+                      <th className="px-6 py-3 text-right text-gray-700 font-semibold bg-gray-50">Harga Satuan</th>
+                      <th className="px-6 py-3 text-right text-gray-700 font-semibold bg-gray-50">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {rincianForSelectedPaket.map((r, i) => (
+                      <tr key={i} className="hover:bg-blue-50/50 transition-colors">
+                        <td className="px-6 py-4 text-gray-600 align-top max-w-[150px] truncate" title={r.sumberDana?.nama}>{r.sumberDana?.nama || '-'}</td>
+                        <td className="px-6 py-4 text-gray-600 align-top max-w-[200px]">
+                          <div className="font-medium">{r.rekening?.kode}</div>
+                          <div className="text-xs text-gray-500 mt-1">{r.rekening?.nama}</div>
+                        </td>
+                        <td className="px-6 py-4 text-gray-600 align-top max-w-[200px] whitespace-normal">
+                          <div className="font-medium text-gray-900">{r.sshSbu?.uraianBarang || r.namaPaket}</div>
+                          {r.sshSbu?.spesifikasi && (
+                            <div className="text-xs text-gray-500 mt-1 italic">{r.sshSbu.spesifikasi}</div>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 text-center text-gray-700 align-top whitespace-nowrap">
+                          {r.volumePerubahan} {r.sshSbu?.satuan}
+                        </td>
+                        <td className="px-6 py-4 text-right text-gray-600 align-top whitespace-nowrap">{formatRupiah(r.hargaSatuanPerubahan)}</td>
+                        <td className="px-6 py-4 text-right font-bold text-blue-700 align-top whitespace-nowrap">{formatRupiah(r.paguPerubahan)}</td>
+                      </tr>
+                    ))}
+                    {rincianForSelectedPaket.length === 0 && (
+                      <tr><td colSpan={6} className="px-6 py-8 text-center text-gray-500 italic">Data rincian tidak ditemukan.</td></tr>
+                    )}
+                  </tbody>
+                  {rincianForSelectedPaket.length > 0 && (
+                    <tfoot className="bg-gray-50 sticky bottom-0 border-t border-gray-200">
+                      <tr>
+                        <th colSpan={5} className="px-6 py-4 text-right font-bold text-gray-900 uppercase tracking-wider text-xs">Total Keseluruhan</th>
+                        <th className="px-6 py-4 text-right font-bold text-blue-800 text-base">
+                          {formatRupiah(rincianForSelectedPaket.reduce((acc, curr) => acc + Number(curr.paguPerubahan || 0), 0))}
+                        </th>
+                      </tr>
+                    </tfoot>
+                  )}
+               </table>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
