@@ -124,14 +124,24 @@ export default function LaporanEksekutif() {
     const chartData = getChartDataForTabs();
     
     // Format data for excel
-    const excelData = chartData.map((item: any) => ({
-      'Nama': item.nama,
-      'Pagu Induk': item.paguInduk,
-      'Pagu Perubahan': item.paguPerubahan,
-      'Realisasi': item.realisasi,
-      'Sisa Anggaran': item.paguPerubahan - item.realisasi,
-      'Persentase Serapan (%)': item.paguPerubahan > 0 ? ((item.realisasi / item.paguPerubahan) * 100).toFixed(2) : 0
-    }));
+    const excelData = chartData.map((item: any) => {
+      const base: any = {
+        'Nama': item.nama,
+      };
+
+      if (activeChartTab === 'paket') {
+        base['Sub Kegiatan'] = item.rincian ? Array.from(new Set(item.rincian.map((r: any) => r.subKegiatan))).join(', ') : '-';
+        base['Sumber Dana'] = item.rincian ? Array.from(new Set(item.rincian.map((r: any) => r.sumberDana))).join(', ') : '-';
+      }
+
+      base['Pagu Induk'] = item.paguInduk;
+      base['Pagu Perubahan'] = item.paguPerubahan;
+      base['Realisasi'] = item.realisasi;
+      base['Sisa Anggaran'] = item.paguPerubahan - item.realisasi;
+      base['Persentase Serapan (%)'] = item.paguPerubahan > 0 ? ((item.realisasi / item.paguPerubahan) * 100).toFixed(2) : 0;
+
+      return base;
+    });
 
     const ws = XLSX.utils.json_to_sheet(excelData);
     const wb = XLSX.utils.book_new();
