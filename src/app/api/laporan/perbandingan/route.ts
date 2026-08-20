@@ -196,6 +196,7 @@ const getCachedLaporan = unstable_cache(
         paketMap[r.namaPaket].rincian.push({
           subKegiatanId: sub.id,
           rekeningId: rek.id,
+          sumberDanaId: r.sumberDana.id,
           subKegiatan: sub.nama,
           rekening: rek.nama,
           sumberDana: r.sumberDana.nama || 'Tidak Ada',
@@ -209,7 +210,7 @@ const getCachedLaporan = unstable_cache(
       sumDanaMap[sdNama].induk += nilaiInduk;
       sumDanaMap[sdNama].perubahan += nilaiPerubahan;
       
-      const subRekKey = `${sub.id}-${rek.id}`;
+      const subRekKey = `${sub.id}-${rek.id}-${r.sumberDana.id}`;
       subRekPaguMap[subRekKey] = (subRekPaguMap[subRekKey] || 0) + nilaiPerubahan;
     });
 
@@ -236,7 +237,7 @@ const getCachedLaporan = unstable_cache(
         rekRealisasiMap[rek.id].realisasi += nilai;
       }
       
-      const subRekKey = `${sub.id}-${rek.id}`;
+      const subRekKey = `${sub.id}-${rek.id}-${r.sumberDana.id}`;
       subRekRealisasiMap[subRekKey] = (subRekRealisasiMap[subRekKey] || 0) + nilai;
 
       if (isGaji) {
@@ -276,7 +277,7 @@ const getCachedLaporan = unstable_cache(
     // Assign proportional realisasi to paket rincian
     Object.values(paketMap).forEach((paket: any) => {
       paket.rincian.forEach((r: any) => {
-        const subRekKey = `${r.subKegiatanId}-${r.rekeningId}`;
+        const subRekKey = `${r.subKegiatanId}-${r.rekeningId}-${r.sumberDanaId}`;
         const totalPagu = subRekPaguMap[subRekKey] || 1;
         const totalRealisasi = subRekRealisasiMap[subRekKey] || 0;
         const propReal = (r.paguPerubahan / totalPagu) * totalRealisasi;
