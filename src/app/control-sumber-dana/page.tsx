@@ -24,6 +24,7 @@ interface SystemSumberDana {
 export default function ControlSumberDanaPage() {
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [addedSumberDanas, setAddedSumberDanas] = useState<number[]>([]);
   
   const [sumberDanas, setSumberDanas] = useState<SystemSumberDana[]>([]);
   const [isLoadingSystem, setIsLoadingSystem] = useState(false);
@@ -139,8 +140,28 @@ export default function ControlSumberDanaPage() {
 
       {!isLoadingSystem && sumberDanas.length > 0 && (
         <div className="bg-white rounded-lg shadow border border-gray-200 overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
-            <h3 className="text-lg font-medium text-gray-900">Form Pagu & Perbandingan</h3>
+          <div className="px-6 py-4 border-b border-gray-200 bg-gray-50 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <h3 className="text-lg font-medium text-gray-900">Form Pagu & Perbandingan</h3>
+              <select 
+                className="block rounded-md border-0 py-1.5 pl-3 pr-8 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-primary sm:text-sm sm:leading-6"
+                onChange={(e) => {
+                  if (e.target.value) {
+                    setAddedSumberDanas(prev => [...prev, Number(e.target.value)]);
+                    e.target.value = "";
+                  }
+                }}
+                defaultValue=""
+              >
+                <option value="" disabled>+ Tambah Sumber Dana</option>
+                {sumberDanas
+                  .filter((sd) => sd.ceilingAmount === 0 && sd.excelAmount === 0 && !addedSumberDanas.includes(sd.sumberDanaId))
+                  .map((sd) => (
+                    <option key={sd.sumberDanaId} value={sd.sumberDanaId}>{sd.kode} - {sd.nama}</option>
+                  ))
+                }
+              </select>
+            </div>
             {skpdInfo && (
               <span className="inline-flex items-center rounded-full bg-blue-100 px-3 py-1 text-xs font-medium text-blue-800">
                 {skpdInfo.kode} - {skpdInfo.nama}
@@ -161,7 +182,7 @@ export default function ControlSumberDanaPage() {
               </thead>
               <tbody className="divide-y divide-gray-200 bg-white">
                 {sumberDanas
-                  .filter((sd) => sd.ceilingAmount > 0 || sd.excelAmount > 0)
+                  .filter((sd) => sd.ceilingAmount > 0 || sd.excelAmount > 0 || addedSumberDanas.includes(sd.sumberDanaId))
                   .map((sd) => {
                   const variance = sd.ceilingAmount - sd.excelAmount;
                   
