@@ -60,7 +60,7 @@ export async function GET(request: Request) {
         subKegiatan: {
           select: {
             nama: true,
-            kegiatan: { select: { program: { select: { skpdId: true } } } }
+            kegiatan: { select: { nama: true, program: { select: { skpdId: true, nama: true } } } }
           }
         }
       }
@@ -85,7 +85,7 @@ export async function GET(request: Request) {
           'DAK Non Fisik BOP PAUD Reguler': 0, 'DAK Non Fisik BOP PAUD Kinerja': 0,
           'DAK Non Fisik BOP Kesetaraan Reguler': 0, 'DAK Non Fisik BOP Kesetaraan Kinerja': 0,
           'TPG': 0, 'Tamsil': 0, 'TPG/Tamsil Carry Over 2024': 0, 'TPG/Tamsil THR Guru': 0,
-          'Juru Pelihara Cagar Budaya': 0
+          'Juru Pelihara Cagar Budaya': 0, 'Kegiatan PAUD dan Kebudayaan': 0
         });
       }
       
@@ -175,6 +175,24 @@ export async function GET(request: Request) {
       if (isThr) stat['TPG/Tamsil THR Guru'] += valPerubahan;
       
       if (paketLower.includes('juru pelihara cagar budaya')) stat['Juru Pelihara Cagar Budaya'] += valPerubahan;
+      
+      const kegiatanNama = r.subKegiatan?.kegiatan?.nama || '';
+      const programNama = r.subKegiatan?.kegiatan?.program?.nama || '';
+      const kegiatanUpper = kegiatanNama.toUpperCase();
+      const programUpper = programNama.toUpperCase();
+      const sdUpper = sdNama.toUpperCase();
+
+      const isPad = sdUpper.includes('PENDAPATAN ASLI DAERAH') || sdUpper.includes('(PAD)') || sdUpper === 'PAD';
+      const isPaudKebudayaan = isPad && (
+        kegiatanUpper.includes('PENGELOLAAN PENDIDIKAN ANAK USIA DINI (PAUD)') ||
+        kegiatanUpper.includes('PENGELOLAAN PENDIDIKAN NONFORMAL/KESETARAAN') ||
+        programUpper.includes('PENGEMBANGAN KEBUDAYAAN') ||
+        programUpper.includes('PENGEMBANGAN KESENIAN TRADISIONAL') ||
+        programUpper.includes('PEMBINAAN SEJARAH') ||
+        programUpper.includes('PELESTARIAN DAN PENGELOLAAN CAGAR BUDAYA')
+      );
+
+      if (isPaudKebudayaan) stat['Kegiatan PAUD dan Kebudayaan'] += valPerubahan;
     });
 
     // 4. Gabungkan Data
@@ -193,7 +211,7 @@ export async function GET(request: Request) {
         'DAK Non Fisik BOP PAUD Reguler', 'DAK Non Fisik BOP PAUD Kinerja',
         'DAK Non Fisik BOP Kesetaraan Reguler', 'DAK Non Fisik BOP Kesetaraan Kinerja',
         'TPG', 'Tamsil', 'TPG/Tamsil Carry Over 2024', 'TPG/Tamsil THR Guru',
-        'Juru Pelihara Cagar Budaya'
+        'Juru Pelihara Cagar Budaya', 'Kegiatan PAUD dan Kebudayaan'
       ];
 
       const items = categories.map(cat => {
