@@ -89,18 +89,24 @@ export default function LaporanPerbandingan() {
           {title}
           {isBosp && <span className="ml-auto text-[10px] bg-red-100 text-red-700 px-2 py-0.5 rounded-full font-medium">Lihat Rincian</span>}
         </h3>
-        <div className="flex justify-between items-end mb-2 relative z-10">
-          <span className={`text-xs font-medium ${compMode.startsWith('induk') ? 'text-primary' : 'text-gray-500'}`}>Pagu Induk</span>
-          <span className="text-sm font-semibold text-gray-600">{formatCurrency(item.induk)}</span>
-        </div>
-        <div className="flex justify-between items-end mb-2 relative z-10">
-          <span className={`text-xs font-medium ${compMode.includes('rkpd') ? 'text-primary' : 'text-gray-500'}`}>Pagu RKPD</span>
-          <span className="text-sm font-semibold text-gray-600">{formatCurrency(item.rkpd)}</span>
-        </div>
-        <div className="flex justify-between items-end mb-3 relative z-10">
-          <span className={`text-xs font-medium ${compMode.includes('perubahan') ? 'text-primary' : 'text-gray-500'}`}>Pagu Perubahan</span>
-          <span className="text-base font-bold text-gray-800">{formatCurrency(item.perubahan)}</span>
-        </div>
+        {compMode !== 'rkpd-perubahan' && (
+          <div className="flex justify-between items-end mb-2 relative z-10">
+            <span className={`text-xs font-medium ${compMode.startsWith('induk') ? 'text-primary' : 'text-gray-500'}`}>Pagu Induk</span>
+            <span className="text-sm font-semibold text-gray-600">{formatCurrency(item.induk)}</span>
+          </div>
+        )}
+        {compMode !== 'induk-perubahan' && (
+          <div className="flex justify-between items-end mb-2 relative z-10">
+            <span className={`text-xs font-medium ${compMode.includes('rkpd') ? 'text-primary' : 'text-gray-500'}`}>Pagu RKPD</span>
+            <span className="text-sm font-semibold text-gray-600">{formatCurrency(item.rkpd)}</span>
+          </div>
+        )}
+        {compMode !== 'induk-rkpd' && (
+          <div className="flex justify-between items-end mb-3 relative z-10">
+            <span className={`text-xs font-medium ${compMode.includes('perubahan') ? 'text-primary' : 'text-gray-500'}`}>Pagu Perubahan</span>
+            <span className="text-base font-bold text-gray-800">{formatCurrency(item.perubahan)}</span>
+          </div>
+        )}
         <div className="flex justify-between items-end mb-3 pt-3 border-t border-gray-100 relative z-10">
           <span className="text-xs text-green-600 font-medium">Realisasi</span>
           <span className="text-sm font-bold text-green-700">{formatCurrency(item.realisasi)}</span>
@@ -193,18 +199,24 @@ export default function LaporanPerbandingan() {
           <div className="absolute -right-10 -top-10 opacity-[0.03] group-hover:opacity-10 transition-opacity">
             <Building className="w-48 h-48 text-primary" />
           </div>
-          <div className="flex-1 text-center md:text-left border-b md:border-b-0 md:border-r border-gray-100 pb-4 md:pb-0 pr-0 md:pr-6">
-            <p className="text-gray-500 text-sm font-medium mb-1">Total Pagu Induk</p>
-            <h3 className="text-2xl font-bold text-gray-800">{formatCurrency(summary.pagu.induk)}</h3>
-          </div>
-          <div className="flex-1 text-center md:text-left border-b md:border-b-0 md:border-r border-gray-100 pb-4 md:pb-0 px-0 md:px-6">
-            <p className="text-gray-500 text-sm font-medium mb-1">Total Pagu RKPD</p>
-            <h3 className="text-2xl font-bold text-gray-800">{formatCurrency(summary.pagu.rkpd)}</h3>
-          </div>
-          <div className="flex-1 text-center md:text-left border-b md:border-b-0 md:border-r border-gray-100 pb-4 md:pb-0 px-0 md:px-6">
-            <p className="text-primary text-sm font-medium mb-1">Total Pagu Perubahan</p>
-            <h3 className="text-2xl font-bold text-primary">{formatCurrency(summary.pagu.perubahan)}</h3>
-          </div>
+          {compMode !== 'rkpd-perubahan' && (
+            <div className="flex-1 text-center md:text-left border-b md:border-b-0 md:border-r border-gray-100 pb-4 md:pb-0 pr-0 md:pr-6">
+              <p className="text-gray-500 text-sm font-medium mb-1">Total Pagu Induk</p>
+              <h3 className="text-2xl font-bold text-gray-800">{formatCurrency(summary.pagu.induk)}</h3>
+            </div>
+          )}
+          {compMode !== 'induk-perubahan' && (
+            <div className={`flex-1 text-center md:text-left border-b md:border-b-0 md:border-r border-gray-100 pb-4 md:pb-0 px-0 md:px-6 ${compMode === 'rkpd-perubahan' ? 'pl-0 md:pl-0 pr-0 md:pr-6' : ''}`}>
+              <p className="text-gray-500 text-sm font-medium mb-1">Total Pagu RKPD</p>
+              <h3 className="text-2xl font-bold text-gray-800">{formatCurrency(summary.pagu.rkpd)}</h3>
+            </div>
+          )}
+          {compMode !== 'induk-rkpd' && (
+            <div className="flex-1 text-center md:text-left border-b md:border-b-0 md:border-r border-gray-100 pb-4 md:pb-0 px-0 md:px-6">
+              <p className="text-primary text-sm font-medium mb-1">Total Pagu Perubahan</p>
+              <h3 className="text-2xl font-bold text-primary">{formatCurrency(summary.pagu.perubahan)}</h3>
+            </div>
+          )}
           <div className="flex-1 text-center md:text-left pl-0 md:pl-6">
             <p className="text-sm font-medium text-green-600 mb-1">Total Realisasi</p>
             <h3 className="text-2xl font-bold text-green-700">{formatCurrency(summary.pagu.realisasi)}</h3>
@@ -416,18 +428,24 @@ export default function LaporanPerbandingan() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200 bg-white">
-                    <tr className="hover:bg-gray-50">
-                      <td className="px-4 py-3 font-medium text-gray-600">Pagu Induk</td>
-                      <td className="px-4 py-3 text-right font-semibold text-gray-800">{formatCurrency(selectedChartData.data.paguInduk || selectedChartData.data.induk)}</td>
-                    </tr>
-                    <tr className="hover:bg-gray-50">
-                      <td className="px-4 py-3 font-medium text-gray-600">Pagu RKPD</td>
-                      <td className="px-4 py-3 text-right font-semibold text-gray-800">{formatCurrency(selectedChartData.data.paguRkpd || selectedChartData.data.rkpd)}</td>
-                    </tr>
-                    <tr className="hover:bg-red-50">
-                      <td className="px-4 py-3 font-medium text-primary">Pagu Perubahan</td>
-                      <td className="px-4 py-3 text-right font-bold text-primary">{formatCurrency(selectedChartData.data.paguPerubahan || selectedChartData.data.perubahan)}</td>
-                    </tr>
+                    {compMode !== 'rkpd-perubahan' && (
+                      <tr className="hover:bg-gray-50">
+                        <td className="px-4 py-3 font-medium text-gray-600">Pagu Induk</td>
+                        <td className="px-4 py-3 text-right font-semibold text-gray-800">{formatCurrency(selectedChartData.data.paguInduk || selectedChartData.data.induk)}</td>
+                      </tr>
+                    )}
+                    {compMode !== 'induk-perubahan' && (
+                      <tr className="hover:bg-gray-50">
+                        <td className="px-4 py-3 font-medium text-gray-600">Pagu RKPD</td>
+                        <td className="px-4 py-3 text-right font-semibold text-gray-800">{formatCurrency(selectedChartData.data.paguRkpd || selectedChartData.data.rkpd)}</td>
+                      </tr>
+                    )}
+                    {compMode !== 'induk-rkpd' && (
+                      <tr className="hover:bg-red-50">
+                        <td className="px-4 py-3 font-medium text-primary">Pagu Perubahan</td>
+                        <td className="px-4 py-3 text-right font-bold text-primary">{formatCurrency(selectedChartData.data.paguPerubahan || selectedChartData.data.perubahan)}</td>
+                      </tr>
+                    )}
                     <tr className="hover:bg-green-50">
                       <td className="px-4 py-3 font-medium text-green-600">Realisasi</td>
                       <td className="px-4 py-3 text-right font-bold text-green-700">{formatCurrency(selectedChartData.data.realisasi)}</td>
@@ -493,9 +511,9 @@ export default function LaporanPerbandingan() {
                       <th className="px-4 py-3 text-left font-bold text-gray-600">Sub Kegiatan</th>
                       <th className="px-4 py-3 text-left font-bold text-gray-600">Rekening</th>
                       <th className="px-4 py-3 text-left font-bold text-gray-600">Sumber Dana</th>
-                      <th className="px-4 py-3 text-right font-bold text-gray-600">Pagu Induk</th>
-                      <th className="px-4 py-3 text-right font-bold text-gray-600">Pagu RKPD</th>
-                      <th className="px-4 py-3 text-right font-bold text-gray-600">Pagu Perubahan</th>
+                      {compMode !== 'rkpd-perubahan' && <th className="px-4 py-3 text-right font-bold text-gray-600">Pagu Induk</th>}
+                      {compMode !== 'induk-perubahan' && <th className="px-4 py-3 text-right font-bold text-gray-600">Pagu RKPD</th>}
+                      {compMode !== 'induk-rkpd' && <th className="px-4 py-3 text-right font-bold text-gray-600">Pagu Perubahan</th>}
                       <th className="px-4 py-3 text-right font-bold text-gray-600">Realisasi</th>
                     </tr>
                   </thead>
@@ -508,9 +526,9 @@ export default function LaporanPerbandingan() {
                           <td className="px-4 py-3 text-gray-800 align-top">{r.subKegiatan}</td>
                           <td className="px-4 py-3 text-gray-600 align-top">{r.rekening}</td>
                           <td className="px-4 py-3 text-gray-500 text-xs align-top"><span className="bg-gray-100 px-2 py-1 rounded-md">{r.sumberDana}</span></td>
-                          <td className="px-4 py-3 text-right font-medium text-gray-500 align-top whitespace-nowrap">{formatCurrency(r.paguInduk)}</td>
-                          <td className="px-4 py-3 text-right font-medium text-gray-500 align-top whitespace-nowrap">{formatCurrency(r.paguRkpd)}</td>
-                          <td className="px-4 py-3 text-right font-semibold text-primary align-top whitespace-nowrap">{formatCurrency(r.paguPerubahan)}</td>
+                          {compMode !== 'rkpd-perubahan' && <td className="px-4 py-3 text-right font-medium text-gray-500 align-top whitespace-nowrap">{formatCurrency(r.paguInduk)}</td>}
+                          {compMode !== 'induk-perubahan' && <td className="px-4 py-3 text-right font-medium text-gray-500 align-top whitespace-nowrap">{formatCurrency(r.paguRkpd)}</td>}
+                          {compMode !== 'induk-rkpd' && <td className="px-4 py-3 text-right font-semibold text-primary align-top whitespace-nowrap">{formatCurrency(r.paguPerubahan)}</td>}
                           <td className="px-4 py-3 text-right font-bold text-green-600 align-top whitespace-nowrap">{formatCurrency(r.realisasi)}</td>
                         </tr>
                       ))
@@ -520,15 +538,21 @@ export default function LaporanPerbandingan() {
                     <tfoot className="bg-gray-50 border-t-2 border-gray-200 font-bold">
                       <tr>
                         <td colSpan={3} className="px-4 py-3 text-right text-gray-700">Total:</td>
-                        <td className="px-4 py-3 text-right text-gray-600">
-                          {formatCurrency(selectedPaket.rincian.reduce((acc, curr) => acc + (curr.paguInduk || 0), 0))}
-                        </td>
-                        <td className="px-4 py-3 text-right text-gray-600">
-                          {formatCurrency(selectedPaket.rincian.reduce((acc, curr) => acc + (curr.paguRkpd || 0), 0))}
-                        </td>
-                        <td className="px-4 py-3 text-right text-primary">
-                          {formatCurrency(selectedPaket.rincian.reduce((acc, curr) => acc + (curr.paguPerubahan || 0), 0))}
-                        </td>
+                        {compMode !== 'rkpd-perubahan' && (
+                          <td className="px-4 py-3 text-right text-gray-600">
+                            {formatCurrency(selectedPaket.rincian.reduce((acc: any, curr: any) => acc + (curr.paguInduk || 0), 0))}
+                          </td>
+                        )}
+                        {compMode !== 'induk-perubahan' && (
+                          <td className="px-4 py-3 text-right text-gray-600">
+                            {formatCurrency(selectedPaket.rincian.reduce((acc: any, curr: any) => acc + (curr.paguRkpd || 0), 0))}
+                          </td>
+                        )}
+                        {compMode !== 'induk-rkpd' && (
+                          <td className="px-4 py-3 text-right text-primary">
+                            {formatCurrency(selectedPaket.rincian.reduce((acc: any, curr: any) => acc + (curr.paguPerubahan || 0), 0))}
+                          </td>
+                        )}
                         <td className="px-4 py-3 text-right text-green-600">
                           {formatCurrency(selectedPaket.rincian.reduce((acc, curr) => acc + (curr.realisasi || 0), 0))}
                         </td>
@@ -572,15 +596,25 @@ export default function LaporanPerbandingan() {
               {/* Reguler */}
               <div className="space-y-3">
                 <h4 className="font-semibold text-gray-800 border-b pb-1">BOSP Reguler</h4>
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="bg-gray-50 p-3 rounded-lg border border-gray-100">
-                    <p className="text-xs text-gray-500 mb-1">Pagu Induk</p>
-                    <p className="font-bold text-gray-700 text-sm">{formatCurrency(selectedBosp.data.reguler.induk)}</p>
-                  </div>
-                  <div className="bg-red-50 p-3 rounded-lg border border-red-50">
-                    <p className="text-xs text-primary mb-1">Pagu Perubahan</p>
-                    <p className="font-bold text-primary text-sm">{formatCurrency(selectedBosp.data.reguler.perubahan)}</p>
-                  </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {compMode !== 'rkpd-perubahan' && (
+                    <div className="bg-gray-50 p-3 rounded-lg border border-gray-100">
+                      <p className="text-xs text-gray-500 mb-1">Pagu Induk</p>
+                      <p className="font-bold text-gray-700 text-sm">{formatCurrency(selectedBosp.data.reguler.induk)}</p>
+                    </div>
+                  )}
+                  {compMode !== 'induk-perubahan' && (
+                    <div className="bg-gray-50 p-3 rounded-lg border border-gray-100">
+                      <p className="text-xs text-gray-500 mb-1">Pagu RKPD</p>
+                      <p className="font-bold text-gray-700 text-sm">{formatCurrency(selectedBosp.data.reguler.rkpd)}</p>
+                    </div>
+                  )}
+                  {compMode !== 'induk-rkpd' && (
+                    <div className="bg-red-50 p-3 rounded-lg border border-red-50">
+                      <p className="text-xs text-primary mb-1">Pagu Perubahan</p>
+                      <p className="font-bold text-primary text-sm">{formatCurrency(selectedBosp.data.reguler.perubahan)}</p>
+                    </div>
+                  )}
                   <div className="bg-green-50 p-3 rounded-lg border border-green-100">
                     <p className="text-xs text-green-600 mb-1">Realisasi</p>
                     <p className="font-bold text-green-700 text-sm">{formatCurrency(selectedBosp.data.reguler.realisasi)}</p>
@@ -591,15 +625,25 @@ export default function LaporanPerbandingan() {
               {/* Kinerja */}
               <div className="space-y-3">
                 <h4 className="font-semibold text-gray-800 border-b pb-1">BOSP Kinerja</h4>
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="bg-gray-50 p-3 rounded-lg border border-gray-100">
-                    <p className="text-xs text-gray-500 mb-1">Pagu Induk</p>
-                    <p className="font-bold text-gray-700 text-sm">{formatCurrency(selectedBosp.data.kinerja.induk)}</p>
-                  </div>
-                  <div className="bg-red-50 p-3 rounded-lg border border-red-50">
-                    <p className="text-xs text-primary mb-1">Pagu Perubahan</p>
-                    <p className="font-bold text-primary text-sm">{formatCurrency(selectedBosp.data.kinerja.perubahan)}</p>
-                  </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {compMode !== 'rkpd-perubahan' && (
+                    <div className="bg-gray-50 p-3 rounded-lg border border-gray-100">
+                      <p className="text-xs text-gray-500 mb-1">Pagu Induk</p>
+                      <p className="font-bold text-gray-700 text-sm">{formatCurrency(selectedBosp.data.kinerja.induk)}</p>
+                    </div>
+                  )}
+                  {compMode !== 'induk-perubahan' && (
+                    <div className="bg-gray-50 p-3 rounded-lg border border-gray-100">
+                      <p className="text-xs text-gray-500 mb-1">Pagu RKPD</p>
+                      <p className="font-bold text-gray-700 text-sm">{formatCurrency(selectedBosp.data.kinerja.rkpd)}</p>
+                    </div>
+                  )}
+                  {compMode !== 'induk-rkpd' && (
+                    <div className="bg-red-50 p-3 rounded-lg border border-red-50">
+                      <p className="text-xs text-primary mb-1">Pagu Perubahan</p>
+                      <p className="font-bold text-primary text-sm">{formatCurrency(selectedBosp.data.kinerja.perubahan)}</p>
+                    </div>
+                  )}
                   <div className="bg-green-50 p-3 rounded-lg border border-green-100">
                     <p className="text-xs text-green-600 mb-1">Realisasi</p>
                     <p className="font-bold text-green-700 text-sm">{formatCurrency(selectedBosp.data.kinerja.realisasi)}</p>
@@ -642,9 +686,9 @@ export default function LaporanPerbandingan() {
                     <tr>
                       <th className="px-4 py-3 text-left font-semibold text-gray-600">No</th>
                       <th className="px-4 py-3 text-left font-semibold text-gray-600">Sumber Dana</th>
-                      <th className="px-4 py-3 text-right font-semibold text-gray-600">Pagu Induk</th>
-                      <th className="px-4 py-3 text-right font-semibold text-gray-600">Pagu RKPD</th>
-                      <th className="px-4 py-3 text-right font-semibold text-primary">Pagu Perubahan</th>
+                      {compMode !== 'rkpd-perubahan' && <th className="px-4 py-3 text-right font-semibold text-gray-600">Pagu Induk</th>}
+                      {compMode !== 'induk-perubahan' && <th className="px-4 py-3 text-right font-semibold text-gray-600">Pagu RKPD</th>}
+                      {compMode !== 'induk-rkpd' && <th className="px-4 py-3 text-right font-semibold text-primary">Pagu Perubahan</th>}
                       <th className="px-4 py-3 text-right font-semibold text-green-600">Realisasi</th>
                       <th className="px-4 py-3 text-right font-semibold text-gray-600">Selisih Pagu</th>
                       <th className="px-4 py-3 text-right font-semibold text-gray-600">% Serapan</th>
@@ -658,9 +702,9 @@ export default function LaporanPerbandingan() {
                       <tr key={idx} className="hover:bg-gray-50/50 transition-colors">
                         <td className="px-4 py-3 text-gray-500">{idx + 1}</td>
                         <td className="px-4 py-3 font-medium text-gray-800">{sd.name}</td>
-                        <td className="px-4 py-3 text-right font-semibold text-gray-800">{formatCurrency(sd.paguInduk || sd.induk)}</td>
-                        <td className="px-4 py-3 text-right font-semibold text-gray-800">{formatCurrency(sd.paguRkpd || sd.rkpd)}</td>
-                        <td className="px-4 py-3 text-right font-bold text-primary">{formatCurrency(sd.perubahan)}</td>
+                        {compMode !== 'rkpd-perubahan' && <td className="px-4 py-3 text-right font-semibold text-gray-800">{formatCurrency(sd.paguInduk || sd.induk)}</td>}
+                        {compMode !== 'induk-perubahan' && <td className="px-4 py-3 text-right font-semibold text-gray-800">{formatCurrency(sd.paguRkpd || sd.rkpd)}</td>}
+                        {compMode !== 'induk-rkpd' && <td className="px-4 py-3 text-right font-bold text-primary">{formatCurrency(sd.perubahan)}</td>}
                         <td className="px-4 py-3 text-right font-bold text-green-700">{formatCurrency(sd.realisasi)}</td>
                         <td className="px-4 py-3 text-right font-semibold text-sm">
                           {formatSelisih(baseVal, targetVal)}
@@ -676,15 +720,21 @@ export default function LaporanPerbandingan() {
                   <tfoot className="bg-gray-50 sticky bottom-0 border-t border-gray-200">
                     <tr>
                       <td colSpan={2} className="px-4 py-3 text-right text-gray-700 font-bold">Total:</td>
-                      <td className="px-4 py-3 text-right text-gray-800 font-bold">
-                        {formatCurrency(chartData.reduce((acc: number, curr: any) => acc + (curr.paguInduk || 0), 0))}
-                      </td>
-                      <td className="px-4 py-3 text-right text-gray-800 font-bold">
-                        {formatCurrency(chartData.reduce((acc: number, curr: any) => acc + (curr.paguRkpd || curr.rkpd || 0), 0))}
-                      </td>
-                      <td className="px-4 py-3 text-right text-primary font-bold">
-                        {formatCurrency(chartData.reduce((acc: number, curr: any) => acc + (curr.perubahan || 0), 0))}
-                      </td>
+                      {compMode !== 'rkpd-perubahan' && (
+                        <td className="px-4 py-3 text-right text-gray-800 font-bold">
+                          {formatCurrency(chartData.reduce((acc: number, curr: any) => acc + (curr.paguInduk || curr.induk || 0), 0))}
+                        </td>
+                      )}
+                      {compMode !== 'induk-perubahan' && (
+                        <td className="px-4 py-3 text-right text-gray-800 font-bold">
+                          {formatCurrency(chartData.reduce((acc: number, curr: any) => acc + (curr.paguRkpd || curr.rkpd || curr.induk || 0), 0))}
+                        </td>
+                      )}
+                      {compMode !== 'induk-rkpd' && (
+                        <td className="px-4 py-3 text-right text-primary font-bold">
+                          {formatCurrency(chartData.reduce((acc: number, curr: any) => acc + (curr.perubahan || 0), 0))}
+                        </td>
+                      )}
                       <td className="px-4 py-3 text-right text-green-700 font-bold">
                         {formatCurrency(chartData.reduce((acc: number, curr: any) => acc + (curr.realisasi || 0), 0))}
                       </td>
