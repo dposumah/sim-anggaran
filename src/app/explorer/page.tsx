@@ -154,7 +154,7 @@ export default function ExplorerPage() {
     return (
       <div key={key}>
         <div 
-          className={`grid grid-cols-1 lg:grid-cols-7 gap-2 items-center p-3 border-b border-gray-100 hover:bg-blue-50/50 cursor-pointer transition-colors ${depth === 0 ? 'bg-gray-50/50' : ''}`}
+          className={`grid grid-cols-1 lg:grid-cols-8 gap-2 items-center p-3 border-b border-gray-100 hover:bg-blue-50/50 cursor-pointer transition-colors ${depth === 0 ? 'bg-gray-50/50' : ''}`}
           onClick={() => toggleNode(type, item.id)}
         >
           {/* Uraian */}
@@ -205,6 +205,17 @@ export default function ExplorerPage() {
                 <span className="text-sm font-bold text-blue-700">{formatRupiah(item.totalPaguPerubahan || 0)}</span>
               </div>
               <div className="col-span-1 lg:col-span-1 text-right">
+                <span className="text-xs text-gray-500 block lg:hidden">Selisih</span>
+                {(() => {
+                  const selisih = (item.totalPaguPerubahan || 0) - (item.totalPaguRkpd || 0);
+                  return (
+                    <span className={`text-sm font-bold ${selisih > 0 ? 'text-green-600' : selisih < 0 ? 'text-red-600' : 'text-gray-400'}`}>
+                      {selisih > 0 ? '+' + formatRupiah(selisih) : formatRupiah(selisih)}
+                    </span>
+                  );
+                })()}
+              </div>
+              <div className="col-span-1 lg:col-span-1 text-right">
                 <span className="text-xs text-gray-500 block lg:hidden">Realisasi</span>
                 <span className="text-sm font-bold text-purple-700">{formatRupiah(item.totalRealisasi || 0)}</span>
               </div>
@@ -229,6 +240,9 @@ export default function ExplorerPage() {
               <div className="col-span-1 lg:col-span-1 text-right">
                 <span className="text-xs text-gray-500 block lg:hidden">Induk</span>
                 <span className="text-sm font-semibold text-gray-800">{formatRupiah(item.totalPaguInduk || item.pagu)}</span>
+              </div>
+              <div className="col-span-1 lg:col-span-1 text-right">
+                <span className="text-sm font-semibold text-gray-400">-</span>
               </div>
               <div className="col-span-1 lg:col-span-1 text-right">
                 <span className="text-sm font-semibold text-gray-400">-</span>
@@ -311,11 +325,12 @@ export default function ExplorerPage() {
         ) : (
           <div className="min-w-full">
             {/* Header Columns */}
-            <div className="hidden lg:grid lg:grid-cols-7 gap-2 p-3 bg-gray-50 border-b border-gray-200 font-bold text-sm text-gray-700">
+            <div className="hidden lg:grid lg:grid-cols-8 gap-2 p-3 bg-gray-50 border-b border-gray-200 font-bold text-sm text-gray-700">
                <div className="col-span-2 pl-10">Uraian / Kode</div>
                <div className="col-span-1 text-right">Pagu Induk</div>
                <div className="col-span-1 text-right">Pagu RKPD</div>
                <div className="col-span-1 text-right text-blue-800">Pagu Perubahan</div>
+               <div className="col-span-1 text-right text-gray-600">Selisih</div>
                <div className="col-span-1 text-right text-purple-700">Realisasi</div>
                <div className="col-span-1 text-right">Sisa / %</div>
             </div>

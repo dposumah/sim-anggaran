@@ -301,6 +301,9 @@ export default function RincianTable({ rincianList, subKegiatanId, onRefresh, is
                 <th className="px-4 py-2.5 text-right font-semibold text-blue-800 cursor-pointer select-none" onClick={() => requestSort('paguPerubahan')}>
                   Pagu Perubahan {renderSortIcon('paguPerubahan')}
                 </th>
+                <th className="px-4 py-2.5 text-right font-semibold text-gray-600 cursor-pointer select-none" onClick={() => requestSort('selisih')}>
+                  Selisih {renderSortIcon('selisih')}
+                </th>
                 <th className="px-4 py-2.5 text-right font-semibold text-purple-700 cursor-pointer select-none" onClick={() => requestSort('realisasi')}>
                   Realisasi {renderSortIcon('realisasi')}
                 </th>
@@ -354,6 +357,17 @@ export default function RincianTable({ rincianList, subKegiatanId, onRefresh, is
                       ) : (
                         r.paguPerubahan !== null && r.paguPerubahan !== undefined ? formatRupiah(Number(r.paguPerubahan)) : '-'
                       )}
+                    </td>
+                    <td className="px-4 py-2 text-right font-bold">
+                      {(() => {
+                        if (r.paguPerubahan === null || r.paguPerubahan === undefined) return '-';
+                        const selisih = Number(r.paguPerubahan) - Number(r.paguRkpd || 0);
+                        return (
+                          <span className={selisih > 0 ? 'text-green-600' : selisih < 0 ? 'text-red-600' : 'text-gray-400'}>
+                            {selisih > 0 ? '+' + formatRupiah(selisih) : formatRupiah(selisih)}
+                          </span>
+                        );
+                      })()}
                     </td>
                     <td className="px-4 py-2 text-right font-bold text-purple-700">
                       {formatRupiah(Number(r.realisasi || 0))}
