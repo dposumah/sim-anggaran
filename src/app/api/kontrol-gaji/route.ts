@@ -123,10 +123,10 @@ export async function GET(request: Request) {
         // console.log(`Found Gaji: ${rekNama} = ${valPerubahan}`);
       }
 
-      const isTppBpjs = paket.includes('TPP BPJS');
-      const isTppPph = paket.includes('TPP PPH');
+      const isTppBpjs = paket.includes('TPP BPJS') || paket.includes('TTP BPJS');
+      const isTppPph = paket.includes('TPP PPH') || paket.includes('TTP PPH');
 
-      // Gaji PNS dikurangi dengan TPP BPJS dan TPP PPH (jangan tambahkan jika itu adalah paket TPP)
+      // Gaji PNS dikurangi dengan TTP BPJS dan TTP PPH (jangan tambahkan jika itu adalah paket TTP)
       if (isPns && !isTppBpjs && !isTppPph) stat['Gaji PNS'] += valPerubahan;
       if (isPppk) stat['Gaji PPPK'] += valPerubahan;
 
