@@ -114,10 +114,14 @@ export async function POST(request: Request) {
 
     // Build lookup: subKegiatanId+rekeningId -> sumberDanaId (first match)
     const sdLookup = new Map<string, number>();
+    const skSDLookup = new Map<number, number>();
     rincianBelanjas.forEach(rb => {
       const key = `${rb.subKegiatanId}_${rb.rekeningId}`;
       if (!sdLookup.has(key)) {
         sdLookup.set(key, rb.sumberDanaId);
+      }
+      if (!skSDLookup.has(rb.subKegiatanId)) {
+        skSDLookup.set(rb.subKegiatanId, rb.sumberDanaId);
       }
     });
 
@@ -128,6 +132,7 @@ export async function POST(request: Request) {
     let errorCount = 0;
     const warnings: string[] = [];
     const upsertData: any[] = [];
+    let cachedFirstSD: number | null = null;
 
     for (let i = 0; i < dataRows.length; i++) {
       const row = dataRows[i];
@@ -168,14 +173,18 @@ export async function POST(request: Request) {
       
       if (!sumberDanaId) {
         // Try to find any sumber dana for this sub kegiatan
-        const anySD = rincianBelanjas.find(rb => rb.subKegiatanId === skData.id);
+        const anySD = skSDLookup.get(skData.id);
         if (anySD) {
-          sumberDanaId = anySD.sumberDanaId;
+          sumberDanaId = anySD;
         } else {
-          // Use first sumber dana available
-          const firstSD = await prisma.sumberDana.findFirst();
-          if (firstSD) {
-            sumberDanaId = firstSD.id;
+          // Use first sumber dana available if not cached yet
+          if (!cachedFirstSD) {
+            const firstSDFetch = await prisma.sumberDana.findFirst();
+            cachedFirstSD = firstSDFetch ? firstSDFetch.id : null;
+          }
+          
+          if (cachedFirstSD) {
+            sumberDanaId = cachedFirstSD;
           } else {
             warnings.push(`Baris data ke-${i + 1}: Tidak ditemukan Sumber Dana untuk Sub Kegiatan "${kodeSubKegiatan}"`);
             errorCount++;
@@ -197,10 +206,13 @@ export async function POST(request: Request) {
       });
     }
 
-    // Batch upsert
-    for (const item of upsertData) {
-      try {
-        await prisma.realisasiBelanja.upsert({
+    // Batch upsert in chunks to avoid blocking and speed up processing
+    const CHUNK_SIZE = 50;
+    for (let i = 0; i < upsertData.length; i += CHUNK_SIZE) {
+      const chunk = upsertData.slice(i, i + CHUNK_SIZE);
+      
+      const promises = chunk.map(item => 
+        prisma.realisasiBelanja.upsert({
           where: {
             skpdId_subKegiatanId_sumberDanaId_rekeningId_bulan: {
               skpdId: item.skpdId,
@@ -216,12 +228,15 @@ export async function POST(request: Request) {
             keterangan: item.keterangan
           },
           create: item
-        });
-        successCount++;
-      } catch (e: any) {
-        warnings.push(`Gagal simpan Sub Kegiatan ID ${item.subKegiatanId} + Rekening ID ${item.rekeningId}: ${e.message}`);
-        errorCount++;
-      }
+        }).then(() => {
+          successCount++;
+        }).catch((e: any) => {
+          warnings.push(`Gagal simpan Sub Kegiatan ID ${item.subKegiatanId} + Rekening ID ${item.rekeningId}: ${e.message}`);
+          errorCount++;
+        })
+      );
+      
+      await Promise.all(promises);
     }
 
     revalidateTag('laporanData', 'default');
