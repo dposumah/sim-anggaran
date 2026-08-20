@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import * as xlsx from 'xlsx';
-import { Upload, FileSpreadsheet, AlertCircle, CheckCircle, Database, Save, Loader2 } from 'lucide-react';
+import { Upload, FileSpreadsheet, AlertCircle, CheckCircle, Database, Save, Loader2, Trash2 } from 'lucide-react';
 
 interface ExcelDataRow {
   'NAMA SKPD': string;
@@ -25,6 +25,7 @@ export default function ControlSumberDanaPage() {
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [addedSumberDanas, setAddedSumberDanas] = useState<number[]>([]);
+  const [selectedSdToAdd, setSelectedSdToAdd] = useState("");
   
   const [sumberDanas, setSumberDanas] = useState<SystemSumberDana[]>([]);
   const [isLoadingSystem, setIsLoadingSystem] = useState(false);
@@ -104,6 +105,46 @@ export default function ControlSumberDanaPage() {
     }
   };
 
+  const deleteSumberDana = async (sd: SystemSumberDana) => {
+    if (!skpdInfo) return;
+    
+    // Optimistic UI update for removal if it's not saved to DB yet
+    if (sd.ceilingAmount === 0 && sd.excelAmount === 0) {
+       setAddedSumberDanas(prev => prev.filter(id => id !== sd.sumberDanaId));
+       return;
+    }
+
+    if (!window.confirm(`Apakah Anda yakin ingin menghapus pagu ${sd.nama}?`)) return;
+
+    setSumberDanas(prev => prev.map(item => item.kode === sd.kode ? { ...item, isSaving: true } : item));
+    setError(null);
+    setSuccessMsg(null);
+
+    try {
+      const response = await fetch('/api/control-sumber-dana', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          skpdId: skpdInfo.id,
+          tahunId: skpdInfo.tahunId,
+          sumberDanaId: sd.sumberDanaId,
+          ceilingAmount: 0 // Set to 0 to remove
+        })
+      });
+
+      if (!response.ok) throw new Error('Gagal menghapus data');
+      setSuccessMsg(`Pagu untuk ${sd.nama} berhasil dihapus.`);
+      
+      // Update local state
+      setSumberDanas(prev => prev.map(item => item.kode === sd.kode ? { ...item, ceilingAmount: 0 } : item));
+      setAddedSumberDanas(prev => prev.filter(id => id !== sd.sumberDanaId));
+    } catch (err) {
+      setError(`Gagal menghapus Pagu untuk ${sd.nama}.`);
+    } finally {
+      setSumberDanas(prev => prev.map(item => item.kode === sd.kode ? { ...item, isSaving: false } : item));
+    }
+  };
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(amount);
   };
@@ -145,13 +186,13 @@ export default function ControlSumberDanaPage() {
               <h3 className="text-lg font-medium text-gray-900">Form Pagu & Perbandingan</h3>
               <select 
                 className="block rounded-md border-0 py-1.5 pl-3 pr-8 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-primary sm:text-sm sm:leading-6"
+                value={selectedSdToAdd}
                 onChange={(e) => {
                   if (e.target.value) {
                     setAddedSumberDanas(prev => [...prev, Number(e.target.value)]);
-                    e.target.value = "";
+                    setSelectedSdToAdd("");
                   }
                 }}
-                defaultValue=""
               >
                 <option value="" disabled>+ Tambah Sumber Dana</option>
                 {sumberDanas
@@ -208,6 +249,14 @@ export default function ControlSumberDanaPage() {
                             title="Simpan Pagu"
                           >
                             {sd.isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4 text-blue-600" />}
+                          </button>
+                          <button
+                            onClick={() => deleteSumberDana(sd)}
+                            disabled={sd.isSaving}
+                            className="inline-flex items-center rounded-md bg-white px-2.5 py-1.5 text-sm font-semibold text-red-600 shadow-sm ring-1 ring-inset ring-red-300 hover:bg-red-50 disabled:opacity-50"
+                            title="Hapus Sumber Dana"
+                          >
+                            <Trash2 className="h-4 w-4" />
                           </button>
                         </div>
                         <div className="text-xs text-gray-400 mt-1">{formatCurrency(sd.ceilingAmount)}</div>

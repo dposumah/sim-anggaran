@@ -85,7 +85,8 @@ export async function GET(request: Request) {
           'DAK Non Fisik BOP PAUD Reguler': 0, 'DAK Non Fisik BOP PAUD Kinerja': 0,
           'DAK Non Fisik BOP Kesetaraan Reguler': 0, 'DAK Non Fisik BOP Kesetaraan Kinerja': 0,
           'TPG': 0, 'Tamsil': 0, 'TPG/Tamsil Carry Over 2024': 0, 'TPG/Tamsil THR Guru': 0,
-          'Juru Pelihara Cagar Budaya': 0, 'Kegiatan PAUD dan Kebudayaan': 0
+          'Juru Pelihara Cagar Budaya': 0, 'Kegiatan PAUD dan Kebudayaan': 0,
+          'Optimalisasi Retribusi': 0, 'Tim Kesenian': 0
         });
       }
       
@@ -193,6 +194,9 @@ export async function GET(request: Request) {
       );
 
       if (isPaudKebudayaan) stat['Kegiatan PAUD dan Kebudayaan'] += valPerubahan;
+
+      if (sdUpper.includes('RETRIBUSI DAERAH') && sdUpper.includes('LRA')) stat['Optimalisasi Retribusi'] += valPerubahan;
+      if (paketLower.includes('tim kesenian')) stat['Tim Kesenian'] += valPerubahan;
     });
 
     // 4. Gabungkan Data
@@ -211,7 +215,8 @@ export async function GET(request: Request) {
         'DAK Non Fisik BOP PAUD Reguler', 'DAK Non Fisik BOP PAUD Kinerja',
         'DAK Non Fisik BOP Kesetaraan Reguler', 'DAK Non Fisik BOP Kesetaraan Kinerja',
         'TPG', 'Tamsil', 'TPG/Tamsil Carry Over 2024', 'TPG/Tamsil THR Guru',
-        'Juru Pelihara Cagar Budaya', 'Kegiatan PAUD dan Kebudayaan'
+        'Juru Pelihara Cagar Budaya', 'Kegiatan PAUD dan Kebudayaan',
+        'Optimalisasi Retribusi', 'Tim Kesenian'
       ];
 
       const items = categories.map(cat => {
