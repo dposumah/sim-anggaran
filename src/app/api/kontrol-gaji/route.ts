@@ -123,12 +123,17 @@ export async function GET(request: Request) {
         // console.log(`Found Gaji: ${rekNama} = ${valPerubahan}`);
       }
 
-      if (isPns) stat['Gaji PNS'] += valPerubahan;
+      const isTppBpjs = paket.includes('TPP BPJS');
+      const isTppPph = paket.includes('TPP PPH');
+
+      // Gaji PNS dikurangi dengan TPP BPJS dan TPP PPH (jangan tambahkan jika itu adalah paket TPP)
+      if (isPns && !isTppBpjs && !isTppPph) stat['Gaji PNS'] += valPerubahan;
       if (isPppk) stat['Gaji PPPK'] += valPerubahan;
 
       if (rekNama.includes('Tambahan Penghasilan berdasarkan Beban Kerja PNS')) stat['TPP'] += valPerubahan;
-      if (paket.includes('TPP BPJS')) stat['TPP BPJS'] += valPerubahan;
-      if (paket.includes('TPP PPH')) stat['TPP PPH'] += valPerubahan;
+      
+      if (isTppBpjs) stat['TPP BPJS'] += valPerubahan;
+      if (isTppPph) stat['TPP PPH'] += valPerubahan;
       
       if (rekNama.toLowerCase().includes('belanja jasa pegawai pemerintah dengan perjanjian kerja') && rekNama.toLowerCase().includes('paruh waktu')) stat['Gaji PPPK Paruh Waktu'] += valPerubahan;
       
