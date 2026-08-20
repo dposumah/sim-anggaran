@@ -131,7 +131,7 @@ export async function POST(request: Request) {
     let skipCount = 0;
     let errorCount = 0;
     const warnings: string[] = [];
-    const upsertData: any[] = [];
+    const upsertDataMap = new Map<string, any>();
     let cachedFirstSD: number | null = null;
 
     for (let i = 0; i < dataRows.length; i++) {
@@ -193,18 +193,28 @@ export async function POST(request: Request) {
         }
       }
 
-      upsertData.push({
-        skpdId: skData.skpdId,
-        tahunId: tahunData.id,
-        subKegiatanId: skData.id,
-        sumberDanaId,
-        rekeningId: rekId,
-        bulan: 0,
-        nominal: realisasi,
-        alokasiRealisasi: alokasi,
-        keterangan: 'Import Excel'
-      });
+      // Combine (sum) duplicates
+      const uniqueKey = `${skData.skpdId}_${skData.id}_${sumberDanaId}_${rekId}`;
+      const existing = upsertDataMap.get(uniqueKey);
+      if (existing) {
+        existing.nominal += realisasi;
+        existing.alokasiRealisasi += alokasi;
+      } else {
+        upsertDataMap.set(uniqueKey, {
+          skpdId: skData.skpdId,
+          tahunId: tahunData.id,
+          subKegiatanId: skData.id,
+          sumberDanaId,
+          rekeningId: rekId,
+          bulan: 0,
+          nominal: realisasi,
+          alokasiRealisasi: alokasi,
+          keterangan: 'Import Excel'
+        });
+      }
     }
+
+    const upsertData = Array.from(upsertDataMap.values());
 
     // Batch upsert in chunks to avoid blocking and speed up processing
     const CHUNK_SIZE = 50;
