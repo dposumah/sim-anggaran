@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
@@ -43,8 +44,7 @@ export async function GET(request: Request) {
       targetMap.get(kt.skpdId)[kt.kategori] = Number(kt.target);
     });
 
-    const REKENING_PNS = ['5.1.02.01.01.0001', '5.1.02.01.01.0002', '5.1.02.01.01.0003', '5.1.02.01.01.0004', '5.1.02.01.01.0005', '5.1.02.01.01.0006', '5.1.02.01.01.0007', '5.1.02.01.01.0008', '5.1.02.01.01.0009', '5.1.02.01.01.0010'];
-    const REKENING_PPPK = ['5.1.02.01.01.0011', '5.1.02.01.01.0012', '5.1.02.01.01.0013', '5.1.02.01.01.0014', '5.1.02.01.01.0015', '5.1.02.01.01.0016', '5.1.02.01.01.0017', '5.1.02.01.01.0018', '5.1.02.01.01.0019', '5.1.02.01.01.0020'];
+
 
     // 3. Ambil data dari RincianBelanja (Excel)
     const rincian = await prisma.rincianBelanja.findMany({
@@ -59,6 +59,7 @@ export async function GET(request: Request) {
         sumberDana: { select: { nama: true } },
         subKegiatan: {
           select: {
+            nama: true,
             kegiatan: { select: { program: { select: { skpdId: true } } } }
           }
         }
@@ -99,8 +100,28 @@ export async function GET(request: Request) {
       const paket = r.namaPaket || '';
       const paketLower = paket.toLowerCase();
       
-      const isPns = REKENING_PNS.some(k => rekKode.startsWith(k));
-      const isPppk = REKENING_PPPK.some(k => rekKode.startsWith(k));
+      const subUpper = (r.subKegiatan?.nama || '').toUpperCase();
+      const rekUpper = rekNama.toUpperCase();
+      const isGaji = subUpper.includes('GAJI DAN TUNJANGAN ASN');
+
+      let isPns = false;
+      let isPppk = false;
+
+      if (isGaji) {
+        const isExcluded = rekUpper.includes('PNSD') || rekUpper.includes('TUNJANGAN PROFESI GURU') || rekUpper.includes('TAMBAHAN PENGHASILAN') || rekUpper.includes('TAMSIL');
+        if (!isExcluded) {
+          if (rekUpper.includes('PNS')) {
+            isPns = true;
+          } else if (rekUpper.includes('PPPK')) {
+            isPppk = true;
+          }
+        }
+      }
+      
+      // Force trigger recompilation
+      if (isPns || isPppk) {
+        // console.log(`Found Gaji: ${rekNama} = ${valPerubahan}`);
+      }
 
       if (isPns) stat['Gaji PNS'] += valPerubahan;
       if (isPppk) stat['Gaji PPPK'] += valPerubahan;
