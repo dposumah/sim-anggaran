@@ -17,6 +17,7 @@ export default function LaporanPerbandingan() {
   const [selectedChartData, setSelectedChartData] = useState<{ title: string, type: 'subkegiatan' | 'rekening' | 'sumberdana' | 'paket', data: any } | null>(null);
   const [selectedPaket, setSelectedPaket] = useState<{ title: string, rincian: any[] } | null>(null);
   const [showAllSumberDana, setShowAllSumberDana] = useState(false);
+  const [compMode, setCompMode] = useState<'induk-rkpd' | 'induk-perubahan' | 'rkpd-perubahan'>('induk-perubahan');
 
   useEffect(() => {
     setLoading(true);
@@ -69,52 +70,57 @@ export default function LaporanPerbandingan() {
     return null;
   };
 
-  const ScoreCard = ({ title, item, icon: Icon, isBosp = false }: any) => (
-    <div 
-      className={`bg-white p-5 rounded-2xl border border-gray-100 shadow-sm transition-all relative overflow-hidden group ${isBosp ? 'cursor-pointer hover:shadow-md hover:border-red-200' : ''}`}
-      onClick={() => isBosp && setSelectedBosp({ title, data: item })}
-    >
-      <div className="absolute -right-4 -top-4 opacity-[0.03] group-hover:opacity-10 transition-opacity">
-        <Icon className="w-24 h-24 text-primary" />
-      </div>
-      <h3 className="text-sm font-bold text-gray-700 mb-4 flex items-center gap-2 relative z-10">
-        <div className="p-2 bg-red-50 rounded-lg text-primary">
-          <Icon className="w-4 h-4" />
+  const ScoreCard = ({ title, item, icon: Icon, isBosp = false }: any) => {
+    const baseVal = compMode === 'induk-rkpd' ? item.induk : compMode === 'rkpd-perubahan' ? item.rkpd : item.induk;
+    const targetVal = compMode === 'induk-rkpd' ? item.rkpd : item.perubahan;
+
+    return (
+      <div 
+        className={`bg-white p-5 rounded-2xl border border-gray-100 shadow-sm transition-all relative overflow-hidden group ${isBosp ? 'cursor-pointer hover:shadow-md hover:border-red-200' : ''}`}
+        onClick={() => isBosp && setSelectedBosp({ title, data: item })}
+      >
+        <div className="absolute -right-4 -top-4 opacity-[0.03] group-hover:opacity-10 transition-opacity">
+          <Icon className="w-24 h-24 text-primary" />
         </div>
-        {title}
-        {isBosp && <span className="ml-auto text-[10px] bg-red-100 text-red-700 px-2 py-0.5 rounded-full font-medium">Lihat Rincian</span>}
-      </h3>
-      <div className="flex justify-between items-end mb-2 relative z-10">
-        <span className="text-xs text-gray-500 font-medium">Pagu Induk</span>
-        <span className="text-sm font-semibold text-gray-600">{formatCurrency(item.induk)}</span>
+        <h3 className="text-sm font-bold text-gray-700 mb-4 flex items-center gap-2 relative z-10">
+          <div className="p-2 bg-red-50 rounded-lg text-primary">
+            <Icon className="w-4 h-4" />
+          </div>
+          {title}
+          {isBosp && <span className="ml-auto text-[10px] bg-red-100 text-red-700 px-2 py-0.5 rounded-full font-medium">Lihat Rincian</span>}
+        </h3>
+        <div className="flex justify-between items-end mb-2 relative z-10">
+          <span className={`text-xs font-medium ${compMode.startsWith('induk') ? 'text-primary' : 'text-gray-500'}`}>Pagu Induk</span>
+          <span className="text-sm font-semibold text-gray-600">{formatCurrency(item.induk)}</span>
+        </div>
+        <div className="flex justify-between items-end mb-2 relative z-10">
+          <span className={`text-xs font-medium ${compMode.includes('rkpd') ? 'text-primary' : 'text-gray-500'}`}>Pagu RKPD</span>
+          <span className="text-sm font-semibold text-gray-600">{formatCurrency(item.rkpd)}</span>
+        </div>
+        <div className="flex justify-between items-end mb-3 relative z-10">
+          <span className={`text-xs font-medium ${compMode.includes('perubahan') ? 'text-primary' : 'text-gray-500'}`}>Pagu Perubahan</span>
+          <span className="text-base font-bold text-gray-800">{formatCurrency(item.perubahan)}</span>
+        </div>
+        <div className="flex justify-between items-end mb-3 pt-3 border-t border-gray-100 relative z-10">
+          <span className="text-xs text-green-600 font-medium">Realisasi</span>
+          <span className="text-sm font-bold text-green-700">{formatCurrency(item.realisasi)}</span>
+        </div>
+        
+        <div className="w-full bg-gray-100 rounded-full h-1.5 mt-2 overflow-hidden relative z-10">
+          <div 
+            className="bg-green-500 h-1.5 rounded-full" 
+            style={{ width: `${targetVal > 0 ? Math.min(100, (item.realisasi / targetVal) * 100) : 0}%` }}
+          ></div>
+        </div>
+        <div className="flex justify-between mt-2 relative z-10">
+          <span className="text-[10px] font-medium text-gray-500">Selisih: {formatSelisih(baseVal, targetVal)}</span>
+          <span className="text-[10px] text-gray-500 font-bold">
+            {targetVal > 0 ? ((item.realisasi / targetVal) * 100).toFixed(1) : 0}% Serap
+          </span>
+        </div>
       </div>
-      <div className="flex justify-between items-end mb-2 relative z-10">
-        <span className="text-xs text-gray-500 font-medium">Pagu RKPD</span>
-        <span className="text-sm font-semibold text-gray-600">{formatCurrency(item.rkpd)}</span>
-      </div>
-      <div className="flex justify-between items-end mb-3 relative z-10">
-        <span className="text-xs text-primary font-medium">Pagu Perubahan</span>
-        <span className="text-base font-bold text-primary">{formatCurrency(item.perubahan)}</span>
-      </div>
-      <div className="flex justify-between items-end mb-3 pt-3 border-t border-gray-100 relative z-10">
-        <span className="text-xs text-green-600 font-medium">Realisasi</span>
-        <span className="text-sm font-bold text-green-700">{formatCurrency(item.realisasi)}</span>
-      </div>
-      
-      <div className="w-full bg-gray-100 rounded-full h-1.5 mt-2 overflow-hidden relative z-10">
-        <div 
-          className="bg-green-500 h-1.5 rounded-full" 
-          style={{ width: `${item.perubahan > 0 ? Math.min(100, (item.realisasi / item.perubahan) * 100) : 0}%` }}
-        ></div>
-      </div>
-      <div className="flex justify-between mt-2 relative z-10">
-        <span className="text-[10px] font-medium text-gray-500">Selisih: {formatSelisih(item.induk, item.perubahan)}</span>
-        <span className="text-[10px] text-gray-500 font-bold">
-          {item.perubahan > 0 ? ((item.realisasi / item.perubahan) * 100).toFixed(1) : 0}% Serap
-        </span>
-      </div>
-    </div>
-  );
+    );
+  };
 
   const getChartDataForTabs = () => {
     if (!data) return [];
@@ -139,11 +145,13 @@ export default function LaporanPerbandingan() {
       }
 
       base['Pagu Induk'] = item.paguInduk;
-      base['Pagu RKPD'] = item.paguRkpd;
+      base['Pagu RKPD'] = item.paguRkpd || item.rkpd;
       base['Pagu Perubahan'] = item.paguPerubahan;
       base['Realisasi'] = item.realisasi;
-      base['Sisa Anggaran'] = item.paguPerubahan - item.realisasi;
-      base['Persentase Serapan (%)'] = item.paguPerubahan > 0 ? ((item.realisasi / item.paguPerubahan) * 100).toFixed(2) : 0;
+      
+      const targetVal = compMode === 'induk-rkpd' ? (item.paguRkpd || item.rkpd || item.paguInduk || item.induk) : (item.paguPerubahan || item.perubahan);
+      base['Sisa Anggaran'] = targetVal - item.realisasi;
+      base['Persentase Serapan (%)'] = targetVal > 0 ? ((item.realisasi / targetVal) * 100).toFixed(2) : 0;
 
       return base;
     });
@@ -157,6 +165,28 @@ export default function LaporanPerbandingan() {
 
   return (
     <div className="space-y-6">
+      {/* Toggle Comparison Mode */}
+      <div className="flex bg-white p-2 rounded-xl shadow-sm border border-gray-100 w-fit mx-auto md:mx-0">
+        <button
+          onClick={() => setCompMode('induk-rkpd')}
+          className={`px-4 py-2 text-sm font-semibold rounded-lg transition-colors ${compMode === 'induk-rkpd' ? 'bg-primary text-white shadow-sm' : 'text-gray-500 hover:bg-gray-50 hover:text-gray-700'}`}
+        >
+          Induk vs RKPD
+        </button>
+        <button
+          onClick={() => setCompMode('induk-perubahan')}
+          className={`px-4 py-2 text-sm font-semibold rounded-lg transition-colors ${compMode === 'induk-perubahan' ? 'bg-primary text-white shadow-sm' : 'text-gray-500 hover:bg-gray-50 hover:text-gray-700'}`}
+        >
+          Induk vs Perubahan
+        </button>
+        <button
+          onClick={() => setCompMode('rkpd-perubahan')}
+          className={`px-4 py-2 text-sm font-semibold rounded-lg transition-colors ${compMode === 'rkpd-perubahan' ? 'bg-primary text-white shadow-sm' : 'text-gray-500 hover:bg-gray-50 hover:text-gray-700'}`}
+        >
+          RKPD vs Perubahan
+        </button>
+      </div>
+
       {/* Overview Cards */}
       <div className="mb-4">
         <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm relative overflow-hidden group w-full flex flex-col md:flex-row justify-between items-center gap-6">
@@ -179,15 +209,18 @@ export default function LaporanPerbandingan() {
             <p className="text-sm font-medium text-green-600 mb-1">Total Realisasi</p>
             <h3 className="text-2xl font-bold text-green-700">{formatCurrency(summary.pagu.realisasi)}</h3>
             <div className="mt-2 text-xs font-medium bg-green-50 text-green-700 px-3 py-1 rounded-full inline-block">
-              {((summary.pagu.realisasi / summary.pagu.perubahan) * 100).toFixed(1)}% Serapan
+              {compMode === 'induk-rkpd' ? 
+                ((summary.pagu.realisasi / summary.pagu.rkpd) * 100).toFixed(1) : 
+                ((summary.pagu.realisasi / summary.pagu.perubahan) * 100).toFixed(1)}% Serapan
             </div>
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
         <ScoreCard title="Gaji PNS" item={summary.gajiPns} icon={Briefcase} />
         <ScoreCard title="Gaji PPPK" item={summary.gajiPppk} icon={Briefcase} />
+        <ScoreCard title="Gaji PPPK Paruh Waktu" item={summary.gajiPppkParuhWaktu} icon={Briefcase} />
         <ScoreCard title="Tambahan Penghasilan (TPP)" item={summary.tpp} icon={Briefcase} />
       </div>
 
@@ -214,58 +247,67 @@ export default function LaporanPerbandingan() {
               Lihat Detail
             </button>
           </div>
-          <div className="h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart 
-                data={chartData} 
-                margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
-                onClick={(e: any) => {
-                  if (e && e.activePayload && e.activePayload.length > 0) {
-                    const payload = e.activePayload[0].payload;
-                    setSelectedChartData({ title: payload.name, type: 'sumberdana', data: payload });
-                  }
-                }}
-                className="cursor-pointer"
-              >
-                <defs>
-                  <linearGradient id="colorPerubahan" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#dc2626" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="#dc2626" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                <XAxis dataKey="name" hide />
-                <YAxis tickFormatter={(value) => `${(value / 1000000000).toFixed(0)}M`} width={60} style={{ fontSize: '11px' }} />
-                <RechartsTooltip content={<CustomTooltip />} />
-                <Area type="monotone" dataKey="perubahan" name="Pagu Perubahan" stroke="#dc2626" strokeWidth={3} fillOpacity={1} fill="url(#colorPerubahan)" />
-              </AreaChart>
-            </ResponsiveContainer>
+          <div className="h-80 overflow-y-auto pr-2">
+            <table className="min-w-full divide-y divide-gray-100 text-xs">
+              <thead className="bg-gray-50 sticky top-0 z-10">
+                <tr>
+                  <th className="px-2 py-2 text-left font-semibold text-gray-600">Sumber Dana</th>
+                  <th className="px-2 py-2 text-right font-semibold text-gray-600">
+                    {compMode === 'induk-rkpd' ? 'Pagu Induk' : compMode === 'rkpd-perubahan' ? 'Pagu RKPD' : 'Pagu Induk'}
+                  </th>
+                  <th className="px-2 py-2 text-right font-semibold text-primary">
+                    {compMode === 'induk-rkpd' ? 'Pagu RKPD' : 'Pagu Perubahan'}
+                  </th>
+                  <th className="px-2 py-2 text-right font-semibold text-green-600">Realisasi</th>
+                  <th className="px-2 py-2 text-right font-semibold text-gray-600">%</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {chartData.map((sd: any, idx: number) => {
+                  const baseVal = compMode === 'induk-rkpd' ? sd.induk : compMode === 'rkpd-perubahan' ? (sd.rkpd || sd.induk) : sd.induk;
+                  const targetVal = compMode === 'induk-rkpd' ? (sd.rkpd || sd.induk) : sd.perubahan;
+                  return (
+                    <tr key={idx} className="hover:bg-gray-50 cursor-pointer" onClick={() => setSelectedChartData({ title: sd.name, type: 'sumberdana', data: sd })}>
+                      <td className="px-2 py-2 font-medium text-gray-700 truncate max-w-[120px]" title={sd.name}>{sd.name}</td>
+                      <td className="px-2 py-2 text-right text-gray-600">{formatCurrency(baseVal)}</td>
+                      <td className="px-2 py-2 text-right font-medium text-primary">{formatCurrency(targetVal)}</td>
+                      <td className="px-2 py-2 text-right font-medium text-green-700">{formatCurrency(sd.realisasi)}</td>
+                      <td className="px-2 py-2 text-right">
+                        {targetVal > 0 ? ((sd.realisasi / targetVal) * 100).toFixed(1) : 0}%
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
           </div>
         </div>
 
-        <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
+        <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex flex-col">
           <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
             <Package className="w-5 h-5 text-primary" />
-            Top 10 Kegiatan Teknis
+            Seluruh Kegiatan Teknis
           </h3>
-          <div className="h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={topPaket} layout="vertical" margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#f1f5f9" />
-                <XAxis type="number" tickFormatter={(value) => `${(value / 1000000).toFixed(0)}Jt`} style={{ fontSize: '11px' }} />
-                <YAxis dataKey="nama" type="category" width={120} style={{ fontSize: '10px' }} tick={{ fill: '#475569' }} />
-                <RechartsTooltip content={<CustomTooltip />} />
-                <Bar 
-                  dataKey="perubahan" 
-                  name="Pagu Perubahan" 
-                  fill="#fca5a5" 
-                  radius={[0, 4, 4, 0]} 
-                  barSize={20} 
-                  onClick={(data: any) => setSelectedPaket({ title: data.payload?.nama || data.nama, rincian: data.payload?.rincian || [] })}
-                  cursor="pointer"
-                />
-              </BarChart>
-            </ResponsiveContainer>
+          <div className="h-80 overflow-y-auto pr-2 relative">
+            <div style={{ height: `${Math.max((data.allPaket || []).length * 40, 320)}px`, minHeight: '100%' }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={data.allPaket || []} layout="vertical" margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#f1f5f9" />
+                  <XAxis type="number" tickFormatter={(value) => `${(value / 1000000).toFixed(0)}Jt`} style={{ fontSize: '11px' }} />
+                  <YAxis dataKey="nama" type="category" width={120} style={{ fontSize: '10px' }} tick={{ fill: '#475569' }} />
+                  <RechartsTooltip content={<CustomTooltip />} />
+                  <Bar 
+                    dataKey={compMode === 'induk-rkpd' ? 'rkpd' : 'perubahan'} 
+                    name={compMode === 'induk-rkpd' ? 'Pagu RKPD' : 'Pagu Perubahan'} 
+                    fill="#fca5a5" 
+                    radius={[0, 4, 4, 0]} 
+                    barSize={20} 
+                    onClick={(d: any) => setSelectedPaket({ title: d.payload?.nama || d.nama, rincian: d.payload?.rincian || [] })}
+                    cursor="pointer"
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
           </div>
           <p className="text-[10px] text-gray-400 mt-2 text-center italic">* Klik pada batang grafik untuk melihat rincian.</p>
         </div>
@@ -323,8 +365,8 @@ export default function LaporanPerbandingan() {
               <RechartsTooltip content={<CustomTooltip />} />
               <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} />
               <Bar 
-                dataKey="paguPerubahan" 
-                name="Pagu Perubahan" 
+                dataKey={compMode === 'induk-rkpd' ? 'paguRkpd' : 'paguPerubahan'} 
+                name={compMode === 'induk-rkpd' ? 'Pagu RKPD' : 'Pagu Perubahan'} 
                 fill="#dc2626" 
                 radius={[0, 4, 4, 0]} 
                 barSize={12} 
@@ -376,24 +418,36 @@ export default function LaporanPerbandingan() {
                   <tbody className="divide-y divide-gray-200 bg-white">
                     <tr className="hover:bg-gray-50">
                       <td className="px-4 py-3 font-medium text-gray-600">Pagu Induk</td>
-                      <td className="px-4 py-3 text-right font-semibold text-gray-800">{formatCurrency(selectedChartData.data.paguInduk)}</td>
+                      <td className="px-4 py-3 text-right font-semibold text-gray-800">{formatCurrency(selectedChartData.data.paguInduk || selectedChartData.data.induk)}</td>
+                    </tr>
+                    <tr className="hover:bg-gray-50">
+                      <td className="px-4 py-3 font-medium text-gray-600">Pagu RKPD</td>
+                      <td className="px-4 py-3 text-right font-semibold text-gray-800">{formatCurrency(selectedChartData.data.paguRkpd || selectedChartData.data.rkpd)}</td>
                     </tr>
                     <tr className="hover:bg-red-50">
                       <td className="px-4 py-3 font-medium text-primary">Pagu Perubahan</td>
-                      <td className="px-4 py-3 text-right font-bold text-primary">{formatCurrency(selectedChartData.data.paguPerubahan)}</td>
+                      <td className="px-4 py-3 text-right font-bold text-primary">{formatCurrency(selectedChartData.data.paguPerubahan || selectedChartData.data.perubahan)}</td>
                     </tr>
                     <tr className="hover:bg-green-50">
                       <td className="px-4 py-3 font-medium text-green-600">Realisasi</td>
                       <td className="px-4 py-3 text-right font-bold text-green-700">{formatCurrency(selectedChartData.data.realisasi)}</td>
                     </tr>
                     <tr className="hover:bg-gray-50 border-t-2 border-gray-200">
-                      <td className="px-4 py-3 font-medium text-gray-500 text-xs">Selisih (Perubahan - Induk)</td>
-                      <td className="px-4 py-3 text-right font-semibold text-sm">{formatSelisih(selectedChartData.data.paguInduk, selectedChartData.data.paguPerubahan)}</td>
+                      <td className="px-4 py-3 font-medium text-gray-500 text-xs">Selisih (Target - Base)</td>
+                      <td className="px-4 py-3 text-right font-semibold text-sm">
+                        {formatSelisih(
+                          compMode === 'induk-rkpd' ? (selectedChartData.data.paguInduk || selectedChartData.data.induk) : compMode === 'rkpd-perubahan' ? (selectedChartData.data.paguRkpd || selectedChartData.data.rkpd || selectedChartData.data.paguInduk || selectedChartData.data.induk) : (selectedChartData.data.paguInduk || selectedChartData.data.induk),
+                          compMode === 'induk-rkpd' ? (selectedChartData.data.paguRkpd || selectedChartData.data.rkpd) : (selectedChartData.data.paguPerubahan || selectedChartData.data.perubahan)
+                        )}
+                      </td>
                     </tr>
                     <tr className="hover:bg-gray-50">
                       <td className="px-4 py-3 font-medium text-gray-500 text-xs">Persentase Serapan</td>
                       <td className="px-4 py-3 text-right font-semibold text-sm text-gray-600">
-                        {selectedChartData.data.paguPerubahan > 0 ? ((selectedChartData.data.realisasi / selectedChartData.data.paguPerubahan) * 100).toFixed(2) : 0}%
+                        {(() => {
+                          const target = compMode === 'induk-rkpd' ? (selectedChartData.data.paguRkpd || selectedChartData.data.rkpd) : (selectedChartData.data.paguPerubahan || selectedChartData.data.perubahan);
+                          return target > 0 ? ((selectedChartData.data.realisasi / target) * 100).toFixed(2) : 0;
+                        })()}%
                       </td>
                     </tr>
                   </tbody>
@@ -597,24 +651,27 @@ export default function LaporanPerbandingan() {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-100">
-                    {chartData.map((sd: any, idx: number) => (
+                    {chartData.map((sd: any, idx: number) => {
+                      const baseVal = compMode === 'induk-rkpd' ? sd.induk : compMode === 'rkpd-perubahan' ? (sd.rkpd || sd.induk) : sd.induk;
+                      const targetVal = compMode === 'induk-rkpd' ? (sd.rkpd || sd.induk) : sd.perubahan;
+                      return (
                       <tr key={idx} className="hover:bg-gray-50/50 transition-colors">
                         <td className="px-4 py-3 text-gray-500">{idx + 1}</td>
                         <td className="px-4 py-3 font-medium text-gray-800">{sd.name}</td>
-                        <td className="px-4 py-3 text-right font-semibold text-gray-800">{formatCurrency(sd.paguInduk)}</td>
+                        <td className="px-4 py-3 text-right font-semibold text-gray-800">{formatCurrency(sd.paguInduk || sd.induk)}</td>
                         <td className="px-4 py-3 text-right font-semibold text-gray-800">{formatCurrency(sd.paguRkpd || sd.rkpd)}</td>
                         <td className="px-4 py-3 text-right font-bold text-primary">{formatCurrency(sd.perubahan)}</td>
                         <td className="px-4 py-3 text-right font-bold text-green-700">{formatCurrency(sd.realisasi)}</td>
                         <td className="px-4 py-3 text-right font-semibold text-sm">
-                          {formatSelisih(sd.paguInduk, sd.perubahan)}
+                          {formatSelisih(baseVal, targetVal)}
                         </td>
                         <td className="px-4 py-3 text-right">
                           <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                            {sd.perubahan > 0 ? ((sd.realisasi / sd.perubahan) * 100).toFixed(2) : 0}%
+                            {targetVal > 0 ? ((sd.realisasi / targetVal) * 100).toFixed(2) : 0}%
                           </span>
                         </td>
                       </tr>
-                    ))}
+                    )})}
                   </tbody>
                   <tfoot className="bg-gray-50 sticky bottom-0 border-t border-gray-200">
                     <tr>
@@ -632,16 +689,17 @@ export default function LaporanPerbandingan() {
                         {formatCurrency(chartData.reduce((acc: number, curr: any) => acc + (curr.realisasi || 0), 0))}
                       </td>
                       <td className="px-4 py-3 text-right font-bold">
-                        {formatSelisih(
-                          chartData.reduce((acc: number, curr: any) => acc + (curr.paguInduk || 0), 0),
-                          chartData.reduce((acc: number, curr: any) => acc + (curr.perubahan || 0), 0)
-                        )}
+                        {(() => {
+                          const baseTotal = compMode === 'induk-rkpd' ? chartData.reduce((acc: number, curr: any) => acc + (curr.paguInduk || curr.induk || 0), 0) : compMode === 'rkpd-perubahan' ? chartData.reduce((acc: number, curr: any) => acc + (curr.paguRkpd || curr.rkpd || curr.induk || 0), 0) : chartData.reduce((acc: number, curr: any) => acc + (curr.paguInduk || curr.induk || 0), 0);
+                          const targetTotal = compMode === 'induk-rkpd' ? chartData.reduce((acc: number, curr: any) => acc + (curr.paguRkpd || curr.rkpd || curr.induk || 0), 0) : chartData.reduce((acc: number, curr: any) => acc + (curr.perubahan || 0), 0);
+                          return formatSelisih(baseTotal, targetTotal);
+                        })()}
                       </td>
                       <td className="px-4 py-3 text-right font-bold text-gray-800">
                         {(() => {
                           const totalRealisasi = chartData.reduce((acc: number, curr: any) => acc + (curr.realisasi || 0), 0);
-                          const totalPerubahan = chartData.reduce((acc: number, curr: any) => acc + (curr.perubahan || 0), 0);
-                          return totalPerubahan > 0 ? ((totalRealisasi / totalPerubahan) * 100).toFixed(2) : 0;
+                          const targetTotal = compMode === 'induk-rkpd' ? chartData.reduce((acc: number, curr: any) => acc + (curr.paguRkpd || curr.rkpd || curr.induk || 0), 0) : chartData.reduce((acc: number, curr: any) => acc + (curr.perubahan || 0), 0);
+                          return targetTotal > 0 ? ((totalRealisasi / targetTotal) * 100).toFixed(2) : 0;
                         })()}%
                       </td>
                     </tr>
