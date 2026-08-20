@@ -63,25 +63,25 @@ const getCachedLaporan = unstable_cache(
     // Wait, the prompt just said "Perbandingan Pagu vs Realisasi", but for the BOSP cards "data Pagu BOSP Reguler dan BOSP Kinerja", maybe only Pagu is needed? 
     // Let's create a map to store BOSP Reguler/Kinerja values.
     
-    let paguIndukTotal = 0; let paguPerubahanTotal = 0; let realisasiTotal = 0;
+    let paguIndukTotal = 0; let paguRkpdTotal = 0; let paguPerubahanTotal = 0; let realisasiTotal = 0;
     
-    let gajiPnsInduk = 0; let gajiPnsPerubahan = 0; let gajiPnsRealisasi = 0;
-    let gajiPppkInduk = 0; let gajiPppkPerubahan = 0; let gajiPppkRealisasi = 0;
-    let pppkParuhWaktuInduk = 0; let pppkParuhWaktuPerubahan = 0; let pppkParuhWaktuRealisasi = 0;
+    let gajiPnsInduk = 0; let gajiPnsRkpd = 0; let gajiPnsPerubahan = 0; let gajiPnsRealisasi = 0;
+    let gajiPppkInduk = 0; let gajiPppkRkpd = 0; let gajiPppkPerubahan = 0; let gajiPppkRealisasi = 0;
+    let pppkParuhWaktuInduk = 0; let pppkParuhWaktuRkpd = 0; let pppkParuhWaktuPerubahan = 0; let pppkParuhWaktuRealisasi = 0;
     
-    let tppInduk = 0; let tppPerubahan = 0; let tppRealisasi = 0;
-    let tpgInduk = 0; let tpgPerubahan = 0; let tpgRealisasi = 0;
+    let tppInduk = 0; let tppRkpd = 0; let tppPerubahan = 0; let tppRealisasi = 0;
+    let tpgInduk = 0; let tpgRkpd = 0; let tpgPerubahan = 0; let tpgRealisasi = 0;
     
-    const initBosp = () => ({ induk: 0, perubahan: 0, realisasi: 0, reguler: { induk: 0, perubahan: 0, realisasi: 0 }, kinerja: { induk: 0, perubahan: 0, realisasi: 0 } });
+    const initBosp = () => ({ induk: 0, rkpd: 0, perubahan: 0, realisasi: 0, reguler: { induk: 0, rkpd: 0, perubahan: 0, realisasi: 0 }, kinerja: { induk: 0, rkpd: 0, perubahan: 0, realisasi: 0 } });
     const bospSd = initBosp();
     const bospSmp = initBosp();
     const bospPaud = initBosp();
     const bospKesetaraan = initBosp();
     
-    const paketMap: Record<string, { nama: string, induk: number, perubahan: number, realisasi: number, rincian: any[] }> = {};
-    const subKegRealisasiMap: Record<number, { nama: string, kode: string, paguInduk: number, paguPerubahan: number, realisasi: number }> = {};
-    const rekRealisasiMap: Record<number, { nama: string, kode: string, paguInduk: number, paguPerubahan: number, realisasi: number }> = {};
-    const sumDanaMap: Record<string, { induk: number, perubahan: number, realisasi: number }> = {};
+    const paketMap: Record<string, { nama: string, induk: number, rkpd: number, perubahan: number, realisasi: number, rincian: any[] }> = {};
+    const subKegRealisasiMap: Record<number, { nama: string, kode: string, paguInduk: number, paguRkpd: number, paguPerubahan: number, realisasi: number }> = {};
+    const rekRealisasiMap: Record<number, { nama: string, kode: string, paguInduk: number, paguRkpd: number, paguPerubahan: number, realisasi: number }> = {};
+    const sumDanaMap: Record<string, { induk: number, rkpd: number, perubahan: number, realisasi: number }> = {};
     const subRekPaguMap: Record<string, number> = {};
     const subRekRealisasiMap: Record<string, number> = {};
 
@@ -101,13 +101,15 @@ const getCachedLaporan = unstable_cache(
       const rek = r.rekening;
 
       const nilaiInduk = r.paguInduk ? Number(r.paguInduk) : 0;
+      const nilaiRkpd = r.paguRkpd ? Number(r.paguRkpd) : 0;
       const nilaiPerubahan = r.paguPerubahan !== null ? Number(r.paguPerubahan) : nilaiInduk;
 
       paguIndukTotal += nilaiInduk;
+      paguRkpdTotal += nilaiRkpd;
       paguPerubahanTotal += nilaiPerubahan;
 
       if (!subKegRealisasiMap[sub.id]) {
-        subKegRealisasiMap[sub.id] = { nama: sub.nama, kode: sub.kode, paguInduk: 0, paguPerubahan: 0, realisasi: 0 };
+        subKegRealisasiMap[sub.id] = { nama: sub.nama, kode: sub.kode, paguInduk: 0, paguRkpd: 0, paguPerubahan: 0, realisasi: 0 };
       }
       
       const subUpper = (sub.nama || '').toUpperCase();
@@ -118,13 +120,15 @@ const getCachedLaporan = unstable_cache(
       
       if (!isBosp && !isGaji && !isParuhWaktu) {
         subKegRealisasiMap[sub.id].paguInduk += nilaiInduk;
+        subKegRealisasiMap[sub.id].paguRkpd += nilaiRkpd;
         subKegRealisasiMap[sub.id].paguPerubahan += nilaiPerubahan;
       }
 
       if (!rekRealisasiMap[rek.id]) {
-        rekRealisasiMap[rek.id] = { nama: rek.nama, kode: rek.kode, paguInduk: 0, paguPerubahan: 0, realisasi: 0 };
+        rekRealisasiMap[rek.id] = { nama: rek.nama, kode: rek.kode, paguInduk: 0, paguRkpd: 0, paguPerubahan: 0, realisasi: 0 };
       }
       rekRealisasiMap[rek.id].paguInduk += nilaiInduk;
+      rekRealisasiMap[rek.id].paguRkpd += nilaiRkpd;
       rekRealisasiMap[rek.id].paguPerubahan += nilaiPerubahan;
 
       // PNS & PPPK
@@ -133,9 +137,11 @@ const getCachedLaporan = unstable_cache(
         if (!isExcluded) {
           if (rekUpper.includes('PNS')) {
             gajiPnsInduk += nilaiInduk;
+            gajiPnsRkpd += nilaiRkpd;
             gajiPnsPerubahan += nilaiPerubahan;
           } else if (rekUpper.includes('PPPK')) {
             gajiPppkInduk += nilaiInduk;
+            gajiPppkRkpd += nilaiRkpd;
             gajiPppkPerubahan += nilaiPerubahan;
           }
         }
@@ -144,16 +150,19 @@ const getCachedLaporan = unstable_cache(
       // Paruh Waktu
       if ((sub.nama || '').toUpperCase().includes('PENYEDIAAN JASA PELAYANAN UMUM KANTOR') && rekUpper.includes('PARUH WAKTU')) {
         pppkParuhWaktuInduk += nilaiInduk;
+        pppkParuhWaktuRkpd += nilaiRkpd;
         pppkParuhWaktuPerubahan += nilaiPerubahan;
       }
 
       // TPP & TPG
       if (rekUpper.includes('TAMBAHAN PENGHASILAN BERDASARKAN BEBAN KERJA PNS')) {
         tppInduk += nilaiInduk;
+        tppRkpd += nilaiRkpd;
         tppPerubahan += nilaiPerubahan;
       }
       if (rekUpper.includes('TUNJANGAN PROFESI GURU')) {
         tpgInduk += nilaiInduk;
+        tpgRkpd += nilaiRkpd;
         tpgPerubahan += nilaiPerubahan;
       }
 
@@ -166,23 +175,31 @@ const getCachedLaporan = unstable_cache(
 
         if (subUpper.includes('SEKOLAH DASAR')) {
           bospSd.induk += nilaiInduk;
+          bospSd.rkpd += nilaiRkpd;
           bospSd.perubahan += nilaiPerubahan;
           bospSd[bospType].induk += nilaiInduk;
+          bospSd[bospType].rkpd += nilaiRkpd;
           bospSd[bospType].perubahan += nilaiPerubahan;
         } else if (subUpper.includes('SEKOLAH MENENGAH PERTAMA')) {
           bospSmp.induk += nilaiInduk;
+          bospSmp.rkpd += nilaiRkpd;
           bospSmp.perubahan += nilaiPerubahan;
           bospSmp[bospType].induk += nilaiInduk;
+          bospSmp[bospType].rkpd += nilaiRkpd;
           bospSmp[bospType].perubahan += nilaiPerubahan;
         } else if (subUpper.includes('PAUD')) {
           bospPaud.induk += nilaiInduk;
+          bospPaud.rkpd += nilaiRkpd;
           bospPaud.perubahan += nilaiPerubahan;
           bospPaud[bospType].induk += nilaiInduk;
+          bospPaud[bospType].rkpd += nilaiRkpd;
           bospPaud[bospType].perubahan += nilaiPerubahan;
         } else if (subUpper.includes('KESETARAAN')) {
           bospKesetaraan.induk += nilaiInduk;
+          bospKesetaraan.rkpd += nilaiRkpd;
           bospKesetaraan.perubahan += nilaiPerubahan;
           bospKesetaraan[bospType].induk += nilaiInduk;
+          bospKesetaraan[bospType].rkpd += nilaiRkpd;
           bospKesetaraan[bospType].perubahan += nilaiPerubahan;
         }
       }
@@ -190,8 +207,9 @@ const getCachedLaporan = unstable_cache(
       // Uraian Paket
       const isEmptyPaket = (r.namaPaket || '').trim() === '-' || (r.namaPaket || '').trim() === '';
       if (r.namaPaket && !(prog.nama || '').toUpperCase().includes('PROGRAM PENUNJANG URUSAN PEMERINTAHAN DAERAH KABUPATEN/KOTA') && !isBosp && !isEmptyPaket) {
-        if (!paketMap[r.namaPaket]) paketMap[r.namaPaket] = { nama: r.namaPaket, induk: 0, perubahan: 0, realisasi: 0, rincian: [] };
+        if (!paketMap[r.namaPaket]) paketMap[r.namaPaket] = { nama: r.namaPaket, induk: 0, rkpd: 0, perubahan: 0, realisasi: 0, rincian: [] };
         paketMap[r.namaPaket].induk += nilaiInduk;
+        paketMap[r.namaPaket].rkpd += nilaiRkpd;
         paketMap[r.namaPaket].perubahan += nilaiPerubahan;
         paketMap[r.namaPaket].rincian.push({
           subKegiatanId: sub.id,
@@ -199,15 +217,18 @@ const getCachedLaporan = unstable_cache(
           sumberDanaId: r.sumberDana.id,
           subKegiatan: sub.nama,
           rekening: rek.nama,
-          sumberDana: r.sumberDana.nama || 'Tidak Ada',
+          sumberDana: r.sumberDana.nama,
+          paguInduk: nilaiInduk,
+          paguRkpd: nilaiRkpd,
           paguPerubahan: nilaiPerubahan,
           realisasi: 0
         });
       }
 
       const sdNama = r.sumberDana.nama || 'Tidak Ada Sumber Dana';
-      if (!sumDanaMap[sdNama]) sumDanaMap[sdNama] = { induk: 0, perubahan: 0, realisasi: 0 };
+      if (!sumDanaMap[sdNama]) sumDanaMap[sdNama] = { induk: 0, rkpd: 0, perubahan: 0, realisasi: 0 };
       sumDanaMap[sdNama].induk += nilaiInduk;
+      sumDanaMap[sdNama].rkpd += nilaiRkpd;
       sumDanaMap[sdNama].perubahan += nilaiPerubahan;
       
       const subRekKey = `${sub.id}-${rek.id}-${r.sumberDana.id}`;
@@ -289,6 +310,7 @@ const getCachedLaporan = unstable_cache(
     const chartData = Object.keys(sumDanaMap).map(k => ({
       name: k,
       induk: sumDanaMap[k].induk,
+      rkpd: sumDanaMap[k].rkpd,
       perubahan: sumDanaMap[k].perubahan,
       realisasi: sumDanaMap[k].realisasi
     })).sort((a, b) => b.perubahan - a.perubahan);
@@ -304,7 +326,7 @@ const getCachedLaporan = unstable_cache(
       })
       .sort((a, b) => b.paguPerubahan - a.paguPerubahan);
 
-    const rekFilteredMap: Record<number, { nama: string, kode: string, paguInduk: number, paguPerubahan: number, realisasi: number }> = {};
+    const rekFilteredMap: Record<number, { nama: string, kode: string, paguInduk: number, paguRkpd: number, paguPerubahan: number, realisasi: number }> = {};
     
     rincianList.forEach(r => {
       const sub = r.subKegiatan;
@@ -317,11 +339,13 @@ const getCachedLaporan = unstable_cache(
       
       if (!isBosp && !isGaji && !isParuhWaktu) {
         if (!rekFilteredMap[rek.id]) {
-          rekFilteredMap[rek.id] = { nama: rek.nama, kode: rek.kode, paguInduk: 0, paguPerubahan: 0, realisasi: 0 };
+          rekFilteredMap[rek.id] = { nama: rek.nama, kode: rek.kode, paguInduk: 0, paguRkpd: 0, paguPerubahan: 0, realisasi: 0 };
         }
         const nilaiInduk = r.paguInduk ? Number(r.paguInduk) : 0;
+        const nilaiRkpd = r.paguRkpd ? Number(r.paguRkpd) : 0;
         const nilaiPerubahan = r.paguPerubahan !== null ? Number(r.paguPerubahan) : nilaiInduk;
         rekFilteredMap[rek.id].paguInduk += nilaiInduk;
+        rekFilteredMap[rek.id].paguRkpd += nilaiRkpd;
         rekFilteredMap[rek.id].paguPerubahan += nilaiPerubahan;
       }
     });
@@ -348,12 +372,12 @@ const getCachedLaporan = unstable_cache(
 
     return {
       summary: {
-        pagu: { induk: paguIndukTotal, perubahan: paguPerubahanTotal, realisasi: realisasiTotal },
-        gajiPns: { induk: gajiPnsInduk, perubahan: gajiPnsPerubahan, realisasi: gajiPnsRealisasi },
-        gajiPppk: { induk: gajiPppkInduk, perubahan: gajiPppkPerubahan, realisasi: gajiPppkRealisasi },
-        gajiPppkParuhWaktu: { induk: pppkParuhWaktuInduk, perubahan: pppkParuhWaktuPerubahan, realisasi: pppkParuhWaktuRealisasi },
-        tpp: { induk: tppInduk, perubahan: tppPerubahan, realisasi: tppRealisasi },
-        tpg: { induk: tpgInduk, perubahan: tpgPerubahan, realisasi: tpgRealisasi },
+        pagu: { induk: paguIndukTotal, rkpd: paguRkpdTotal, perubahan: paguPerubahanTotal, realisasi: realisasiTotal },
+        gajiPns: { induk: gajiPnsInduk, rkpd: gajiPnsRkpd, perubahan: gajiPnsPerubahan, realisasi: gajiPnsRealisasi },
+        gajiPppk: { induk: gajiPppkInduk, rkpd: gajiPppkRkpd, perubahan: gajiPppkPerubahan, realisasi: gajiPppkRealisasi },
+        gajiPppkParuhWaktu: { induk: pppkParuhWaktuInduk, rkpd: pppkParuhWaktuRkpd, perubahan: pppkParuhWaktuPerubahan, realisasi: pppkParuhWaktuRealisasi },
+        tpp: { induk: tppInduk, rkpd: tppRkpd, perubahan: tppPerubahan, realisasi: tppRealisasi },
+        tpg: { induk: tpgInduk, rkpd: tpgRkpd, perubahan: tpgPerubahan, realisasi: tpgRealisasi },
         bospSd,
         bospSmp,
         bospPaud,
