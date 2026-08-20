@@ -214,89 +214,91 @@ export async function POST(request: Request) {
     if (rincianList.length > 0) {
       const skpdIdsInUpload = Array.from(sIdMap.values()) as number[];
       
-      if (paguType !== 'induk') {
-        const existingRincian = await prisma.rincianBelanja.findMany({
-          where: { subKegiatan: { kegiatan: { program: { skpdId: { in: skpdIdsInUpload } } } } }
-        });
-        
-        const existingMap = new Map<string, any[]>();
-        existingRincian.forEach((r: any) => {
-          const key = `${r.subKegiatanId}_${r.sumberDanaId}_${r.rekeningId}_${r.tipePaket}_${r.namaPaket}`;
-          if (!existingMap.has(key)) existingMap.set(key, []);
-          existingMap.get(key)!.push(r);
-        });
+      const existingRincian = await prisma.rincianBelanja.findMany({
+        where: { subKegiatan: { kegiatan: { program: { skpdId: { in: skpdIdsInUpload } } } } }
+      });
+      
+      const existingMap = new Map<string, any[]>();
+      existingRincian.forEach((r: any) => {
+        const key = `${r.subKegiatanId}_${r.sumberDanaId}_${r.rekeningId}_${r.tipePaket}_${r.namaPaket}`;
+        if (!existingMap.has(key)) existingMap.set(key, []);
+        existingMap.get(key)!.push(r);
+      });
 
-        const mergedRincian: any[] = [];
+      const mergedRincian: any[] = [];
+      
+      for (const item of rincianList) {
+        const key = `${item.subKegiatanId}_${item.sumberDanaId}_${item.rekeningId}_${item.tipePaket}_${item.namaPaket}`;
+        const existArr = existingMap.get(key);
         
-        for (const item of rincianList) {
-          const key = `${item.subKegiatanId}_${item.sumberDanaId}_${item.rekeningId}_${item.tipePaket}_${item.namaPaket}`;
-          const existArr = existingMap.get(key);
+        if (existArr && existArr.length > 0) {
+          const exist = existArr.shift();
+          const { id, ...rest } = exist;
+          const updatedRincian = { ...rest };
           
-          if (existArr && existArr.length > 0) {
-            const exist = existArr.shift();
-            const { id, ...rest } = exist;
-            const updatedRincian = { ...rest };
-            if (paguType === 'rkpd') {
-              updatedRincian.volumeRkpd = item.volumeInduk;
-              updatedRincian.hargaSatuanRkpd = item.hargaSatuanInduk;
-              updatedRincian.paguRkpd = item.paguInduk;
-            } else if (paguType === 'perubahan') {
-              updatedRincian.volumePerubahan = item.volumeInduk;
-              updatedRincian.hargaSatuanPerubahan = item.hargaSatuanInduk;
-              updatedRincian.paguPerubahan = item.paguInduk;
-            }
-            mergedRincian.push(updatedRincian);
-          } else {
-            const newRincian = { ...item };
-            if (paguType === 'rkpd') {
-              newRincian.paguInduk = 0; newRincian.volumeInduk = 1; newRincian.hargaSatuanInduk = 0;
-              newRincian.volumeRkpd = item.volumeInduk; newRincian.hargaSatuanRkpd = item.hargaSatuanInduk; newRincian.paguRkpd = item.paguInduk;
-            } else if (paguType === 'perubahan') {
-              newRincian.paguInduk = 0; newRincian.volumeInduk = 1; newRincian.hargaSatuanInduk = 0;
-              newRincian.volumePerubahan = item.volumeInduk; newRincian.hargaSatuanPerubahan = item.hargaSatuanInduk; newRincian.paguPerubahan = item.paguInduk;
-            }
-            mergedRincian.push(newRincian);
+          if (paguType === 'induk') {
+            updatedRincian.volumeInduk = item.volumeInduk;
+            updatedRincian.hargaSatuanInduk = item.hargaSatuanInduk;
+            updatedRincian.paguInduk = item.paguInduk;
+          } else if (paguType === 'rkpd') {
+            updatedRincian.volumeRkpd = item.volumeInduk;
+            updatedRincian.hargaSatuanRkpd = item.hargaSatuanInduk;
+            updatedRincian.paguRkpd = item.paguInduk;
+          } else if (paguType === 'perubahan') {
+            updatedRincian.volumePerubahan = item.volumeInduk;
+            updatedRincian.hargaSatuanPerubahan = item.hargaSatuanInduk;
+            updatedRincian.paguPerubahan = item.paguInduk;
           }
-        }
-        
-        for (const existArr of existingMap.values()) {
-          for (const exist of existArr) {
-            const { id, ...rest } = exist;
-            const updatedRest = { ...rest };
-            if (paguType === 'rkpd') {
-              updatedRest.volumeRkpd = 0;
-              updatedRest.hargaSatuanRkpd = 0;
-              updatedRest.paguRkpd = 0;
-            } else if (paguType === 'perubahan') {
-              updatedRest.volumePerubahan = 0;
-              updatedRest.hargaSatuanPerubahan = 0;
-              updatedRest.paguPerubahan = 0;
-            }
-            mergedRincian.push(updatedRest);
+          mergedRincian.push(updatedRincian);
+        } else {
+          const newRincian = { ...item };
+          
+          newRincian.paguInduk = 0; newRincian.volumeInduk = 1; newRincian.hargaSatuanInduk = 0;
+          newRincian.paguRkpd = null; newRincian.volumeRkpd = null; newRincian.hargaSatuanRkpd = null;
+          newRincian.paguPerubahan = null; newRincian.volumePerubahan = null; newRincian.hargaSatuanPerubahan = null;
+          
+          if (paguType === 'induk') {
+            newRincian.volumeInduk = item.volumeInduk; newRincian.hargaSatuanInduk = item.hargaSatuanInduk; newRincian.paguInduk = item.paguInduk;
+          } else if (paguType === 'rkpd') {
+            newRincian.volumeRkpd = item.volumeInduk; newRincian.hargaSatuanRkpd = item.hargaSatuanInduk; newRincian.paguRkpd = item.paguInduk;
+          } else if (paguType === 'perubahan') {
+            newRincian.volumePerubahan = item.volumeInduk; newRincian.hargaSatuanPerubahan = item.hargaSatuanInduk; newRincian.paguPerubahan = item.paguInduk;
           }
+          mergedRincian.push(newRincian);
         }
-        
-        await prisma.rincianBelanja.deleteMany({
-          where: { subKegiatan: { kegiatan: { program: { skpdId: { in: skpdIdsInUpload } } } } }
+      }
+      
+      for (const existArr of existingMap.values()) {
+        for (const exist of existArr) {
+          const { id, ...rest } = exist;
+          const updatedRest = { ...rest };
+          
+          if (paguType === 'induk') {
+            updatedRest.volumeInduk = 0;
+            updatedRest.hargaSatuanInduk = 0;
+            updatedRest.paguInduk = 0;
+          } else if (paguType === 'rkpd') {
+            updatedRest.volumeRkpd = 0;
+            updatedRest.hargaSatuanRkpd = 0;
+            updatedRest.paguRkpd = 0;
+          } else if (paguType === 'perubahan') {
+            updatedRest.volumePerubahan = 0;
+            updatedRest.hargaSatuanPerubahan = 0;
+            updatedRest.paguPerubahan = 0;
+          }
+          mergedRincian.push(updatedRest);
+        }
+      }
+      
+      await prisma.rincianBelanja.deleteMany({
+        where: { subKegiatan: { kegiatan: { program: { skpdId: { in: skpdIdsInUpload } } } } }
+      });
+      
+      const chunkSize = 500;
+      for (let i = 0; i < mergedRincian.length; i += chunkSize) {
+        await prisma.rincianBelanja.createMany({
+          data: mergedRincian.slice(i, i + chunkSize)
         });
-        
-        const chunkSize = 500;
-        for (let i = 0; i < mergedRincian.length; i += chunkSize) {
-          await prisma.rincianBelanja.createMany({
-            data: mergedRincian.slice(i, i + chunkSize)
-          });
-        }
-      } else {
-        await prisma.rincianBelanja.deleteMany({
-          where: { subKegiatan: { kegiatan: { program: { skpdId: { in: skpdIdsInUpload } } } } }
-        });
-        
-        const chunkSize = 500;
-        for (let i = 0; i < rincianList.length; i += chunkSize) {
-          await prisma.rincianBelanja.createMany({
-            data: rincianList.slice(i, i + chunkSize)
-          });
-        }
       }
     }
 
