@@ -59,6 +59,7 @@ export async function GET(request: Request) {
         sumberDana: { select: { nama: true } },
         subKegiatan: {
           select: {
+            kode: true,
             nama: true,
             kegiatan: { select: { nama: true, program: { select: { skpdId: true, nama: true } } } }
           }
@@ -196,7 +197,11 @@ export async function GET(request: Request) {
       if (isPaudKebudayaan) stat['Kegiatan PAUD dan Kebudayaan'] += valPerubahan;
 
       if (sdUpper.includes('RETRIBUSI DAERAH') && sdUpper.includes('LRA')) stat['Optimalisasi Retribusi'] += valPerubahan;
-      if (paketLower.includes('tim kesenian')) stat['Tim Kesenian'] += valPerubahan;
+      
+      const subKode = r.subKegiatan?.kode || '';
+      if (sdUpper.includes('PENDAPATAN TRANSFER ANTAR DAERAH') && subKode.includes('2.22.03.2.01.0001')) {
+        stat['Tim Kesenian'] += valPerubahan;
+      }
     });
 
     // 4. Gabungkan Data
