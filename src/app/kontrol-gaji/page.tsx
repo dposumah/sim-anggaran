@@ -1,8 +1,16 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect } from 'react';
-import { Save, AlertCircle, CheckCircle, Calculator, Info, Loader2, Download } from 'lucide-react';
-import * as XLSX from 'xlsx';
+import React, { useState, useEffect } from "react";
+import {
+  Save,
+  AlertCircle,
+  CheckCircle,
+  Calculator,
+  Info,
+  Loader2,
+  Download,
+} from "lucide-react";
+import * as XLSX from "xlsx";
 
 interface KontrolGajiItem {
   kategori: string;
@@ -25,21 +33,25 @@ export default function KontrolGajiPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
-  
-  const [selectedDetails, setSelectedDetails] = useState<{kategori: string, skpd: string, items: any[]} | null>(null);
+
+  const [selectedDetails, setSelectedDetails] = useState<{
+    kategori: string;
+    skpd: string;
+    items: any[];
+  } | null>(null);
 
   const fetchSystemData = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch('/api/kontrol-gaji');
-      if (!response.ok) throw new Error('Gagal mengambil data sistem');
+      const response = await fetch("/api/kontrol-gaji");
+      if (!response.ok) throw new Error("Gagal mengambil data sistem");
       const resData = await response.json();
-      
+
       setData(resData.data);
       setTahunId(resData.tahun?.id || null);
     } catch (err: unknown) {
       console.error(err);
-      setError('Gagal mengambil data dari database sistem.');
+      setError("Gagal mengambil data dari database sistem.");
     } finally {
       setIsLoading(false);
     }
@@ -49,39 +61,51 @@ export default function KontrolGajiPage() {
     fetchSystemData();
   }, []);
 
-  const handleTargetChange = (skpdId: number, kategori: string, value: string) => {
-    const numValue = value === '' ? 0 : parseFloat(value.replace(/[^0-9-]+/g, ""));
+  const handleTargetChange = (
+    skpdId: number,
+    kategori: string,
+    value: string,
+  ) => {
+    const numValue =
+      value === "" ? 0 : parseFloat(value.replace(/[^0-9-]+/g, ""));
     if (isNaN(numValue)) return;
-    
-    setData(prev => prev.map(skpd => 
-      skpd.skpdId === skpdId 
-        ? {
-            ...skpd,
-            items: skpd.items.map(i => i.kategori === kategori ? { ...i, target: numValue } : i)
-          }
-        : skpd
-    ));
+
+    setData((prev) =>
+      prev.map((skpd) =>
+        skpd.skpdId === skpdId
+          ? {
+              ...skpd,
+              items: skpd.items.map((i) =>
+                i.kategori === kategori ? { ...i, target: numValue } : i,
+              ),
+            }
+          : skpd,
+      ),
+    );
   };
 
   const saveAllTargets = async (skpd: KontrolGajiSkpd) => {
     if (!tahunId) return;
-    
+
     setIsSaving(true);
     setError(null);
     setSuccessMsg(null);
 
     try {
-      const response = await fetch('/api/kontrol-gaji', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/kontrol-gaji", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           skpdId: skpd.skpdId,
           tahunId: tahunId,
-          items: skpd.items.map(i => ({ kategori: i.kategori, target: i.target }))
-        })
+          items: skpd.items.map((i) => ({
+            kategori: i.kategori,
+            target: i.target,
+          })),
+        }),
       });
 
-      if (!response.ok) throw new Error('Gagal menyimpan data');
+      if (!response.ok) throw new Error("Gagal menyimpan data");
       setSuccessMsg(`Semua Pagu Kontrol untuk ${skpd.nama} berhasil disimpan.`);
     } catch (err) {
       setError(`Gagal menyimpan Pagu Kontrol untuk ${skpd.nama}.`);
@@ -91,13 +115,19 @@ export default function KontrolGajiPage() {
   };
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(amount);
+    return new Intl.NumberFormat("id-ID", {
+      style: "currency",
+      currency: "IDR",
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(amount);
   };
 
   const renderDiffBadge = (target: number, excel: number) => {
-    if (target === 0) return <span className="text-gray-400 italic">Belum diset</span>;
+    if (target === 0)
+      return <span className="text-gray-400 italic">Belum diset</span>;
     const diff = excel - target;
-    
+
     if (diff === 0) {
       return (
         <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
@@ -105,12 +135,15 @@ export default function KontrolGajiPage() {
         </span>
       );
     }
-    
+
     const isOver = diff > 0;
     return (
-      <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${isOver ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'}`}>
+      <span
+        className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${isOver ? "bg-red-100 text-red-800" : "bg-yellow-100 text-yellow-800"}`}
+      >
         <AlertCircle className="w-3 h-3" />
-        {isOver ? '+' : ''}{formatCurrency(diff)}
+        {isOver ? "+" : ""}
+        {formatCurrency(diff)}
       </span>
     );
   };
@@ -123,27 +156,39 @@ export default function KontrolGajiPage() {
     data.forEach((skpd) => {
       // Setup rows for this SKPD
       const wsData: any[][] = [
-        ['Kontrol Anggaran', '', '', ''],
-        ['SKPD:', skpd.nama, '', ''],
-        ['Kode:', skpd.kode, '', ''],
-        ['', '', '', ''],
-        ['Kategori', 'Target Pagu (Manual)', 'APBD Excel (Perubahan)', 'Selisih (Excel - Target)']
+        ["Kontrol Anggaran", "", "", ""],
+        ["SKPD:", skpd.nama, "", ""],
+        ["Kode:", skpd.kode, "", ""],
+        ["", "", "", ""],
+        [
+          "Kategori",
+          "Target Pagu (Manual)",
+          "APBD Excel (Perubahan)",
+          "Selisih (Excel - Target)",
+        ],
       ];
 
       skpd.items.forEach((item) => {
         const selisih = item.excel - item.target;
-        wsData.push([
-          item.kategori,
-          item.target,
-          item.excel,
-          selisih
-        ]);
+        wsData.push([item.kategori, item.target, item.excel, selisih]);
       });
 
+      const totalTarget = skpd.items.reduce(
+        (sum, item) => sum + item.target,
+        0,
+      );
+      const totalExcel = skpd.items.reduce((sum, item) => sum + item.excel, 0);
+      wsData.push([
+        "TOTAL PAGU",
+        totalTarget,
+        totalExcel,
+        totalExcel - totalTarget,
+      ]);
+
       const ws = XLSX.utils.aoa_to_sheet(wsData);
-      
+
       // Column width
-      ws['!cols'] = [
+      ws["!cols"] = [
         { wch: 40 }, // Kategori
         { wch: 25 }, // Target
         { wch: 25 }, // Excel
@@ -151,9 +196,11 @@ export default function KontrolGajiPage() {
       ];
 
       // Use a safe sheet name (max 31 chars)
-      let sheetName = skpd.kode.replace(/[^a-zA-Z0-9.\- ]/g, '').substring(0, 31);
+      let sheetName = skpd.kode
+        .replace(/[^a-zA-Z0-9.\- ]/g, "")
+        .substring(0, 31);
       if (!sheetName) sheetName = `SKPD_${skpd.skpdId}`;
-      
+
       XLSX.utils.book_append_sheet(wb, ws, sheetName);
     });
 
@@ -165,9 +212,13 @@ export default function KontrolGajiPage() {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-            <Calculator className="w-6 h-6 text-primary" /> Kontrol Anggaran (Pagu vs Rincian)
+            <Calculator className="w-6 h-6 text-primary" /> Kontrol Anggaran
+            (Pagu vs Rincian)
           </h1>
-          <p className="text-sm text-secondary">Input Pagu Target Manual untuk dibandingkan dengan Hasil Upload Excel (APBD).</p>
+          <p className="text-sm text-secondary">
+            Input Pagu Target Manual untuk dibandingkan dengan Hasil Upload
+            Excel (APBD).
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -219,11 +270,14 @@ export default function KontrolGajiPage() {
         </div>
       ) : data.length === 0 ? (
         <div className="bg-white rounded-xl shadow-sm border border-border p-8 text-center text-secondary">
-           Tidak ada data SKPD (Pendidikan) yang ditemukan.
+          Tidak ada data SKPD (Pendidikan) yang ditemukan.
         </div>
       ) : (
         data.map((skpd) => (
-          <div key={skpd.skpdId} className="bg-white rounded-xl shadow-sm border border-border overflow-hidden mb-6">
+          <div
+            key={skpd.skpdId}
+            className="bg-white rounded-xl shadow-sm border border-border overflow-hidden mb-6"
+          >
             <div className="px-6 py-4 border-b border-gray-200 bg-gray-50 flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
                 <h3 className="text-lg font-bold text-gray-900">{skpd.nama}</h3>
@@ -234,32 +288,57 @@ export default function KontrolGajiPage() {
                 disabled={isSaving}
                 className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 flex items-center gap-2 transition-colors disabled:opacity-50"
               >
-                {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                {isSaving ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Save className="w-4 h-4" />
+                )}
                 Simpan Semua Pagu
               </button>
             </div>
-            
+
             <div className="overflow-x-auto">
               <table className="w-full text-sm text-left">
                 <thead className="bg-slate-50 border-b border-border text-slate-600 font-semibold">
                   <tr>
                     <th className="px-4 py-3 border-r w-1/3">Kategori</th>
-                    <th className="px-4 py-3 bg-blue-50/50">Target Pagu (Manual)</th>
-                    <th className="px-4 py-3 bg-slate-50/50 text-right">APBD Excel (Perubahan)</th>
-                    <th className="px-4 py-3 bg-slate-50/50 text-center">Selisih</th>
+                    <th className="px-4 py-3 bg-blue-50/50">
+                      Target Pagu (Manual)
+                    </th>
+                    <th className="px-4 py-3 bg-slate-50/50 text-right">
+                      APBD Excel (Perubahan)
+                    </th>
+                    <th className="px-4 py-3 bg-slate-50/50 text-center">
+                      Selisih
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
                   {skpd.items.map((item, idx) => (
-                    <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
+                    <tr
+                      key={idx}
+                      className="hover:bg-slate-50/50 transition-colors"
+                    >
                       <td className="px-4 py-3 border-r font-medium text-gray-900">
                         {item.kategori}
                       </td>
                       <td className="px-4 py-3 bg-blue-50/10">
                         <input
                           type="text"
-                          value={item.target === 0 ? '' : new Intl.NumberFormat('id-ID').format(item.target)}
-                          onChange={(e) => handleTargetChange(skpd.skpdId, item.kategori, e.target.value)}
+                          value={
+                            item.target === 0
+                              ? ""
+                              : new Intl.NumberFormat("id-ID").format(
+                                  item.target,
+                                )
+                          }
+                          onChange={(e) =>
+                            handleTargetChange(
+                              skpd.skpdId,
+                              item.kategori,
+                              e.target.value,
+                            )
+                          }
                           placeholder="Rp 0"
                           className="w-full text-right rounded border border-gray-300 px-2 py-1.5 text-sm font-medium focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                         />
@@ -267,13 +346,21 @@ export default function KontrolGajiPage() {
                       <td className="px-4 py-3 text-right">
                         {item.excel > 0 ? (
                           <button
-                            onClick={() => setSelectedDetails({ kategori: item.kategori, skpd: skpd.nama, items: item.details || [] })}
+                            onClick={() =>
+                              setSelectedDetails({
+                                kategori: item.kategori,
+                                skpd: skpd.nama,
+                                items: item.details || [],
+                              })
+                            }
                             className="font-medium text-blue-600 hover:text-blue-800 hover:underline transition-all"
                           >
                             {formatCurrency(item.excel)}
                           </button>
                         ) : (
-                          <span className="font-medium text-gray-500">{formatCurrency(item.excel)}</span>
+                          <span className="font-medium text-gray-500">
+                            {formatCurrency(item.excel)}
+                          </span>
                         )}
                       </td>
                       <td className="px-4 py-3 text-center">
@@ -281,6 +368,25 @@ export default function KontrolGajiPage() {
                       </td>
                     </tr>
                   ))}
+                  <tr className="bg-slate-100 font-bold text-gray-900 border-t-2 border-slate-200">
+                    <td className="px-4 py-3 border-r">TOTAL PAGU</td>
+                    <td className="px-4 py-3 text-right bg-blue-50/20">
+                      {formatCurrency(
+                        skpd.items.reduce((sum, item) => sum + item.target, 0),
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      {formatCurrency(
+                        skpd.items.reduce((sum, item) => sum + item.excel, 0),
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      {renderDiffBadge(
+                        skpd.items.reduce((sum, item) => sum + item.target, 0),
+                        skpd.items.reduce((sum, item) => sum + item.excel, 0),
+                      )}
+                    </td>
+                  </tr>
                 </tbody>
               </table>
             </div>
@@ -294,15 +400,27 @@ export default function KontrolGajiPage() {
           <div className="bg-white rounded-xl shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
               <div>
-                <h3 className="text-lg font-bold text-gray-900">Rincian: {selectedDetails.kategori}</h3>
+                <h3 className="text-lg font-bold text-gray-900">
+                  Rincian: {selectedDetails.kategori}
+                </h3>
                 <p className="text-sm text-gray-500">{selectedDetails.skpd}</p>
               </div>
-              <button 
+              <button
                 onClick={() => setSelectedDetails(null)}
                 className="text-gray-400 hover:text-gray-600 hover:bg-gray-100 p-2 rounded-full transition-colors"
               >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
                 </svg>
               </button>
             </div>
@@ -320,17 +438,35 @@ export default function KontrolGajiPage() {
                 <tbody className="divide-y divide-gray-100">
                   {selectedDetails.items.length > 0 ? (
                     selectedDetails.items.map((r, i) => (
-                      <tr key={i} className="hover:bg-blue-50/50 transition-colors">
-                        <td className="px-6 py-3 whitespace-normal break-words max-w-[200px] text-gray-800">{r.subKegiatan}</td>
-                        <td className="px-6 py-3 whitespace-normal break-words max-w-[200px] text-gray-800">{r.rekening}</td>
-                        <td className="px-6 py-3 whitespace-normal break-words max-w-[150px] text-gray-600">{r.sumberDana}</td>
-                        <td className="px-6 py-3 whitespace-normal break-words max-w-[200px] text-gray-600">{r.paket}</td>
-                        <td className="px-6 py-3 text-right font-medium text-blue-700">{formatCurrency(r.pagu)}</td>
+                      <tr
+                        key={i}
+                        className="hover:bg-blue-50/50 transition-colors"
+                      >
+                        <td className="px-6 py-3 whitespace-normal break-words max-w-[200px] text-gray-800">
+                          {r.subKegiatan}
+                        </td>
+                        <td className="px-6 py-3 whitespace-normal break-words max-w-[200px] text-gray-800">
+                          {r.rekening}
+                        </td>
+                        <td className="px-6 py-3 whitespace-normal break-words max-w-[150px] text-gray-600">
+                          {r.sumberDana}
+                        </td>
+                        <td className="px-6 py-3 whitespace-normal break-words max-w-[200px] text-gray-600">
+                          {r.paket}
+                        </td>
+                        <td className="px-6 py-3 text-right font-medium text-blue-700">
+                          {formatCurrency(r.pagu)}
+                        </td>
                       </tr>
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={5} className="px-6 py-8 text-center text-gray-500 italic">Tidak ada rincian yang ditemukan.</td>
+                      <td
+                        colSpan={5}
+                        className="px-6 py-8 text-center text-gray-500 italic"
+                      >
+                        Tidak ada rincian yang ditemukan.
+                      </td>
                     </tr>
                   )}
                 </tbody>
@@ -340,7 +476,12 @@ export default function KontrolGajiPage() {
               <div className="text-right">
                 <span className="text-sm text-gray-500 mr-4">Total Pagu:</span>
                 <span className="text-lg font-bold text-blue-700">
-                  {formatCurrency(selectedDetails.items.reduce((acc, curr) => acc + (curr.pagu || 0), 0))}
+                  {formatCurrency(
+                    selectedDetails.items.reduce(
+                      (acc, curr) => acc + (curr.pagu || 0),
+                      0,
+                    ),
+                  )}
                 </span>
               </div>
             </div>

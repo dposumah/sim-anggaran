@@ -187,8 +187,8 @@ export async function GET(request: Request) {
         if (!isCarryOver && !isThr) addStat('Tamsil', valPerubahan);
       }
       
-      if (isCarryOver) addStat('TPG/Tamsil Carry Over 2024', valPerubahan);
-      if (isThr) addStat('TPG/Tamsil THR Guru', valPerubahan);
+      if (isCarryOver) addStat('TPG/Tamsil THR Guru', valPerubahan);
+      if (isThr) addStat('TPG/Tamsil Carry Over 2024', valPerubahan);
       
       if (paketLower.includes('juru pelihara cagar budaya')) addStat('Juru Pelihara Cagar Budaya', valPerubahan);
       
