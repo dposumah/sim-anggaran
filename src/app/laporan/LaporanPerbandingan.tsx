@@ -82,11 +82,56 @@ export default function LaporanPerbandingan() {
         // @ts-ignore
         const domtoimage = (await import("dom-to-image-more")).default;
 
+        // --- Prevent Row Cutting across PDF pages ---
+        const pdfRatio = 297 / 210; // A4 ratio
+        const pagePxHeight = element.scrollWidth * pdfRatio;
+
+        const spacers: HTMLElement[] = [];
+        const rows = element.querySelectorAll("tr, h3");
+        let currentOffset = 0;
+
+        rows.forEach((row) => {
+          const rect = row.getBoundingClientRect();
+          const parentRect = element.getBoundingClientRect();
+          const top = rect.top - parentRect.top + currentOffset;
+          const bottom = top + rect.height;
+
+          const pageNum = Math.floor(top / pagePxHeight);
+          const bottomPageNum = Math.floor(bottom / pagePxHeight);
+
+          // If the element crosses a page boundary
+          if (bottomPageNum > pageNum && rect.height < pagePxHeight) {
+            const pushAmount = bottomPageNum * pagePxHeight - top;
+
+            if (row.tagName.toLowerCase() === "tr") {
+              const spacer = document.createElement("tr");
+              const td = document.createElement("td");
+              td.style.height = `${pushAmount}px`;
+              td.colSpan = 10; // cover all columns
+              spacer.appendChild(td);
+              row.parentNode?.insertBefore(spacer, row);
+              spacers.push(spacer);
+            } else {
+              const spacer = document.createElement("div");
+              spacer.style.height = `${pushAmount}px`;
+              spacer.style.width = "100%";
+              row.parentNode?.insertBefore(spacer, row);
+              spacers.push(spacer);
+            }
+
+            currentOffset += pushAmount;
+          }
+        });
+        // ---------------------------------------------
+
         const canvas = await domtoimage.toCanvas(element, {
           bgcolor: "#f8fafc",
           width: element.scrollWidth,
-          height: element.scrollHeight,
+          height: element.scrollHeight + currentOffset, // include spacers
         });
+
+        // Cleanup spacers
+        spacers.forEach((s) => s.remove());
 
         const imgData = canvas.toDataURL("image/png");
 
@@ -640,40 +685,62 @@ export default function LaporanPerbandingan() {
                         </th>
                       )}
                       <th className="px-2 py-2 text-right font-semibold text-gray-600">
+                        Selisih
+                      </th>
+                      <th className="px-2 py-2 text-right font-semibold text-gray-600">
                         Realisasi
                       </th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
-                    {(data.allPaket || []).map((paket: any, idx: number) => (
-                      <tr key={idx} className="hover:bg-gray-50">
-                        <td className="px-2 py-2 font-medium text-gray-700">
-                          {paket.nama}
-                        </td>
-                        {compMode !== "rkpd-perubahan" && (
-                          <td className="px-2 py-2 text-right">
-                            {formatCurrency(
-                              paket.induk || paket.paguInduk || 0,
-                            )}
+                    {(data.allPaket || []).map((paket: any, idx: number) => {
+                      const base =
+                        compMode === "induk-rkpd"
+                          ? paket.induk || paket.paguInduk || 0
+                          : compMode === "rkpd-perubahan"
+                            ? paket.rkpd || paket.paguRkpd || 0
+                            : paket.induk || paket.paguInduk || 0;
+                      const target =
+                        compMode === "induk-rkpd"
+                          ? paket.rkpd || paket.paguRkpd || 0
+                          : compMode === "rkpd-perubahan"
+                            ? paket.perubahan || paket.paguPerubahan || 0
+                            : paket.perubahan || paket.paguPerubahan || 0;
+                      return (
+                        <tr key={idx} className="hover:bg-gray-50">
+                          <td className="px-2 py-2 font-medium text-gray-700">
+                            {paket.nama}
                           </td>
-                        )}
-                        {compMode !== "induk-perubahan" && (
+                          {compMode !== "rkpd-perubahan" && (
+                            <td className="px-2 py-2 text-right">
+                              {formatCurrency(
+                                paket.induk || paket.paguInduk || 0,
+                              )}
+                            </td>
+                          )}
+                          {compMode !== "induk-perubahan" && (
+                            <td className="px-2 py-2 text-right">
+                              {formatCurrency(
+                                paket.rkpd || paket.paguRkpd || 0,
+                              )}
+                            </td>
+                          )}
+                          {compMode !== "induk-rkpd" && (
+                            <td className="px-2 py-2 text-right">
+                              {formatCurrency(
+                                paket.perubahan || paket.paguPerubahan || 0,
+                              )}
+                            </td>
+                          )}
                           <td className="px-2 py-2 text-right">
-                            {formatCurrency(paket.rkpd || paket.paguRkpd || 0)}
+                            {formatSelisih(base, target)}
                           </td>
-                        )}
-                        {compMode !== "induk-rkpd" && (
                           <td className="px-2 py-2 text-right">
-                            {formatCurrency(
-                              paket.perubahan || paket.paguPerubahan || 0,
-                            )}
+                            {formatCurrency(paket.realisasi || 0)}
                           </td>
-                        )}
-                        <td className="px-2 py-2 text-right">
-                          {formatCurrency(paket.realisasi || 0)}
-                        </td>
-                      </tr>
-                    ))}
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -808,38 +875,58 @@ export default function LaporanPerbandingan() {
                       </th>
                     )}
                     <th className="px-2 py-2 text-right font-semibold text-gray-600">
+                      Selisih
+                    </th>
+                    <th className="px-2 py-2 text-right font-semibold text-gray-600">
                       Realisasi
                     </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  {getChartDataForTabs().map((item: any, idx: number) => (
-                    <tr key={idx} className="hover:bg-gray-50">
-                      <td className="px-2 py-2 font-medium text-gray-700">
-                        {item.nama}
-                      </td>
-                      {compMode !== "rkpd-perubahan" && (
-                        <td className="px-2 py-2 text-right">
-                          {formatCurrency(item.induk || item.paguInduk || 0)}
+                  {getChartDataForTabs().map((item: any, idx: number) => {
+                    const base =
+                      compMode === "induk-rkpd"
+                        ? item.induk || item.paguInduk || 0
+                        : compMode === "rkpd-perubahan"
+                          ? item.rkpd || item.paguRkpd || 0
+                          : item.induk || item.paguInduk || 0;
+                    const target =
+                      compMode === "induk-rkpd"
+                        ? item.rkpd || item.paguRkpd || 0
+                        : compMode === "rkpd-perubahan"
+                          ? item.perubahan || item.paguPerubahan || 0
+                          : item.perubahan || item.paguPerubahan || 0;
+                    return (
+                      <tr key={idx} className="hover:bg-gray-50">
+                        <td className="px-2 py-2 font-medium text-gray-700">
+                          {item.nama}
                         </td>
-                      )}
-                      {compMode !== "induk-perubahan" && (
+                        {compMode !== "rkpd-perubahan" && (
+                          <td className="px-2 py-2 text-right">
+                            {formatCurrency(item.induk || item.paguInduk || 0)}
+                          </td>
+                        )}
+                        {compMode !== "induk-perubahan" && (
+                          <td className="px-2 py-2 text-right">
+                            {formatCurrency(item.rkpd || item.paguRkpd || 0)}
+                          </td>
+                        )}
+                        {compMode !== "induk-rkpd" && (
+                          <td className="px-2 py-2 text-right">
+                            {formatCurrency(
+                              item.perubahan || item.paguPerubahan || 0,
+                            )}
+                          </td>
+                        )}
                         <td className="px-2 py-2 text-right">
-                          {formatCurrency(item.rkpd || item.paguRkpd || 0)}
+                          {formatSelisih(base, target)}
                         </td>
-                      )}
-                      {compMode !== "induk-rkpd" && (
                         <td className="px-2 py-2 text-right">
-                          {formatCurrency(
-                            item.perubahan || item.paguPerubahan || 0,
-                          )}
+                          {formatCurrency(item.realisasi || 0)}
                         </td>
-                      )}
-                      <td className="px-2 py-2 text-right">
-                        {formatCurrency(item.realisasi || 0)}
-                      </td>
-                    </tr>
-                  ))}
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
