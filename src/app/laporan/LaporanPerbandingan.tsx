@@ -80,7 +80,8 @@ export default function LaporanPerbandingan() {
         if (!element) return;
 
         const canvas = await html2canvas(element, {
-          scale: 2,
+          // @ts-ignore
+          scale: 1,
           useCORS: true,
           logging: false,
           windowWidth: element.scrollWidth,
@@ -108,9 +109,9 @@ export default function LaporanPerbandingan() {
         }
 
         pdf.save(`Laporan_Perbandingan_${tahun}.pdf`);
-      } catch (err) {
+      } catch (err: any) {
         console.error("Gagal export PDF:", err);
-        alert("Terjadi kesalahan saat memproses PDF.");
+        alert(`Terjadi kesalahan saat memproses PDF: ${err?.message || err}`);
       } finally {
         setIsExporting(false);
       }
