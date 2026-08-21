@@ -24,30 +24,32 @@ import {
   Briefcase,
   CreditCard,
   ShieldCheck,
-  CheckCircle
+  CheckCircle,
+  Package
 } from 'lucide-react'
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'Budget Explorer', href: '/explorer', icon: FolderTree },
+  { name: 'Kontrol Anggaran', href: '/kontrol-gaji', icon: Activity },
+  { name: 'Kontrol Sumber Dana', href: '/control-sumber-dana', icon: ShieldCheck },
+  { name: 'Kontrol Kegiatan Teknis', href: '/kontrol-kegiatan', icon: Package },
   { name: 'Laporan & Rekapitulasi', href: '/laporan', icon: FileText },
   { name: 'Upload Data', href: '/upload', icon: Upload },
-  { name: 'Export Laporan', href: '/export', icon: FileDown },
-  { name: 'Manajemen User', href: '/users', icon: Users },
   {
     name: 'Menu Lainnya',
     icon: Menu,
     children: [
       { name: 'Kebutuhan Gaji', href: '/kebutuhan-gaji', icon: Calculator },
-      { name: 'Kontrol Gaji', href: '/kontrol-gaji', icon: Activity },
       { name: 'Kontrol Honor Jasa', href: '/kontrol-honor', icon: Wallet },
       { name: 'Kontrol Pagu', href: '/pagu', icon: Settings },
       { name: 'Sumber Dana', href: '/sumber-dana', icon: Banknote },
       { name: 'Standar Harga', href: '/standar-harga', icon: Tags },
       { name: 'Master Jabatan', href: '/master-jabatan', icon: Briefcase },
       { name: 'Master Gaji', href: '/master-gaji', icon: CreditCard },
-      { name: 'Kontrol Sumber Dana', href: '/control-sumber-dana', icon: ShieldCheck },
       { name: 'Realisasi Anggaran', href: '/realisasi', icon: CheckCircle },
+      { name: 'Export Laporan', href: '/export', icon: FileDown },
+      { name: 'Manajemen User', href: '/users', icon: Users },
     ]
   }
 ]
