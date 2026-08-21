@@ -216,6 +216,10 @@ export async function GET(request: Request) {
       if (sdUpper.includes('PENDAPATAN TRANSFER ANTAR DAERAH') && subKode.includes('2.22.03.2.01.0001')) {
         addStat('Tim Kesenian', valPerubahan);
       }
+
+      if (isPad && programUpper.includes('PROGRAM PENUNJANG URUSAN PEMERINTAHAN DAERAH KABUPATEN/KOTA')) {
+        addStat('RUTIN SEKRETARIAT/ KEG LAINNYA', valPerubahan);
+      }
     });
 
     // 4. Gabungkan Data
@@ -236,7 +240,7 @@ export async function GET(request: Request) {
         'DAK Non Fisik BOP Kesetaraan Reguler', 'DAK Non Fisik BOP Kesetaraan Kinerja',
         'TPG', 'Tamsil', 'TPG/Tamsil Carry Over 2024', 'TPG/Tamsil THR Guru',
         'Juru Pelihara Cagar Budaya', 'Kegiatan PAUD dan Kebudayaan',
-        'Optimalisasi Retribusi', 'Tim Kesenian'
+        'Optimalisasi Retribusi', 'Tim Kesenian', 'RUTIN SEKRETARIAT/ KEG LAINNYA'
       ];
 
       const items = categories.map(cat => {
