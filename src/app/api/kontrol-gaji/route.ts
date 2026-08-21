@@ -212,7 +212,7 @@ export async function GET(request: Request) {
       
       else if (sdUpper.includes('PENDAPATAN TRANSFER ANTAR DAERAH') && subKode.includes('2.22.03.2.01.0001')) addStatAndMark('Tim Kesenian', valPerubahan);
       
-      else if (isPad && programUpper.includes('PROGRAM PENUNJANG URUSAN PEMERINTAHAN DAERAH KABUPATEN/KOTA')) addStatAndMark('RUTIN SEKRETARIAT/ KEG LAINNYA', valPerubahan);
+      else if (isPad) addStatAndMark('RUTIN SEKRETARIAT/ KEG LAINNYA', valPerubahan);
     });
 
     // 4. Gabungkan Data
