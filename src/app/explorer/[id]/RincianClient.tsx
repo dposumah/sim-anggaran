@@ -164,7 +164,7 @@ export default function RincianClient({ subKegiatanId, isLocked, parentInfo }: {
         {activeTab === 'sd' && (
           <div className="p-6">
             <h3 className="text-lg font-semibold text-gray-800 mb-4">Rekapitulasi Berdasarkan Sumber Dana</h3>
-            <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+            <div className="bg-white rounded-lg border border-gray-200 overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200 text-sm">
                 <thead className="bg-gray-50">
                   <tr>
@@ -199,7 +199,7 @@ export default function RincianClient({ subKegiatanId, isLocked, parentInfo }: {
         {activeTab === 'rekening' && (
           <div className="p-6">
             <h3 className="text-lg font-semibold text-gray-800 mb-4">Rekapitulasi Berdasarkan Rekening</h3>
-            <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+            <div className="bg-white rounded-lg border border-gray-200 overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200 text-sm">
                 <thead className="bg-gray-50">
                   <tr>
@@ -255,7 +255,7 @@ export default function RincianClient({ subKegiatanId, isLocked, parentInfo }: {
         {activeTab === 'paket' && (
           <div className="p-6">
             <h3 className="text-lg font-semibold text-gray-800 mb-4">Rekapitulasi Berdasarkan Uraian Paket</h3>
-            <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+            <div className="bg-white rounded-lg border border-gray-200 overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200 text-sm">
                 <thead className="bg-gray-50">
                   <tr>

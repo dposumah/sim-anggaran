@@ -1,18 +1,26 @@
 'use client'
 
-import { Bell, User } from 'lucide-react'
+import { Bell, User, Menu } from 'lucide-react'
 import Image from 'next/image'
 import LogoutButton from './LogoutButton'
 import { useYear } from '@/contexts/YearContext'
 
-export default function Header() {
+export default function Header({ onMenuClick }: { onMenuClick?: () => void }) {
   const { tahun, setTahun } = useYear();
 
   return (
-    <header className="flex h-16 shrink-0 items-center justify-between border-b border-border bg-surface/90 backdrop-blur-md px-6 shadow-sm z-10 sticky top-0">
-      <div className="flex items-center gap-4">
+    <header className="flex h-16 shrink-0 items-center justify-between border-b border-border bg-surface/90 backdrop-blur-md px-4 md:px-6 shadow-sm z-10 sticky top-0">
+      <div className="flex items-center gap-2 md:gap-4">
+        {onMenuClick && (
+          <button 
+            onClick={onMenuClick}
+            className="md:hidden rounded-md p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-900"
+          >
+            <Menu className="h-6 w-6" />
+          </button>
+        )}
         <div className="flex items-center gap-3">
-          <div className="h-10 w-10 overflow-hidden relative">
+          <div className="h-10 w-10 overflow-hidden relative hidden sm:block">
             <Image 
               src="/logo-tomohon.png" 
               alt="Logo Tomohon" 
@@ -22,8 +30,8 @@ export default function Header() {
             />
           </div>
           <div>
-            <h2 className="text-sm font-semibold text-foreground">Pemerintah Kota Tomohon</h2>
-            <p className="text-xs text-secondary">Aplikasi Monitoring Anggaran SKPD</p>
+            <h2 className="text-sm md:text-base font-semibold text-foreground">Pemkot Tomohon</h2>
+            <p className="hidden md:block text-xs text-secondary">Aplikasi Monitoring Anggaran SKPD</p>
           </div>
         </div>
       </div>

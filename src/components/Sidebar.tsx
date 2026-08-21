@@ -54,7 +54,7 @@ const navigation = [
   }
 ]
 
-export default function Sidebar() {
+export default function Sidebar({ isOpen = false, setIsOpen }: { isOpen?: boolean, setIsOpen?: (val: boolean) => void }) {
   const pathname = usePathname()
   const [openMenus, setOpenMenus] = useState<Record<string, boolean>>({ 'Menu Lainnya': true })
 
@@ -63,7 +63,21 @@ export default function Sidebar() {
   }
 
   return (
-    <div className="flex h-full w-64 flex-col bg-gradient-to-b from-primary to-primary-hover text-white shadow-xl z-20 relative">
+    <>
+      {/* Mobile overlay */}
+      {isOpen && (
+        <div 
+          className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm md:hidden transition-opacity"
+          onClick={() => setIsOpen?.(false)}
+        />
+      )}
+      
+      {/* Sidebar container */}
+      <div className={`
+        fixed inset-y-0 left-0 z-50 flex w-64 flex-col bg-gradient-to-b from-primary to-primary-hover text-white shadow-xl transition-transform duration-300 ease-in-out
+        md:relative md:translate-x-0
+        ${isOpen ? 'translate-x-0' : '-translate-x-full'}
+      `}>
       <div className="flex h-16 shrink-0 items-center gap-3 px-6 border-b border-white/10 bg-black/10">
         <h1 className="text-lg font-bold tracking-tight text-white leading-tight">SIM-Anggaran<br/>Dikbud</h1>
       </div>
@@ -146,5 +160,6 @@ export default function Sidebar() {
         </nav>
       </div>
     </div>
+    </>
   )
 }
