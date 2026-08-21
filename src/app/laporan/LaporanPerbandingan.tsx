@@ -80,15 +80,15 @@ export default function LaporanPerbandingan() {
 
         // Gunakan dom-to-image-more sebagai pengganti html2canvas
         // @ts-ignore
-        const domtoimage = (await import('dom-to-image-more')).default;
-        
+        const domtoimage = (await import("dom-to-image-more")).default;
+
         const canvas = await domtoimage.toCanvas(element, {
-          bgcolor: '#f8fafc',
+          bgcolor: "#f8fafc",
           width: element.scrollWidth,
-          height: element.scrollHeight
+          height: element.scrollHeight,
         });
-        
-        const imgData = canvas.toDataURL('image/png');
+
+        const imgData = canvas.toDataURL("image/png");
 
         // A4 size: 210 x 297 mm
         const pdf = new jsPDF("p", "mm", "a4");
@@ -610,71 +610,132 @@ export default function LaporanPerbandingan() {
               <Package className="w-5 h-5 text-primary" />
               Seluruh Kegiatan Teknis
             </h3>
-            <div
-              className={
-                isExporting
-                  ? "pr-2 relative"
-                  : "h-80 overflow-y-auto pr-2 relative"
-              }
-            >
-              <div
-                style={{
-                  height: `${Math.max((data.allPaket || []).length * 40, 320)}px`,
-                  minHeight: "100%",
-                }}
-              >
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                    data={data.allPaket || []}
-                    layout="vertical"
-                    margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-                  >
-                    <CartesianGrid
-                      strokeDasharray="3 3"
-                      horizontal={true}
-                      vertical={false}
-                      stroke="#f1f5f9"
-                    />
-                    <XAxis
-                      type="number"
-                      tickFormatter={(value) =>
-                        `${(value / 1000000).toFixed(0)}Jt`
-                      }
-                      style={{ fontSize: "11px" }}
-                    />
-                    <YAxis
-                      dataKey="nama"
-                      type="category"
-                      width={120}
-                      style={{ fontSize: "10px" }}
-                      tick={{ fill: "#475569" }}
-                    />
-                    <RechartsTooltip content={<CustomTooltip />} />
-                    <Bar
-                      dataKey={compMode === "induk-rkpd" ? "rkpd" : "perubahan"}
-                      name={
-                        compMode === "induk-rkpd"
-                          ? "Pagu RKPD"
-                          : "Pagu Perubahan"
-                      }
-                      fill="#fca5a5"
-                      radius={[0, 4, 4, 0]}
-                      barSize={20}
-                      onClick={(d: any) =>
-                        setSelectedPaket({
-                          title: d.payload?.nama || d.nama,
-                          rincian: d.payload?.rincian || [],
-                        })
-                      }
-                      cursor="pointer"
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
+            {isExporting ? (
+              <div className="pr-2 relative mt-4">
+                <table className="min-w-full divide-y divide-gray-100 text-xs">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-2 py-2 text-left font-semibold text-gray-600">
+                        Nama Kegiatan
+                      </th>
+                      {compMode !== "rkpd-perubahan" && (
+                        <th className="px-2 py-2 text-right font-semibold text-gray-600">
+                          Pagu Induk
+                        </th>
+                      )}
+                      {compMode !== "induk-perubahan" && (
+                        <th className="px-2 py-2 text-right font-semibold text-gray-600">
+                          Pagu RKPD
+                        </th>
+                      )}
+                      {compMode !== "induk-rkpd" && (
+                        <th className="px-2 py-2 text-right font-semibold text-gray-600">
+                          Pagu Perubahan
+                        </th>
+                      )}
+                      <th className="px-2 py-2 text-right font-semibold text-gray-600">
+                        Realisasi
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {(data.allPaket || []).map((paket: any, idx: number) => (
+                      <tr key={idx} className="hover:bg-gray-50">
+                        <td className="px-2 py-2 font-medium text-gray-700">
+                          {paket.nama}
+                        </td>
+                        {compMode !== "rkpd-perubahan" && (
+                          <td className="px-2 py-2 text-right">
+                            {formatCurrency(
+                              paket.induk || paket.paguInduk || 0,
+                            )}
+                          </td>
+                        )}
+                        {compMode !== "induk-perubahan" && (
+                          <td className="px-2 py-2 text-right">
+                            {formatCurrency(paket.rkpd || paket.paguRkpd || 0)}
+                          </td>
+                        )}
+                        {compMode !== "induk-rkpd" && (
+                          <td className="px-2 py-2 text-right">
+                            {formatCurrency(
+                              paket.perubahan || paket.paguPerubahan || 0,
+                            )}
+                          </td>
+                        )}
+                        <td className="px-2 py-2 text-right">
+                          {formatCurrency(paket.realisasi || 0)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
-            </div>
-            <p className="text-[10px] text-gray-400 mt-2 text-center italic">
-              * Klik pada batang grafik untuk melihat rincian.
-            </p>
+            ) : (
+              <div className="h-80 overflow-y-auto pr-2 relative">
+                <div
+                  style={{
+                    height: `${Math.max((data.allPaket || []).length * 40, 320)}px`,
+                    minHeight: "100%",
+                  }}
+                >
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={data.allPaket || []}
+                      layout="vertical"
+                      margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                    >
+                      <CartesianGrid
+                        strokeDasharray="3 3"
+                        horizontal={true}
+                        vertical={false}
+                        stroke="#f1f5f9"
+                      />
+                      <XAxis
+                        type="number"
+                        tickFormatter={(value) =>
+                          `${(value / 1000000).toFixed(0)}Jt`
+                        }
+                        style={{ fontSize: "11px" }}
+                      />
+                      <YAxis
+                        dataKey="nama"
+                        type="category"
+                        width={120}
+                        style={{ fontSize: "10px" }}
+                        tick={{ fill: "#475569" }}
+                      />
+                      <RechartsTooltip content={<CustomTooltip />} />
+                      <Bar
+                        dataKey={
+                          compMode === "induk-rkpd" ? "rkpd" : "perubahan"
+                        }
+                        name={
+                          compMode === "induk-rkpd"
+                            ? "Pagu RKPD"
+                            : "Pagu Perubahan"
+                        }
+                        fill="#fca5a5"
+                        radius={[0, 4, 4, 0]}
+                        barSize={20}
+                        onClick={(d: any) =>
+                          setSelectedPaket({
+                            title: d.payload?.nama || d.nama,
+                            rincian: d.payload?.rincian || [],
+                          })
+                        }
+                        cursor="pointer"
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            )}
+            {!isExporting && (
+              <p className="text-[10px] text-gray-400 mt-2 text-center italic">
+                * Klik pada batang grafik untuk melihat rincian.
+              </p>
+            )}
           </div>
         </div>
 
