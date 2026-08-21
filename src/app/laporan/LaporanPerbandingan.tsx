@@ -511,7 +511,13 @@ export default function LaporanPerbandingan() {
         </div>
 
         {/* Main Charts */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div
+          className={
+            isExporting
+              ? "grid grid-cols-1 gap-6"
+              : "grid grid-cols-1 lg:grid-cols-2 gap-6"
+          }
+        >
           <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
@@ -778,83 +784,146 @@ export default function LaporanPerbandingan() {
             </div>
           </div>
 
-          <div
-            style={{
-              height: `${Math.max(500, getChartDataForTabs().length * 45)}px`,
-            }}
-          >
-            <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart
-                data={getChartDataForTabs()}
-                layout="vertical"
-                margin={{ top: 5, right: 30, left: 10, bottom: 5 }}
-              >
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                  horizontal={true}
-                  vertical={false}
-                  stroke="#f1f5f9"
-                />
-                <XAxis
-                  type="number"
-                  tickFormatter={(value) =>
-                    `${(value / 1000000000).toFixed(1)}M`
-                  }
-                  style={{ fontSize: "11px" }}
-                />
-                <YAxis
-                  dataKey="nama"
-                  type="category"
-                  width={220}
-                  style={{ fontSize: "10px" }}
-                  tick={{ fill: "#475569" }}
-                />
-                <RechartsTooltip content={<CustomTooltip />} />
-                <Legend
-                  wrapperStyle={{ fontSize: "12px", paddingTop: "10px" }}
-                />
-                <Bar
-                  dataKey={
-                    compMode === "induk-rkpd" ? "paguRkpd" : "paguPerubahan"
-                  }
-                  name={
-                    compMode === "induk-rkpd" ? "Pagu RKPD" : "Pagu Perubahan"
-                  }
-                  fill="#dc2626"
-                  radius={[0, 4, 4, 0]}
-                  barSize={12}
-                  onClick={(data: any) =>
-                    setSelectedChartData({
-                      title: data.payload?.nama || data.nama,
-                      type: activeChartTab,
-                      data: data.payload || data,
-                    })
-                  }
-                  cursor="pointer"
-                />
-                <Bar
-                  dataKey="realisasi"
-                  name="Realisasi"
-                  fill="#10b981"
-                  radius={[0, 4, 4, 0]}
-                  barSize={12}
-                  onClick={(data: any) =>
-                    setSelectedChartData({
-                      title: data.payload?.nama || data.nama,
-                      type: activeChartTab,
-                      data: data.payload || data,
-                    })
-                  }
-                  cursor="pointer"
-                />
-              </ComposedChart>
-            </ResponsiveContainer>
-          </div>
-          <p className="text-xs text-gray-400 mt-4 text-center italic">
-            * Klik pada batang grafik (bar) untuk melihat tabel rincian data.
-            Data Gaji & Tunjangan, PPPK Paruh Waktu, serta BOSP disembunyikan
-            dari grafik ini.
-          </p>
+          {isExporting ? (
+            <div className="pr-2 relative mt-4">
+              <table className="min-w-full divide-y divide-gray-100 text-xs">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-2 py-2 text-left font-semibold text-gray-600">
+                      Uraian
+                    </th>
+                    {compMode !== "rkpd-perubahan" && (
+                      <th className="px-2 py-2 text-right font-semibold text-gray-600">
+                        Pagu Induk
+                      </th>
+                    )}
+                    {compMode !== "induk-perubahan" && (
+                      <th className="px-2 py-2 text-right font-semibold text-gray-600">
+                        Pagu RKPD
+                      </th>
+                    )}
+                    {compMode !== "induk-rkpd" && (
+                      <th className="px-2 py-2 text-right font-semibold text-gray-600">
+                        Pagu Perubahan
+                      </th>
+                    )}
+                    <th className="px-2 py-2 text-right font-semibold text-gray-600">
+                      Realisasi
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {getChartDataForTabs().map((item: any, idx: number) => (
+                    <tr key={idx} className="hover:bg-gray-50">
+                      <td className="px-2 py-2 font-medium text-gray-700">
+                        {item.nama}
+                      </td>
+                      {compMode !== "rkpd-perubahan" && (
+                        <td className="px-2 py-2 text-right">
+                          {formatCurrency(item.induk || item.paguInduk || 0)}
+                        </td>
+                      )}
+                      {compMode !== "induk-perubahan" && (
+                        <td className="px-2 py-2 text-right">
+                          {formatCurrency(item.rkpd || item.paguRkpd || 0)}
+                        </td>
+                      )}
+                      {compMode !== "induk-rkpd" && (
+                        <td className="px-2 py-2 text-right">
+                          {formatCurrency(
+                            item.perubahan || item.paguPerubahan || 0,
+                          )}
+                        </td>
+                      )}
+                      <td className="px-2 py-2 text-right">
+                        {formatCurrency(item.realisasi || 0)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div
+              style={{
+                height: `${Math.max(500, getChartDataForTabs().length * 45)}px`,
+              }}
+            >
+              <ResponsiveContainer width="100%" height="100%">
+                <ComposedChart
+                  data={getChartDataForTabs()}
+                  layout="vertical"
+                  margin={{ top: 5, right: 30, left: 10, bottom: 5 }}
+                >
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    horizontal={true}
+                    vertical={false}
+                    stroke="#f1f5f9"
+                  />
+                  <XAxis
+                    type="number"
+                    tickFormatter={(value) =>
+                      `${(value / 1000000000).toFixed(1)}M`
+                    }
+                    style={{ fontSize: "11px" }}
+                  />
+                  <YAxis
+                    dataKey="nama"
+                    type="category"
+                    width={220}
+                    style={{ fontSize: "10px" }}
+                    tick={{ fill: "#475569" }}
+                  />
+                  <RechartsTooltip content={<CustomTooltip />} />
+                  <Legend
+                    wrapperStyle={{ fontSize: "12px", paddingTop: "10px" }}
+                  />
+                  <Bar
+                    dataKey={
+                      compMode === "induk-rkpd" ? "paguRkpd" : "paguPerubahan"
+                    }
+                    name={
+                      compMode === "induk-rkpd" ? "Pagu RKPD" : "Pagu Perubahan"
+                    }
+                    fill="#dc2626"
+                    radius={[0, 4, 4, 0]}
+                    barSize={12}
+                    onClick={(data: any) =>
+                      setSelectedChartData({
+                        title: data.payload?.nama || data.nama,
+                        type: activeChartTab,
+                        data: data.payload || data,
+                      })
+                    }
+                    cursor="pointer"
+                  />
+                  <Bar
+                    dataKey="realisasi"
+                    name="Realisasi"
+                    fill="#10b981"
+                    radius={[0, 4, 4, 0]}
+                    barSize={12}
+                    onClick={(data: any) =>
+                      setSelectedChartData({
+                        title: data.payload?.nama || data.nama,
+                        type: activeChartTab,
+                        data: data.payload || data,
+                      })
+                    }
+                    cursor="pointer"
+                  />
+                </ComposedChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+          {!isExporting && (
+            <p className="text-xs text-gray-400 mt-4 text-center italic">
+              * Klik pada batang grafik (bar) untuk melihat tabel rincian data.
+              Data Gaji & Tunjangan, PPPK Paruh Waktu, serta BOSP disembunyikan
+              dari grafik ini.
+            </p>
+          )}
         </div>
       </div>
 
