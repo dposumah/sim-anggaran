@@ -72,15 +72,24 @@ export default function RincianClient({ subKegiatanId, isLocked, parentInfo }: {
 
   // Aggregate Rekap Paket
   const rekapPaket = useMemo(() => {
-    const map = new Map<string, { nama: string, pagu: number, realisasi: number }>();
+    const map = new Map<string, { nama: string, paguInduk: number, paguRkpd: number, paguPerubahan: number, selisih: number, realisasi: number }>();
     rincianList.forEach(r => {
       const k = r.namaPaket || 'Unknown';
-      const ext = map.get(k) || { nama: k, pagu: 0, realisasi: 0 };
-      ext.pagu += Number(r.paguPerubahan || 0);
+      const ext = map.get(k) || { nama: k, paguInduk: 0, paguRkpd: 0, paguPerubahan: 0, selisih: 0, realisasi: 0 };
+      
+      const induk = Number(r.paguInduk || 0);
+      const rkpd = Number(r.paguRkpd || 0);
+      const perubahan = Number(r.paguPerubahan || 0);
+      
+      ext.paguInduk += induk;
+      ext.paguRkpd += rkpd;
+      ext.paguPerubahan += perubahan;
+      ext.selisih += (perubahan - induk);
       ext.realisasi += Number(r.realisasi || 0);
+      
       map.set(k, ext);
     });
-    return Array.from(map.values()).sort((a, b) => b.pagu - a.pagu);
+    return Array.from(map.values()).sort((a, b) => b.paguPerubahan - a.paguPerubahan);
   }, [rincianList]);
 
   if (loading) {
@@ -251,31 +260,45 @@ export default function RincianClient({ subKegiatanId, isLocked, parentInfo }: {
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-6 py-3 text-left font-semibold text-gray-900">Uraian / Paket</th>
-                    <th className="px-6 py-3 text-right font-semibold text-gray-900">Total Pagu Perubahan</th>
+                    <th className="px-6 py-3 text-right font-semibold text-gray-900">Pagu Induk</th>
+                    <th className="px-6 py-3 text-right font-semibold text-gray-900">RKPD</th>
+                    <th className="px-6 py-3 text-right font-semibold text-gray-900">Pagu Perubahan</th>
+                    <th className="px-6 py-3 text-right font-semibold text-gray-900">Selisih</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
-                  {rekapPaket.map((r, i) => (
+                  {rekapPaket.map((r, i) => {
+                    const selisihColor = r.selisih > 0 ? 'text-green-600' : r.selisih < 0 ? 'text-red-600' : 'text-gray-500';
+                    return (
                     <tr key={i} className="hover:bg-gray-50">
                       <td className="px-6 py-4 text-gray-700 max-w-sm whitespace-normal break-words">{r.nama}</td>
+                      <td className="px-6 py-4 text-right text-gray-700">{formatRupiah(r.paguInduk)}</td>
+                      <td className="px-6 py-4 text-right text-gray-700">{formatRupiah(r.paguRkpd)}</td>
                       <td 
                         className="px-6 py-4 text-right font-semibold text-blue-700 cursor-pointer hover:underline"
                         onClick={() => setSelectedPaket(r.nama)}
                         title="Klik untuk melihat rincian pagu"
                       >
-                        {formatRupiah(r.pagu)}
+                        {formatRupiah(r.paguPerubahan)}
+                      </td>
+                      <td className={`px-6 py-4 text-right font-semibold ${selisihColor}`}>
+                        {r.selisih > 0 ? '+' : ''}{formatRupiah(r.selisih)}
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                   {rekapPaket.length === 0 && (
-                    <tr><td colSpan={2} className="px-6 py-4 text-center text-gray-500 italic">Data kosong</td></tr>
+                    <tr><td colSpan={5} className="px-6 py-4 text-center text-gray-500 italic">Data kosong</td></tr>
                   )}
                 </tbody>
                 {rekapPaket.length > 0 && (
                   <tfoot className="bg-gray-50">
                     <tr>
                       <th className="px-6 py-3 text-right font-bold text-gray-900">Total Keseluruhan</th>
+                      <th className="px-6 py-3 text-right font-bold text-gray-800">{formatRupiah(rekapPaket.reduce((acc, curr) => acc + curr.paguInduk, 0))}</th>
+                      <th className="px-6 py-3 text-right font-bold text-gray-800">{formatRupiah(rekapPaket.reduce((acc, curr) => acc + curr.paguRkpd, 0))}</th>
                       <th className="px-6 py-3 text-right font-bold text-blue-800">{formatRupiah(totalPaguPerubahan)}</th>
+                      <th className="px-6 py-3 text-right font-bold text-gray-800">{formatRupiah(rekapPaket.reduce((acc, curr) => acc + curr.selisih, 0))}</th>
                     </tr>
                   </tfoot>
                 )}
