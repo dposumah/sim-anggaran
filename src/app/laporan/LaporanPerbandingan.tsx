@@ -31,7 +31,6 @@ import {
   Download,
   FileText,
 } from "lucide-react";
-import html2canvas from "html2canvas";
 import { jsPDF } from "jspdf";
 
 const COLORS = [
@@ -79,16 +78,17 @@ export default function LaporanPerbandingan() {
         const element = document.getElementById("laporan-perbandingan-content");
         if (!element) return;
 
-        const canvas = await html2canvas(element, {
-          // @ts-ignore
-          scale: 1,
-          useCORS: true,
-          logging: false,
-          windowWidth: element.scrollWidth,
-          windowHeight: element.scrollHeight,
-        } as any);
-
-        const imgData = canvas.toDataURL("image/png");
+        // Gunakan dom-to-image-more sebagai pengganti html2canvas
+        // @ts-ignore
+        const domtoimage = (await import('dom-to-image-more')).default;
+        
+        const canvas = await domtoimage.toCanvas(element, {
+          bgcolor: '#f8fafc',
+          width: element.scrollWidth,
+          height: element.scrollHeight
+        });
+        
+        const imgData = canvas.toDataURL('image/png');
 
         // A4 size: 210 x 297 mm
         const pdf = new jsPDF("p", "mm", "a4");
