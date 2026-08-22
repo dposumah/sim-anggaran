@@ -112,18 +112,18 @@ export async function POST(req: Request) {
             if (satText) parsingItem.satuan = satText;
             
             // For prices, we can just pick the first currency match inside the bucket string
-            let hrgMatch = hrgText.match(/(\d+\.\d+,\d{2}|\d+,\d{2}|-)/);
+            let hrgMatch = hrgText.match(/(\d{1,3}(?:\.\d{3})*,\d{2}|-)/);
             if (hrgMatch) parsingItem.hargaSatuan = cleanNumber(hrgMatch[0]);
             
-            let ppnMatch = ppnText.match(/(\d+\.\d+,\d{2}|\d+,\d{2}|-)/);
+            let ppnMatch = ppnText.match(/(\d{1,3}(?:\.\d{3})*,\d{2}|-)/);
             if (ppnMatch) parsingItem.ppn = cleanNumber(ppnMatch[0]);
             
-            let jmlMatch = jmlText.match(/(\d+\.\d+,\d{2}|\d+,\d{2}|-)/);
+            let jmlMatch = jmlText.match(/(\d{1,3}(?:\.\d{3})*,\d{2}|-)/);
             if (jmlMatch) parsingItem.jumlah = cleanNumber(jmlMatch[0]);
             
             // If the buckets somehow missed the values, fallback to regex on lineText
             if (!hrgMatch || !jmlMatch) {
-               let fallbackMatches = lineText.match(/(\d+\.\d+,\d{2}|\d+,\d{2}|-)/g);
+               let fallbackMatches = lineText.match(/(\d{1,3}(?:\.\d{3})*,\d{2}|-)/g);
                if (fallbackMatches && fallbackMatches.length >= 6) {
                   parsingItem.hargaSatuan = cleanNumber(fallbackMatches[fallbackMatches.length - 4]);
                   parsingItem.jumlah = cleanNumber(fallbackMatches[fallbackMatches.length - 2]);
