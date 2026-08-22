@@ -21,13 +21,13 @@ export async function POST(req: Request) {
     });
 
     let allTexts: any[] = [];
-    (parsedData as any).Pages.forEach((page: any) => {
+    (parsedData as any).Pages.forEach((page: any, pageIndex: number) => {
       let pageTexts: any[] = [];
       if (page.Texts) {
         page.Texts.forEach((t: any) => {
           let text = '';
           try { text = decodeURIComponent(t.R[0].T); } catch { text = unescape(t.R[0].T); }
-          pageTexts.push({ x: t.x, y: t.y, text });
+          pageTexts.push({ x: t.x, y: t.y + (pageIndex * 100), text });
         });
       }
       pageTexts.sort((a, b) => {
@@ -88,7 +88,7 @@ export async function POST(req: Request) {
             let allItemTexts = [...lineObj.texts];
             
             let prevLineObj = rawLines[i-1];
-            if (prevLineObj && !prevLineObj.texts.map(t=>t.text).join(' ').match(/^([\[5]|Sumber|Sub Kegiatan|Spesifikasi)/)) {
+            if (prevLineObj && !prevLineObj.texts.map(t=>t.text).join(' ').match(/^(\[|^5\.\d+\.\d+|Sumber|Sub Kegiatan|Spesifikasi)/)) {
                allItemTexts = [...prevLineObj.texts, ...allItemTexts];
             }
             
@@ -98,7 +98,7 @@ export async function POST(req: Request) {
                if (!nextLine) break;
                let nextLineText = nextLine.texts.map(t=>t.text).join(' ').trim();
                // Stop if we see a marker that indicates a new section or item
-               if (nextLineText.match(/^([\[5]|Sumber|Sub Kegiatan|Spesifikasi|Jumlah Anggaran)/)) {
+               if (nextLineText.match(/^(\[|^5\.\d+\.\d+|Sumber|Sub Kegiatan|Spesifikasi|Jumlah Anggaran)/)) {
                   break;
                }
                allItemTexts = [...allItemTexts, ...nextLine.texts];
