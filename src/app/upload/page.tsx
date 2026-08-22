@@ -71,11 +71,16 @@ export default function UploadPage() {
 
   return (
     <div className="space-y-6 max-w-3xl">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-          <UploadCloud className="w-6 h-6 text-primary" /> Upload Data Excel
-        </h1>
-        <p className="text-sm text-secondary">Unggah file rekap anggaran SKPD atau master data Standar Harga untuk memperbarui database.</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
+            <UploadCloud className="w-6 h-6 text-primary" /> Upload Data Excel
+          </h1>
+          <p className="text-sm text-secondary">Unggah file rekap anggaran SKPD atau master data Standar Harga untuk memperbarui database.</p>
+        </div>
+        <a href="/upload/pdf-rincian" className="px-4 py-2 bg-blue-50 text-blue-700 font-medium rounded-lg border border-blue-200 hover:bg-blue-100 transition-colors text-sm">
+          Upload PDF Rincian (Detail)
+        </a>
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-border p-6">

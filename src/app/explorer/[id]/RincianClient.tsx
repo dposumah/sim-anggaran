@@ -330,26 +330,50 @@ export default function RincianClient({ subKegiatanId, isLocked, parentInfo }: {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
-                    {rincianForSelectedPaket.map((r, i) => (
-                      <tr key={i} className="hover:bg-blue-50/50 transition-colors">
-                        <td className="px-6 py-4 text-gray-600 align-top max-w-[150px] truncate" title={r.sumberDana?.nama}>{r.sumberDana?.nama || '-'}</td>
-                        <td className="px-6 py-4 text-gray-600 align-top max-w-[200px]">
-                          <div className="font-medium">{r.rekening?.kode}</div>
-                          <div className="text-xs text-gray-500 mt-1">{r.rekening?.nama}</div>
-                        </td>
-                        <td className="px-6 py-4 text-gray-600 align-top max-w-[200px] whitespace-normal">
-                          <div className="font-medium text-gray-900">{r.sshSbu?.uraianBarang || r.namaPaket}</div>
-                          {r.sshSbu?.spesifikasi && (
-                            <div className="text-xs text-gray-500 mt-1 italic">{r.sshSbu.spesifikasi}</div>
-                          )}
-                        </td>
-                        <td className="px-6 py-4 text-center text-gray-700 align-top whitespace-nowrap">
-                          {r.volumePerubahan} {r.sshSbu?.satuan}
-                        </td>
-                        <td className="px-6 py-4 text-right text-gray-600 align-top whitespace-nowrap">{formatRupiah(r.hargaSatuanPerubahan)}</td>
-                        <td className="px-6 py-4 text-right font-bold text-blue-700 align-top whitespace-nowrap">{formatRupiah(r.paguPerubahan)}</td>
-                      </tr>
-                    ))}
+                    {rincianForSelectedPaket.map((r: any, i: number) => {
+                      if (r.rincianItemBelanjas && r.rincianItemBelanjas.length > 0) {
+                        return r.rincianItemBelanjas.map((item: any, idx: number) => (
+                          <tr key={`${i}-${idx}`} className="hover:bg-blue-50/50 transition-colors">
+                            <td className="px-6 py-4 text-gray-600 align-top max-w-[150px] truncate" title={r.sumberDana?.nama}>{r.sumberDana?.nama || '-'}</td>
+                            <td className="px-6 py-4 text-gray-600 align-top max-w-[200px]">
+                              <div className="font-medium">{r.rekening?.kode}</div>
+                              <div className="text-xs text-gray-500 mt-1">{r.rekening?.nama}</div>
+                            </td>
+                            <td className="px-6 py-4 text-gray-600 align-top max-w-[200px] whitespace-normal">
+                              <div className="font-medium text-gray-900">{item.uraian}</div>
+                              {item.spesifikasi && item.spesifikasi !== '-' && (
+                                <div className="text-xs text-gray-500 mt-1 italic">{item.spesifikasi}</div>
+                              )}
+                            </td>
+                            <td className="px-6 py-4 text-center text-gray-700 align-top whitespace-nowrap">
+                              {item.koefisien} {item.satuan}
+                            </td>
+                            <td className="px-6 py-4 text-right text-gray-600 align-top whitespace-nowrap">{formatRupiah(item.hargaSatuan)}</td>
+                            <td className="px-6 py-4 text-right font-bold text-blue-700 align-top whitespace-nowrap">{formatRupiah(item.jumlah)}</td>
+                          </tr>
+                        ));
+                      }
+                      return (
+                        <tr key={i} className="hover:bg-blue-50/50 transition-colors">
+                          <td className="px-6 py-4 text-gray-600 align-top max-w-[150px] truncate" title={r.sumberDana?.nama}>{r.sumberDana?.nama || '-'}</td>
+                          <td className="px-6 py-4 text-gray-600 align-top max-w-[200px]">
+                            <div className="font-medium">{r.rekening?.kode}</div>
+                            <div className="text-xs text-gray-500 mt-1">{r.rekening?.nama}</div>
+                          </td>
+                          <td className="px-6 py-4 text-gray-600 align-top max-w-[200px] whitespace-normal">
+                            <div className="font-medium text-gray-900">{r.sshSbu?.uraianBarang || r.namaPaket}</div>
+                            {r.sshSbu?.spesifikasi && (
+                              <div className="text-xs text-gray-500 mt-1 italic">{r.sshSbu.spesifikasi}</div>
+                            )}
+                          </td>
+                          <td className="px-6 py-4 text-center text-gray-700 align-top whitespace-nowrap">
+                            {r.volumePerubahan} {r.sshSbu?.satuan}
+                          </td>
+                          <td className="px-6 py-4 text-right text-gray-600 align-top whitespace-nowrap">{formatRupiah(r.hargaSatuanPerubahan)}</td>
+                          <td className="px-6 py-4 text-right font-bold text-blue-700 align-top whitespace-nowrap">{formatRupiah(r.paguPerubahan)}</td>
+                        </tr>
+                      );
+                    })}
                     {rincianForSelectedPaket.length === 0 && (
                       <tr><td colSpan={6} className="px-6 py-8 text-center text-gray-500 italic">Data rincian tidak ditemukan.</td></tr>
                     )}

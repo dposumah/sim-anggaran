@@ -153,19 +153,21 @@ model RincianBelanja {
   sshSbuId Int?
   sshSbu   SshSbu? @relation(fields: [sshSbuId], references: [id])
 
-  tipePaket   String
-  namaPaket   String
+  tipePaket        String
+  namaPaket        String
   paguInduk        Decimal @db.Decimal(15, 2)
   volumeInduk      Int     @default(1)
   hargaSatuanInduk Decimal @db.Decimal(15, 2)
 
-  volumeRkpd           Int?     
-  hargaSatuanRkpd      Decimal? @db.Decimal(15, 2)
-  paguRkpd             Decimal? @db.Decimal(15, 2)
+  volumeRkpd      Int?
+  hargaSatuanRkpd Decimal? @db.Decimal(15, 2)
+  paguRkpd        Decimal? @db.Decimal(15, 2)
 
   volumePerubahan      Int?
   hargaSatuanPerubahan Decimal? @db.Decimal(15, 2)
   paguPerubahan        Decimal? @db.Decimal(15, 2)
+
+  rincianItemBelanjas RincianItemBelanja[]
 }
 
 model SshSbu {
@@ -188,8 +190,8 @@ model SshSbu {
 }
 
 model PaguCeiling {
-  id            Int     @id @default(autoincrement())
-  paguInduk     Decimal @db.Decimal(15, 2)
+  id            Int      @id @default(autoincrement())
+  paguInduk     Decimal  @db.Decimal(15, 2)
   paguRkpd      Decimal? @db.Decimal(15, 2)
   paguPerubahan Decimal? @db.Decimal(15, 2)
 
@@ -203,8 +205,8 @@ model PaguCeiling {
 }
 
 model PaguSumberDana {
-  id            Int     @id @default(autoincrement())
-  paguInduk     Decimal @db.Decimal(15, 2)
+  id            Int      @id @default(autoincrement())
+  paguInduk     Decimal  @db.Decimal(15, 2)
   paguRkpd      Decimal? @db.Decimal(15, 2)
   paguPerubahan Decimal? @db.Decimal(15, 2)
 
@@ -338,16 +340,16 @@ model RealisasiGaji {
 }
 
 model RealisasiBelanja {
-  id            Int         @id @default(autoincrement())
-  skpdId        Int
-  tahunId       Int
-  subKegiatanId Int
-  sumberDanaId  Int
-  rekeningId    Int
-  bulan         Int
-  nominal       Decimal     @db.Decimal(15, 2)
+  id               Int      @id @default(autoincrement())
+  skpdId           Int
+  tahunId          Int
+  subKegiatanId    Int
+  sumberDanaId     Int
+  rekeningId       Int
+  bulan            Int
+  nominal          Decimal  @db.Decimal(15, 2)
   alokasiRealisasi Decimal? @db.Decimal(15, 2)
-  keterangan    String?
+  keterangan       String?
 
   skpd        Skpd          @relation(fields: [skpdId], references: [id])
   tahun       TahunAnggaran @relation(fields: [tahunId], references: [id])
@@ -356,4 +358,20 @@ model RealisasiBelanja {
   rekening    Rekening      @relation(fields: [rekeningId], references: [id])
 
   @@unique([skpdId, subKegiatanId, sumberDanaId, rekeningId, bulan])
+}
+
+model RincianItemBelanja {
+  id               Int            @id @default(autoincrement())
+  rincianBelanjaId Int
+  rincianBelanja   RincianBelanja @relation(fields: [rincianBelanjaId], references: [id], onDelete: Cascade)
+
+  uraian      String
+  spesifikasi String?
+  koefisien   String?
+  satuan      String?
+  hargaSatuan Decimal  @db.Decimal(15, 2)
+  ppn         Decimal? @db.Decimal(15, 2)
+  jumlah      Decimal  @db.Decimal(15, 2)
+
+  tahapan String @default("perubahan")
 }

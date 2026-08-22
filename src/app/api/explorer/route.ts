@@ -166,7 +166,8 @@ const getCachedExplorer = unstable_cache(
           where: { subKegiatanId: parseInt(subKegiatanId, 10) },
           include: {
             sumberDana: true,
-            rekening: true
+            rekening: true,
+            rincianItemBelanjas: true
           },
           orderBy: [
             { rekening: { kode: 'asc' } },
