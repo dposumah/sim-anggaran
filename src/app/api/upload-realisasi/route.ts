@@ -130,11 +130,24 @@ export async function POST(request: Request) {
       }
     });
 
-    // Phase 1: Aggregate Excel Realisasi Data
+    // Phase 1: Aggregate    // Process data rows
     const dataRows = filteredData;
     let skipCount = 0;
     let errorCount = 0;
     const warnings: string[] = [];
+
+    // Clear existing realisasi data for this SKPD and Year before inserting new ones
+    try {
+      await prisma.realisasiBelanja.deleteMany({
+        where: {
+          skpdId: { in: skpdIds },
+          tahunId: tahunData.id
+        }
+      });
+    } catch (e: any) {
+      console.error("Failed to clear old realisasi data:", e);
+      warnings.push(`Gagal membersihkan data realisasi lama: ${e.message}`);
+    }
     
     // key: skpdId_subKegiatanId_rekeningId
     const excelAggMap = new Map<string, { skpdId: number, subKegiatanId: number, rekeningId: number, nominal: number, alokasi: number, originalRow: number, kodeSubKeg: string, kodeRek: string }>();
