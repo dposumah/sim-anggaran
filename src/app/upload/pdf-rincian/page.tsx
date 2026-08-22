@@ -142,7 +142,7 @@ export default function UploadPDFRincian() {
                   <tr>
                     <th className="px-4 py-3 font-semibold text-gray-700">Rekening</th>
                     <th className="px-4 py-3 font-semibold text-gray-700">Paket</th>
-                    <th className="px-4 py-3 font-semibold text-gray-700">Uraian & Spesifikasi</th>
+                    <th className="px-4 py-3 font-semibold text-gray-700">Uraian</th>
                     <th className="px-4 py-3 font-semibold text-gray-700 text-right w-48">Jumlah (Rp)</th>
                   </tr>
                 </thead>
@@ -159,7 +159,7 @@ export default function UploadPDFRincian() {
                       </td>
                       <td className="px-4 py-3 align-top">
                         <input type="text" className="w-full bg-transparent border-b border-dashed border-gray-300 focus:outline-none focus:border-blue-500 font-medium" value={item.uraian} onChange={e => updateItem(idx, 'uraian', e.target.value)} />
-                        <div className="text-xs text-gray-500 mt-1">Spesifikasi: {item.spesifikasi}</div>
+                        
                       </td>
                       <td className="px-4 py-3 align-top">
                         <input type="number" className="w-full bg-transparent border-b border-dashed border-gray-300 focus:outline-none focus:border-blue-500 text-right font-medium text-gray-800" value={item.jumlah} onChange={e => updateItem(idx, 'jumlah', e.target.value)} />

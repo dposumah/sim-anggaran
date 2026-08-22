@@ -82,7 +82,7 @@ export async function POST(req: Request) {
         
         if (lineText.includes('Spesifikasi :')) {
           if (parsingItem) {
-            let specStr = lineText.split('Spesifikasi :')[1].trim().split(' ')[0] || '-';
+            let specStr = '-';
             parsingItem.spesifikasi = specStr;
             
             let allItemTexts = [...lineObj.texts];
