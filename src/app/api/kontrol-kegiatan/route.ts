@@ -79,8 +79,27 @@ export async function GET() {
     const groupedMap = new Map<string, any>();
 
     rincianList.forEach((r: any) => {
-      const pkt = r.namaPaket.trim();
+      let pkt = r.namaPaket.trim();
       if (!pkt) return;
+
+      const subUpper = (r.subKegiatan?.nama || "").toUpperCase();
+      const sdUpper = (r.sumberDana?.nama || "").toUpperCase();
+      
+      const isBosp = sdUpper.includes('BOS') || sdUpper.includes('BOP') || sdUpper.includes('BOSP');
+
+      if (subUpper.includes('PENYEDIAAN GAJI DAN TUNJANGAN')) {
+        pkt = 'Gaji dan Tunjangan';
+      } else if (isBosp) {
+        if (subUpper.includes('SEKOLAH DASAR')) {
+          pkt = 'BOS SD';
+        } else if (subUpper.includes('SEKOLAH MENENGAH PERTAMA') || subUpper.includes('SMP')) {
+          pkt = 'BOS SMP';
+        } else if (subUpper.includes('PAUD')) {
+          pkt = 'BOP PAUD';
+        } else if (subUpper.includes('KESETARAAN')) {
+          pkt = 'BOP KESETARAAN';
+        }
+      }
 
       if (!groupedMap.has(pkt)) {
         groupedMap.set(pkt, {

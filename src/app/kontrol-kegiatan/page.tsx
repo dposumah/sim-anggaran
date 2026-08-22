@@ -94,13 +94,16 @@ export default function KontrolKegiatan() {
                   <th className="px-4 py-3 text-right">Pagu Induk</th>
                   <th className="px-4 py-3 text-right">Pagu RKPD</th>
                   <th className="px-4 py-3 text-right">Pagu Perubahan</th>
+                  <th className="px-4 py-3 text-center">Selisih</th>
                   <th className="px-4 py-3 text-right bg-blue-50/50">Realisasi</th>
-                  <th className="px-4 py-3 text-center">Selisih (Perubahan - Realisasi)</th>
                   <th className="px-4 py-3 w-10"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {data.map((group, idx) => (
+                {data.map((group, idx) => {
+                  const selisih = group.paguPerubahan - group.paguInduk;
+                  const selisihColor = selisih > 0 ? 'text-green-600 bg-green-50' : selisih < 0 ? 'text-red-600 bg-red-50' : 'text-gray-500 bg-gray-50';
+                  return (
                   <React.Fragment key={idx}>
                     <tr 
                       className="hover:bg-slate-50/50 transition-colors cursor-pointer"
@@ -110,11 +113,13 @@ export default function KontrolKegiatan() {
                       <td className="px-4 py-3 text-right">{formatCurrency(group.paguInduk)}</td>
                       <td className="px-4 py-3 text-right">{formatCurrency(group.paguRkpd)}</td>
                       <td className="px-4 py-3 text-right font-medium">{formatCurrency(group.paguPerubahan)}</td>
+                      <td className="px-4 py-3 text-center">
+                        <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset ring-gray-500/10 ${selisihColor}`}>
+                          {selisih > 0 ? '+' : ''}{formatCurrency(selisih)}
+                        </span>
+                      </td>
                       <td className="px-4 py-3 text-right font-medium text-blue-700 bg-blue-50/10">
                         {formatCurrency(group.realisasi)}
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        {renderDiffBadge(group.paguPerubahan, group.realisasi)}
                       </td>
                       <td className="px-4 py-3 text-center text-gray-400">
                         {expandedRow === group.namaPaket ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
@@ -161,7 +166,8 @@ export default function KontrolKegiatan() {
                       </tr>
                     )}
                   </React.Fragment>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>
