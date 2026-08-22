@@ -3,7 +3,16 @@
 import { useState } from 'react';
 import { UploadCloud, FileText, CheckCircle, AlertTriangle, ArrowLeft, Loader2, Save } from 'lucide-react';
 import Link from 'next/link';
-import { formatCurrency } from '@/lib/utils';
+
+
+const formatCurrency = (number: number) => {
+  return new Intl.NumberFormat('id-ID', {
+    style: 'currency',
+    currency: 'IDR',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
+  }).format(number || 0);
+};
 
 export default function UploadPDFRincian() {
   const [file, setFile] = useState<File | null>(null);
