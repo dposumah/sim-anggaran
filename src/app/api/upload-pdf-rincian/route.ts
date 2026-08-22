@@ -82,51 +82,70 @@ export async function POST(req: Request) {
         
         if (lineText.includes('Spesifikasi :')) {
           if (parsingItem) {
-            // Restore Spesifikasi text parsing!
-            let specStr = lineText.split('Spesifikasi :')[1].trim().split(' ')[0] || '-';
-            parsingItem.spesifikasi = specStr;
-            
-            let allItemTexts = [...lineObj.texts];
+            let itemLines = [lineObj];
             
             let prevLineObj = rawLines[i-1];
             if (prevLineObj && !prevLineObj.texts.map(t=>t.text).join(' ').match(/^(\[|^5\.\d+\.\d+\.\d+|Sumber|Sub Kegiatan|Spesifikasi)/)) {
-               allItemTexts = [...prevLineObj.texts, ...allItemTexts];
-               // Catch multi-line uraian (e.g. DALAM NEGERI PERGI PULANG (PP) EKONOMI)
-               let prev2LineObj = rawLines[i-2];
-               if (prev2LineObj && !prev2LineObj.texts.map(t=>t.text).join(' ').match(/^(\[|^5\.\d+\.\d+\.\d+|Sumber|Sub Kegiatan|Spesifikasi)/)) {
-                   allItemTexts = [...prev2LineObj.texts, ...allItemTexts];
+               let hasLeftText = prevLineObj.texts.some(t => t.x < 25 && t.text.match(/[a-zA-Z]/));
+               if (hasLeftText) {
+                   itemLines.unshift(prevLineObj);
+                   let prev2LineObj = rawLines[i-2];
+                   if (prev2LineObj && !prev2LineObj.texts.map(t=>t.text).join(' ').match(/^(\[|^5\.\d+\.\d+\.\d+|Sumber|Sub Kegiatan|Spesifikasi)/)) {
+                       if (prev2LineObj.texts.some(t => t.x < 25 && t.text.match(/[a-zA-Z]/))) {
+                          itemLines.unshift(prev2LineObj);
+                       }
+                   }
                }
             }
             
-            // Gather all next lines that belong to this item (up to 5 lines ahead)
             for (let j = 1; j <= 5; j++) {
                let nextLine = rawLines[i+j];
                if (!nextLine) break;
                let nextLineText = nextLine.texts.map(t=>t.text).join(' ').trim();
-               // Stop if we see a marker that indicates a new section or item
-               // Ensure 5.x checks multiple dots so it doesn't match 5.100.000 (currency)
-               if (nextLineText.match(/^(\[|^5\.\d+\.\d+\.\d+|Sumber|Sub Kegiatan|Spesifikasi|Jumlah Anggaran)/)) {
-                  break;
+               if (nextLineText.match(/^(\[|^5\.\d+\.\d+\.\d+|Sumber|Sub Kegiatan|Spesifikasi|Jumlah Anggaran)/)) break;
+               
+               let isNewUraian = false;
+               let hasLeftText = nextLine.texts.some(t => t.x < 25 && t.text.match(/[a-zA-Z]/));
+               if (hasLeftText) {
+                   for (let k = 1; k <= 2; k++) {
+                       let checkLine = rawLines[i+j+k];
+                       if (checkLine && checkLine.texts.map(t=>t.text).join(' ').includes('Spesifikasi :')) {
+                           isNewUraian = true;
+                           break;
+                       }
+                   }
                }
-               allItemTexts = [...allItemTexts, ...nextLine.texts];
+               if (isNewUraian) break;
+               
+               itemLines.push(nextLine);
             }
             
-            // Extract just the Jumlah bucket (X > 59)
-            let jmlText = allItemTexts.filter(t => t.x >= 59 && t.x < 67).map(t => t.text).join(' ').trim();
+            let amountTexts = [];
+            let specFound = false;
+            for (let line of itemLines) {
+                if (line.texts.map(t=>t.text).join(' ').includes('Spesifikasi :')) specFound = true;
+                if (specFound) amountTexts.push(...line.texts);
+            }
             
+            let jmlText = amountTexts.filter(t => t.x >= 59 && t.x < 67).map(t => t.text).join(' ').trim();
             let jmlMatch = jmlText.match(/(\d{1,3}(?:\.\d{3})*,\d{2}|-)/);
             let finalJumlah = 0;
             if (jmlMatch) {
-               finalJumlah = cleanNumber(jmlMatch[0]);
+                finalJumlah = cleanNumber(jmlMatch[0]);
             } else {
-               // Fallback: check raw text if bucket failed
-               let fallbackMatches = lineText.match(/(\d{1,3}(?:\.\d{3})*,\d{2}|-)/g);
-               if (fallbackMatches && fallbackMatches.length >= 6) {
-                  finalJumlah = cleanNumber(fallbackMatches[fallbackMatches.length - 2]);
-               }
+                let fallbackMatches = amountTexts.map(t=>t.text).join(' ').match(/(\d{1,3}(?:\.\d{3})*,\d{2}|-)/g);
+                if (fallbackMatches && fallbackMatches.length >= 6) {
+                    finalJumlah = cleanNumber(fallbackMatches[fallbackMatches.length - 2]);
+                }
             }
             
-            // Set defaults to ignore Koefisien/Satuan/Harga from PDF
+            let leftTexts = itemLines.flatMap(l => l.texts.filter(t => t.x < 25)).map(t => t.text).join(' ').trim();
+            let parts = leftTexts.split('Spesifikasi :');
+            let extractedUraian = parts[0].trim() || parsingItem.uraian;
+            let extractedSpesifikasi = parts[1] ? parts[1].trim() : '-';
+            
+            parsingItem.uraian = extractedUraian;
+            parsingItem.spesifikasi = extractedSpesifikasi;
             parsingItem.koefisien = '1';
             parsingItem.satuan = 'Ls';
             parsingItem.hargaSatuan = finalJumlah;
@@ -137,7 +156,6 @@ export async function POST(req: Request) {
             parsingItem = null;
           }
         } else if (!lineText.startsWith('[') && !lineText.match(/^5\.\d/) && lineText.length > 2) {
-           // Might be uraian
            parsingItem = {
              rekening: currentRekening,
              namaRekening: currentNamaRekening,
