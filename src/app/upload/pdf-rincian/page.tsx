@@ -60,6 +60,9 @@ export default function UploadPDFRincian() {
       const data = await res.json();
       if (data.success) {
         alert('Data berhasil disimpan ke database!');
+        setParsedData(null);
+        setItems([]);
+        setFile(null);
       } else {
         alert(data.error || 'Gagal menyimpan data');
       }

@@ -21,29 +21,41 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: 'Sub Kegiatan dengan kode ' + kodeSubKeg + ' tidak ditemukan di database. Pastikan Anda sudah mengupload Pagu Excel atau mendaftarkan Kegiatan/SubKegiatannya.' }, { status: 404 });
     }
 
-    // Process items. Group by Rekening -> Sumber Dana -> Paket
-    // Since we need to create them, we must ensure Rekening and SumberDana exist.
-    for (let item of items) {
-      // Upsert Rekening
-      let rek = await prisma.rekening.findUnique({ where: { kode: item.rekening }});
-      if (!rek) {
-        rek = await prisma.rekening.create({ data: { kode: item.rekening, nama: item.namaRekening }});
-      }
-      item.rekeningId = rek.id;
+    // Fast resolution of Rekening and Sumber Dana (reduce DB trips)
+    // 1. Rekening
+    const uniqueRekenings = Array.from(new Set(items.map((i: any) => i.rekening)));
+    const existingReks = await prisma.rekening.findMany({ where: { kode: { in: uniqueRekenings as string[] } } });
+    const rekMap = new Map(existingReks.map((r: any) => [r.kode, r.id]));
+    
+    // 2. Sumber Dana
+    const uniqueSD = Array.from(new Set(items.map((i: any) => i.sumberDana)));
+    const existingSD = await prisma.sumberDana.findMany({ where: { nama: { in: uniqueSD as string[] } } });
+    const sdMap = new Map(existingSD.map((s: any) => [s.nama, s.id]));
 
-      // Upsert Sumber Dana (SIPD often has slightly different names, we match loosely or create)
-      let sd = await prisma.sumberDana.findFirst({ where: { nama: item.sumberDana }});
-      if (!sd) {
-        // Let's create a generic kode if not found
-        sd = await prisma.sumberDana.create({ data: { kode: 'SD-' + Math.floor(Math.random()*10000), nama: item.sumberDana }});
+    // Resolve or create missing items sequentially (usually very few)
+    for (let item of items) {
+      if (!rekMap.has(item.rekening)) {
+        let newRek = await prisma.rekening.create({ data: { kode: item.rekening, nama: item.namaRekening }});
+        rekMap.set(item.rekening, newRek.id);
       }
-      item.sumberDanaId = sd.id;
+      item.rekeningId = rekMap.get(item.rekening);
+
+      if (!sdMap.has(item.sumberDana)) {
+        let newSd = await prisma.sumberDana.create({ data: { kode: 'SD-' + Math.floor(Math.random()*10000), nama: item.sumberDana }});
+        sdMap.set(item.sumberDana, newSd.id);
+      }
+      item.sumberDanaId = sdMap.get(item.sumberDana);
     }
 
-    // Hapus data RincianBelanja lama untuk sub kegiatan ini (karena akan direplace)
-    await prisma.rincianBelanja.deleteMany({
-      where: { subKegiatanId: subKeg.id }
-    });
+    // Prepare transaction array
+    const txs: any[] = [];
+
+    // Delete old RincianBelanja
+    txs.push(
+      prisma.rincianBelanja.deleteMany({
+        where: { subKegiatanId: subKeg.id }
+      })
+    );
 
     // Grouping
     const paketGroups = new Map();
@@ -56,37 +68,17 @@ export async function POST(req: Request) {
           sumberDanaId: item.sumberDanaId,
           namaPaket: item.paket,
           tipePaket: '-',
-          paguInduk: 0,
-          paguRkpd: 0,
-          paguPerubahan: 0,
           items: []
         });
       }
       paketGroups.get(key).items.push(item);
     });
 
-    // Save to DB
+    // Build Nested Create Queries
     for (const [key, group] of paketGroups.entries()) {
       let totalPagu = group.items.reduce((acc: number, curr: any) => acc + (parseFloat(curr.jumlah) || 0), 0);
       
-      const newRincian = await prisma.rincianBelanja.create({
-        data: {
-          subKegiatanId: group.subKegiatanId,
-          rekeningId: group.rekeningId,
-          sumberDanaId: group.sumberDanaId,
-          namaPaket: group.namaPaket,
-          tipePaket: '-',
-          volumeInduk: 1,
-          hargaSatuanInduk: totalPagu,
-          paguInduk: totalPagu, 
-          paguRkpd: totalPagu,
-          paguPerubahan: totalPagu,
-        }
-      });
-
-      // Create Item Details
       const itemCreates = group.items.map((it: any) => ({
-        rincianBelanjaId: newRincian.id,
         uraian: it.uraian,
         spesifikasi: it.spesifikasi || '-',
         koefisien: String(it.koefisien),
@@ -96,10 +88,29 @@ export async function POST(req: Request) {
         jumlah: parseFloat(it.jumlah) || 0,
       }));
 
-      await prisma.rincianItemBelanja.createMany({
-        data: itemCreates
-      });
+      txs.push(
+        prisma.rincianBelanja.create({
+          data: {
+            subKegiatanId: group.subKegiatanId,
+            rekeningId: group.rekeningId,
+            sumberDanaId: group.sumberDanaId,
+            namaPaket: group.namaPaket,
+            tipePaket: '-',
+            volumeInduk: 1,
+            hargaSatuanInduk: totalPagu,
+            paguInduk: totalPagu, 
+            paguRkpd: totalPagu,
+            paguPerubahan: totalPagu,
+            rincianItemBelanjas: {
+              create: itemCreates
+            }
+          }
+        })
+      );
     }
+
+    // Execute all database operations in a single fast transaction!
+    await prisma.$transaction(txs);
 
     return NextResponse.json({ success: true });
   } catch (error: any) {
