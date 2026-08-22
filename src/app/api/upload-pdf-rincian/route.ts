@@ -86,55 +86,40 @@ export async function POST(req: Request) {
             parsingItem.spesifikasi = specStr;
             
             // To extract Sesudah (After) values, we look at the specific X coordinates for this line and the line BEFORE it.
-            // Because koefisien can be on the line above (e.g. 157240).
             let prevLineObj = rawLines[i-1];
             let nextLineObj = rawLines[i+1];
             
             let allItemTexts = [...lineObj.texts];
-            // If prev line doesn't start with '[', '5.', 'Sumber', etc, it might contain the Koefisien
             if (prevLineObj && !prevLineObj.texts.map(t=>t.text).join(' ').match(/^([\[5]|Sumber|Sub Kegiatan|Spesifikasi)/)) {
                allItemTexts = [...prevLineObj.texts, ...allItemTexts];
             }
-            // If next line contains part of the item (like "Hari" or "Kali" or values), include it too if it doesn't look like a new Uraian
             if (nextLineObj && !nextLineObj.texts.map(t=>t.text).join(' ').match(/^([\[5]|Sumber|Sub Kegiatan|Spesifikasi)/) && nextLineObj.texts.length < 10) {
                allItemTexts = [...allItemTexts, ...nextLineObj.texts];
             }
             
-            // Extract from buckets (Rincian Perhitungan Sesudah: X > 44)
-            let koefText = allItemTexts.filter(t => t.x >= 44 && t.x < 48.5).map(t => t.text).join(' ').trim();
-            let satText = allItemTexts.filter(t => t.x >= 48.5 && t.x < 52.5).map(t => t.text).join(' ').trim();
-            let hrgText = allItemTexts.filter(t => t.x >= 52.5 && t.x < 56.5).map(t => t.text).join(' ').trim();
-            let ppnText = allItemTexts.filter(t => t.x >= 56.5 && t.x < 59).map(t => t.text).join(' ').trim();
+            // Extract just the Jumlah bucket (X > 59)
             let jmlText = allItemTexts.filter(t => t.x >= 59 && t.x < 67).map(t => t.text).join(' ').trim();
             
-            // Clean up overlapping words in Satuan like "Orang / Hari" vs "Hari"
-            if (koefText) parsingItem.koefisien = koefText;
-            if (satText) parsingItem.satuan = satText;
-            
-            // For prices, we can just pick the first currency match inside the bucket string
-            let hrgMatch = hrgText.match(/(\d{1,3}(?:\.\d{3})*,\d{2}|-)/);
-            if (hrgMatch) parsingItem.hargaSatuan = cleanNumber(hrgMatch[0]);
-            
-            let ppnMatch = ppnText.match(/(\d{1,3}(?:\.\d{3})*,\d{2}|-)/);
-            if (ppnMatch) parsingItem.ppn = cleanNumber(ppnMatch[0]);
-            
+            // User requested to IGNORE Koefisien and Harga Satuan from PDF.
+            // We just need Jumlah (Sesudah).
             let jmlMatch = jmlText.match(/(\d{1,3}(?:\.\d{3})*,\d{2}|-)/);
-            if (jmlMatch) parsingItem.jumlah = cleanNumber(jmlMatch[0]);
-            
-            // If the buckets somehow missed the values, fallback to regex on lineText
-            if (!hrgMatch || !jmlMatch) {
+            let finalJumlah = 0;
+            if (jmlMatch) {
+               finalJumlah = cleanNumber(jmlMatch[0]);
+            } else {
+               // Fallback: check raw text if bucket failed
                let fallbackMatches = lineText.match(/(\d{1,3}(?:\.\d{3})*,\d{2}|-)/g);
                if (fallbackMatches && fallbackMatches.length >= 6) {
-                  parsingItem.hargaSatuan = cleanNumber(fallbackMatches[fallbackMatches.length - 4]);
-                  parsingItem.jumlah = cleanNumber(fallbackMatches[fallbackMatches.length - 2]);
+                  finalJumlah = cleanNumber(fallbackMatches[fallbackMatches.length - 2]);
                }
             }
             
-            // If koefisien empty, fallback to 1
-            if (!parsingItem.koefisien || parsingItem.koefisien === '-') {
-                parsingItem.koefisien = '1';
-                parsingItem.satuan = 'Ls';
-            }
+            // Set defaults to ignore Koefisien/Satuan/Harga from PDF
+            parsingItem.koefisien = '1';
+            parsingItem.satuan = 'Ls';
+            parsingItem.hargaSatuan = finalJumlah;
+            parsingItem.jumlah = finalJumlah;
+            parsingItem.ppn = 0;
 
             items.push(parsingItem);
             parsingItem = null;
