@@ -136,28 +136,36 @@ export default function KontrolKegiatan() {
                             <div className="overflow-x-auto rounded-lg border border-gray-200">
                               <table className="w-full text-xs">
                                 <thead className="bg-gray-100 text-gray-600">
-                                  <tr>
-                                    <th className="px-3 py-2 text-left">Sub Kegiatan</th>
-                                    <th className="px-3 py-2 text-left">Sumber Dana</th>
-                                    <th className="px-3 py-2 text-left">Rekening</th>
-                                    <th className="px-3 py-2 text-right">Pagu Induk</th>
-                                    <th className="px-3 py-2 text-right">Pagu RKPD</th>
-                                    <th className="px-3 py-2 text-right">Pagu Perubahan</th>
-                                    <th className="px-3 py-2 text-right">Realisasi</th>
-                                  </tr>
-                                </thead>
-                                <tbody className="divide-y divide-gray-100 bg-white">
-                                  {group.items.map((item: any, i: number) => (
-                                    <tr key={i} className="hover:bg-gray-50">
-                                      <td className="px-3 py-2 font-medium text-gray-800">{item.subKegiatan}</td>
-                                      <td className="px-3 py-2 text-gray-600">{item.sumberDana}</td>
-                                      <td className="px-3 py-2 text-gray-600">{item.rekening}</td>
-                                      <td className="px-3 py-2 text-right">{formatCurrency(item.paguInduk)}</td>
-                                      <td className="px-3 py-2 text-right">{formatCurrency(item.paguRkpd)}</td>
-                                      <td className="px-3 py-2 text-right">{formatCurrency(item.paguPerubahan)}</td>
-                                      <td className="px-3 py-2 text-right text-blue-600">{formatCurrency(item.realisasi)}</td>
+                                    <tr>
+                                      <th className="px-3 py-2 text-left">Sub Kegiatan</th>
+                                      <th className="px-3 py-2 text-left">Sumber Dana</th>
+                                      <th className="px-3 py-2 text-left">Rekening</th>
+                                      <th className="px-3 py-2 text-right">Pagu Induk</th>
+                                      <th className="px-3 py-2 text-right">Pagu RKPD</th>
+                                      <th className="px-3 py-2 text-right">Pagu Perubahan</th>
+                                      <th className="px-3 py-2 text-center">Selisih</th>
+                                      <th className="px-3 py-2 text-right">Realisasi</th>
                                     </tr>
-                                  ))}
+                                  </thead>
+                                  <tbody className="divide-y divide-gray-100 bg-white">
+                                    {group.items.map((item: any, i: number) => {
+                                      const selisihItem = item.paguPerubahan - item.paguInduk;
+                                      const selisihItemColor = selisihItem > 0 ? 'text-green-600' : selisihItem < 0 ? 'text-red-600' : 'text-gray-500';
+                                      return (
+                                      <tr key={i} className="hover:bg-gray-50">
+                                        <td className="px-3 py-2 font-medium text-gray-800">{item.subKegiatan}</td>
+                                        <td className="px-3 py-2 text-gray-600">{item.sumberDana}</td>
+                                        <td className="px-3 py-2 text-gray-600">{item.rekening}</td>
+                                        <td className="px-3 py-2 text-right">{formatCurrency(item.paguInduk)}</td>
+                                        <td className="px-3 py-2 text-right">{formatCurrency(item.paguRkpd)}</td>
+                                        <td className="px-3 py-2 text-right">{formatCurrency(item.paguPerubahan)}</td>
+                                        <td className={`px-3 py-2 text-center font-medium ${selisihItemColor}`}>
+                                          {selisihItem > 0 ? '+' : ''}{formatCurrency(selisihItem)}
+                                        </td>
+                                        <td className="px-3 py-2 text-right text-blue-600">{formatCurrency(item.realisasi)}</td>
+                                      </tr>
+                                      );
+                                    })}
                                 </tbody>
                               </table>
                             </div>
