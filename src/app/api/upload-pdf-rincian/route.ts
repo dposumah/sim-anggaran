@@ -85,23 +85,28 @@ export async function POST(req: Request) {
             let specStr = lineText.split('Spesifikasi :')[1].trim().split(' ')[0] || '-';
             parsingItem.spesifikasi = specStr;
             
-            // To extract Sesudah (After) values, we look at the specific X coordinates for this line and the line BEFORE it.
-            let prevLineObj = rawLines[i-1];
-            let nextLineObj = rawLines[i+1];
-            
             let allItemTexts = [...lineObj.texts];
+            
+            let prevLineObj = rawLines[i-1];
             if (prevLineObj && !prevLineObj.texts.map(t=>t.text).join(' ').match(/^([\[5]|Sumber|Sub Kegiatan|Spesifikasi)/)) {
                allItemTexts = [...prevLineObj.texts, ...allItemTexts];
             }
-            if (nextLineObj && !nextLineObj.texts.map(t=>t.text).join(' ').match(/^([\[5]|Sumber|Sub Kegiatan|Spesifikasi)/) && nextLineObj.texts.length < 10) {
-               allItemTexts = [...allItemTexts, ...nextLineObj.texts];
+            
+            // Gather all next lines that belong to this item (up to 5 lines ahead)
+            for (let j = 1; j <= 5; j++) {
+               let nextLine = rawLines[i+j];
+               if (!nextLine) break;
+               let nextLineText = nextLine.texts.map(t=>t.text).join(' ').trim();
+               // Stop if we see a marker that indicates a new section or item
+               if (nextLineText.match(/^([\[5]|Sumber|Sub Kegiatan|Spesifikasi|Jumlah Anggaran)/)) {
+                  break;
+               }
+               allItemTexts = [...allItemTexts, ...nextLine.texts];
             }
             
             // Extract just the Jumlah bucket (X > 59)
             let jmlText = allItemTexts.filter(t => t.x >= 59 && t.x < 67).map(t => t.text).join(' ').trim();
             
-            // User requested to IGNORE Koefisien and Harga Satuan from PDF.
-            // We just need Jumlah (Sesudah).
             let jmlMatch = jmlText.match(/(\d{1,3}(?:\.\d{3})*,\d{2}|-)/);
             let finalJumlah = 0;
             if (jmlMatch) {
