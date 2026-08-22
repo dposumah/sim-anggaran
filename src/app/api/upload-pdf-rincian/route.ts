@@ -59,8 +59,8 @@ export async function POST(req: Request) {
     let currentSubKegiatan = '';
     let currentRekening = '';
     let currentNamaRekening = '';
-    let currentPaket = '';
-    let currentSumberDana = '';
+    let currentPaket = '-';
+    let currentSumberDana = '-';
     
     let parsingItem = null;
 
@@ -75,10 +75,10 @@ export async function POST(req: Request) {
         currentRekening = parts[0];
         currentNamaRekening = parts.slice(1).join(' ').split(/ \d/)[0].trim();
       } else if (lineText.startsWith('[ # ]')) {
-        currentPaket = lineText.replace('[ # ]', '').trim();
+        currentPaket = lineText.replace('[ # ]', '').trim() || '-';
       } else if (lineText.startsWith('Sumber Dana :')) {
-        currentSumberDana = lineText.replace('Sumber Dana :', '').split(/ \d/)[0].trim();
-      } else if (currentPaket && currentSumberDana && currentRekening && !lineText.includes('Satuan Kerja Perangkat Daerah') && !lineText.includes('Koefisien Satuan') && !lineText.startsWith('[ - ]')) {
+        currentSumberDana = lineText.replace('Sumber Dana :', '').split(/ \d/)[0].trim() || '-';
+      } else if (currentRekening && !lineText.includes('Satuan Kerja Perangkat Daerah') && !lineText.includes('Koefisien Satuan') && !lineText.startsWith('[ - ]')) {
         
         if (lineText.includes('Spesifikasi :')) {
           if (parsingItem) {
