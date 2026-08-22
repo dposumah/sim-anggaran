@@ -82,14 +82,20 @@ export async function POST(req: Request) {
         
         if (lineText.includes('Spesifikasi :')) {
           if (parsingItem) {
-            let specStr = '-';
+            // Restore Spesifikasi text parsing!
+            let specStr = lineText.split('Spesifikasi :')[1].trim().split(' ')[0] || '-';
             parsingItem.spesifikasi = specStr;
             
             let allItemTexts = [...lineObj.texts];
             
             let prevLineObj = rawLines[i-1];
-            if (prevLineObj && !prevLineObj.texts.map(t=>t.text).join(' ').match(/^(\[|^5\.\d+\.\d+|Sumber|Sub Kegiatan|Spesifikasi)/)) {
+            if (prevLineObj && !prevLineObj.texts.map(t=>t.text).join(' ').match(/^(\[|^5\.\d+\.\d+\.\d+|Sumber|Sub Kegiatan|Spesifikasi)/)) {
                allItemTexts = [...prevLineObj.texts, ...allItemTexts];
+               // Catch multi-line uraian (e.g. DALAM NEGERI PERGI PULANG (PP) EKONOMI)
+               let prev2LineObj = rawLines[i-2];
+               if (prev2LineObj && !prev2LineObj.texts.map(t=>t.text).join(' ').match(/^(\[|^5\.\d+\.\d+\.\d+|Sumber|Sub Kegiatan|Spesifikasi)/)) {
+                   allItemTexts = [...prev2LineObj.texts, ...allItemTexts];
+               }
             }
             
             // Gather all next lines that belong to this item (up to 5 lines ahead)
@@ -98,7 +104,8 @@ export async function POST(req: Request) {
                if (!nextLine) break;
                let nextLineText = nextLine.texts.map(t=>t.text).join(' ').trim();
                // Stop if we see a marker that indicates a new section or item
-               if (nextLineText.match(/^(\[|^5\.\d+\.\d+|Sumber|Sub Kegiatan|Spesifikasi|Jumlah Anggaran)/)) {
+               // Ensure 5.x checks multiple dots so it doesn't match 5.100.000 (currency)
+               if (nextLineText.match(/^(\[|^5\.\d+\.\d+\.\d+|Sumber|Sub Kegiatan|Spesifikasi|Jumlah Anggaran)/)) {
                   break;
                }
                allItemTexts = [...allItemTexts, ...nextLine.texts];
