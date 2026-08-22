@@ -177,10 +177,22 @@ export async function POST(request: Request) {
         if (anySD) {
           sumberDanaId = anySD;
         } else {
-          // Use first sumber dana available if not cached yet
+          // Use PAD or DAU as fallback if not cached yet
           if (!cachedFirstSD) {
-            const firstSDFetch = await prisma.sumberDana.findFirst();
-            cachedFirstSD = firstSDFetch ? firstSDFetch.id : null;
+            const fallbackSd = await prisma.sumberDana.findFirst({
+              where: {
+                OR: [
+                  { nama: { contains: 'PENDAPATAN ASLI DAERAH', mode: 'insensitive' } },
+                  { nama: { contains: 'DAU', mode: 'insensitive' } }
+                ]
+              }
+            });
+            if (fallbackSd) {
+              cachedFirstSD = fallbackSd.id;
+            } else {
+              const firstSDFetch = await prisma.sumberDana.findFirst();
+              cachedFirstSD = firstSDFetch ? firstSDFetch.id : null;
+            }
           }
           
           if (cachedFirstSD) {
