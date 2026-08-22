@@ -89,7 +89,6 @@ export async function POST(request: Request) {
     }
 
     const skpdIds = skpdList.map(s => s.id);
-    const skpdNamesLower = skpdList.map(s => s.nama.toLowerCase());
 
     // Preload lookup data
     const [subKegiatans, rekenings, rincianBelanjas] = await Promise.all([
@@ -100,7 +99,7 @@ export async function POST(request: Request) {
       prisma.rekening.findMany({ select: { id: true, kode: true } }),
       prisma.rincianBelanja.findMany({
         where: { subKegiatan: { kegiatan: { program: { skpdId: { in: skpdIds } } } } },
-        select: { subKegiatanId: true, rekeningId: true, sumberDanaId: true }
+        select: { subKegiatanId: true, rekeningId: true, sumberDanaId: true, paguInduk: true, paguPerubahan: true }
       })
     ]);
 
@@ -112,27 +111,33 @@ export async function POST(request: Request) {
     const rekeningMap = new Map<string, number>();
     rekenings.forEach(r => rekeningMap.set(r.kode, r.id));
 
-    // Build lookup: subKegiatanId+rekeningId -> sumberDanaId (first match)
-    const sdLookup = new Map<string, number>();
-    const skSDLookup = new Map<number, number>();
+    // Build lookup for Rincian Belanja (group by SubKeg+Rekening, collect Sumber Dana and sum Pagu)
+    const sdLookupMap = new Map<string, Map<number, number>>(); // key -> Map<sumberDanaId, totalPagu>
+    const skSDLookup = new Map<number, number>(); // SubKegiatan -> fallback SD
+
     rincianBelanjas.forEach(rb => {
       const key = `${rb.subKegiatanId}_${rb.rekeningId}`;
-      if (!sdLookup.has(key)) {
-        sdLookup.set(key, rb.sumberDanaId);
+      const pagu = Number(rb.paguPerubahan !== null ? rb.paguPerubahan : rb.paguInduk);
+      
+      if (!sdLookupMap.has(key)) {
+        sdLookupMap.set(key, new Map());
       }
+      const sdMap = sdLookupMap.get(key)!;
+      sdMap.set(rb.sumberDanaId, (sdMap.get(rb.sumberDanaId) || 0) + pagu);
+
       if (!skSDLookup.has(rb.subKegiatanId)) {
         skSDLookup.set(rb.subKegiatanId, rb.sumberDanaId);
       }
     });
 
-    // Process data rows
+    // Phase 1: Aggregate Excel Realisasi Data
     const dataRows = filteredData;
-    let successCount = 0;
     let skipCount = 0;
     let errorCount = 0;
     const warnings: string[] = [];
-    const upsertDataMap = new Map<string, any>();
-    let cachedFirstSD: number | null = null;
+    
+    // key: skpdId_subKegiatanId_rekeningId
+    const excelAggMap = new Map<string, { skpdId: number, subKegiatanId: number, rekeningId: number, nominal: number, alokasi: number, originalRow: number, kodeSubKeg: string, kodeRek: string }>();
 
     for (let i = 0; i < dataRows.length; i++) {
       const row = dataRows[i];
@@ -151,83 +156,144 @@ export async function POST(request: Request) {
         continue;
       }
 
-      // Lookup subKegiatan
       const skData = subKegiatanMap.get(kodeSubKegiatan);
       if (!skData) {
-        warnings.push(`Baris data ke-${i + 1}: Kode Sub Kegiatan "${kodeSubKegiatan}" tidak ditemukan di database`);
+        warnings.push(`Baris ke-${i + 1}: Kode Sub Kegiatan "${kodeSubKegiatan}" tidak ditemukan di database`);
         errorCount++;
         continue;
       }
 
-      // Lookup rekening
       const rekId = rekeningMap.get(kodeRekening);
       if (!rekId) {
-        warnings.push(`Baris data ke-${i + 1}: Kode Rekening "${kodeRekening}" tidak ditemukan di database`);
+        warnings.push(`Baris ke-${i + 1}: Kode Rekening "${kodeRekening}" tidak ditemukan di database`);
         errorCount++;
         continue;
       }
 
-      // Lookup sumber dana from rincian belanja
-      const sdKey = `${skData.id}_${rekId}`;
-      let sumberDanaId = sdLookup.get(sdKey);
-            if (!sumberDanaId) {
-          // Try to find any sumber dana for this sub kegiatan
-          const anySD = skSDLookup.get(skData.id);
-          if (anySD) {
-            sumberDanaId = anySD;
-            warnings.push(`Baris ke-${i + 1}: Rekening "${kodeRekening}" pada Sub Kegiatan "${kodeSubKegiatan}" tidak ada di pagu/rincian. Dialihkan ke sumber dana lain di sub kegiatan yang sama.`);
-          } else {
-            // Use PAD or DAU as fallback if not cached yet
-            if (!cachedFirstSD) {
-              const fallbackSd = await prisma.sumberDana.findFirst({
-                where: {
-                  OR: [
-                    { nama: { contains: 'PENDAPATAN ASLI DAERAH', mode: 'insensitive' } },
-                    { nama: { contains: 'DAU', mode: 'insensitive' } }
-                  ]
-                }
-              });
-              if (fallbackSd) {
-                cachedFirstSD = fallbackSd.id;
-              } else {
-                const firstSDFetch = await prisma.sumberDana.findFirst();
-                cachedFirstSD = firstSDFetch ? firstSDFetch.id : null;
-              }
-            }
-            
-            if (cachedFirstSD) {
-              sumberDanaId = cachedFirstSD;
-              warnings.push(`Baris ke-${i + 1}: Sub Kegiatan "${kodeSubKegiatan}" tidak memiliki pagu sama sekali. Dialihkan ke sumber dana default (PAD/DAU).`);
-            } else {
-              warnings.push(`Baris data ke-${i + 1}: Tidak ditemukan Sumber Dana untuk Sub Kegiatan "${kodeSubKegiatan}"`);
-              errorCount++;
-              continue;
-            }
-          }
-        }
-
-      // Combine (sum) duplicates
-      const uniqueKey = `${skData.skpdId}_${skData.id}_${sumberDanaId}_${rekId}`;
-      const existing = upsertDataMap.get(uniqueKey);
+      const aggKey = `${skData.skpdId}_${skData.id}_${rekId}`;
+      const existing = excelAggMap.get(aggKey);
       if (existing) {
         existing.nominal += realisasi;
-        existing.alokasiRealisasi += alokasi;
+        existing.alokasi += alokasi;
       } else {
-        upsertDataMap.set(uniqueKey, {
+        excelAggMap.set(aggKey, {
           skpdId: skData.skpdId,
-          tahunId: tahunData.id,
           subKegiatanId: skData.id,
-          sumberDanaId,
           rekeningId: rekId,
-          bulan: 0,
           nominal: realisasi,
-          alokasiRealisasi: alokasi,
-          keterangan: 'Import Excel'
+          alokasi: alokasi,
+          originalRow: i + 1,
+          kodeSubKeg: kodeSubKegiatan,
+          kodeRek: kodeRekening
         });
       }
     }
 
+    // Phase 2: Distribute Realisasi using Waterfall Logic
+    const upsertDataMap = new Map<string, any>(); // final outputs
+    let cachedFirstSD: number | null = null;
+
+    for (const [aggKey, data] of Array.from(excelAggMap.entries())) {
+      const lookupKey = `${data.subKegiatanId}_${data.rekeningId}`;
+      const sdMap = sdLookupMap.get(lookupKey);
+
+      let remainingNominal = data.nominal;
+      const totalAlokasi = data.alokasi;
+
+      if (sdMap && sdMap.size > 0) {
+        // Sort Sumber Dana by Pagu DESC (Largest first)
+        const sortedSDs = Array.from(sdMap.entries()).sort((a, b) => b[1] - a[1]);
+        
+        for (let idx = 0; idx < sortedSDs.length; idx++) {
+          const [sdId, sdPagu] = sortedSDs[idx];
+          const isLast = idx === sortedSDs.length - 1;
+          
+          let allocatedNominal = 0;
+          if (remainingNominal > 0) {
+            if (isLast) {
+              // Dump all remaining if it's the last one, even if it exceeds pagu
+              allocatedNominal = remainingNominal;
+              remainingNominal = 0;
+            } else if (remainingNominal <= sdPagu) {
+              // Fits completely
+              allocatedNominal = remainingNominal;
+              remainingNominal = 0;
+            } else {
+              // Exceeds pagu, fill this SD and carry over
+              allocatedNominal = sdPagu;
+              remainingNominal -= sdPagu;
+            }
+          } else if (idx === 0) {
+             // ensure at least a 0 nominal record is created for the primary SD if total realisasi is 0
+             allocatedNominal = 0;
+          } else {
+             continue; // don't create empty records for secondary SDs if remaining is 0
+          }
+
+          const finalKey = `${data.skpdId}_${data.subKegiatanId}_${sdId}_${data.rekeningId}`;
+          upsertDataMap.set(finalKey, {
+            skpdId: data.skpdId,
+            tahunId: tahunData.id,
+            subKegiatanId: data.subKegiatanId,
+            sumberDanaId: sdId,
+            rekeningId: data.rekeningId,
+            bulan: 0,
+            nominal: allocatedNominal,
+            alokasiRealisasi: idx === 0 ? totalAlokasi : 0, // put alokasi in the primary SD
+            keterangan: 'Import Excel (Waterfall)'
+          });
+        }
+      } else {
+        // Fallback Logic if no Pagu found
+        let fallbackSdId = null;
+        
+        const anySD = skSDLookup.get(data.subKegiatanId);
+        if (anySD) {
+          fallbackSdId = anySD;
+          warnings.push(`Baris Excel-${data.originalRow}: Rekening "${data.kodeRek}" pada Sub Kegiatan "${data.kodeSubKeg}" tidak ada di pagu. Dialihkan ke sumber dana lain di sub kegiatan yang sama.`);
+        } else {
+          if (!cachedFirstSD) {
+            const fallbackSd = await prisma.sumberDana.findFirst({
+              where: {
+                OR: [
+                  { nama: { contains: 'PENDAPATAN ASLI DAERAH', mode: 'insensitive' } },
+                  { nama: { contains: 'DAU', mode: 'insensitive' } }
+                ]
+              }
+            });
+            if (fallbackSd) {
+              cachedFirstSD = fallbackSd.id;
+            } else {
+              const firstSDFetch = await prisma.sumberDana.findFirst();
+              cachedFirstSD = firstSDFetch ? firstSDFetch.id : null;
+            }
+          }
+          
+          if (cachedFirstSD) {
+            fallbackSdId = cachedFirstSD;
+            warnings.push(`Baris Excel-${data.originalRow}: Sub Kegiatan "${data.kodeSubKeg}" tidak memiliki pagu sama sekali. Dialihkan ke sumber dana default (PAD/DAU).`);
+          }
+        }
+
+        if (fallbackSdId) {
+          const finalKey = `${data.skpdId}_${data.subKegiatanId}_${fallbackSdId}_${data.rekeningId}`;
+          upsertDataMap.set(finalKey, {
+            skpdId: data.skpdId,
+            tahunId: tahunData.id,
+            subKegiatanId: data.subKegiatanId,
+            sumberDanaId: fallbackSdId,
+            rekeningId: data.rekeningId,
+            bulan: 0,
+            nominal: data.nominal,
+            alokasiRealisasi: data.alokasi,
+            keterangan: 'Import Excel (Fallback)'
+          });
+        }
+      }
+    }
+
     const upsertData = Array.from(upsertDataMap.values());
+    let successCount = 0;
 
     // Batch upsert in chunks to avoid blocking and speed up processing
     const CHUNK_SIZE = 50;
@@ -267,7 +333,7 @@ export async function POST(request: Request) {
       success: true,
       summary: {
         totalRows: dataRows.length,
-        imported: successCount,
+        imported: successCount, // Number of distributed records saved
         skipped: skipCount,
         errors: errorCount
       },
