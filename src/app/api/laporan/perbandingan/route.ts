@@ -51,8 +51,16 @@ const getCachedLaporan = unstable_cache(
       },
       include: {
         rekening: true,
-        subKegiatan: true,
-        sumberDana: true // Realisasi doesn't easily have sumberDana, we rely on Rincian mapping below
+        subKegiatan: {
+          include: {
+            kegiatan: {
+              include: {
+                program: true
+              }
+            }
+          }
+        },
+        sumberDana: true
       }
     });
 
@@ -85,6 +93,11 @@ const getCachedLaporan = unstable_cache(
     const subRekPaguMap: Record<string, number> = {};
     const subRekRealisasiMap: Record<string, number> = {};
 
+    // For Dashboard summaries
+    const programListMap: Record<number, { id: number, kode: string, nama: string, paguInduk: number, paguRkpd: number, paguPerubahan: number, realisasi: number }> = {};
+    const kegiatanListMap: Record<number, { id: number, kode: string, nama: string, paguInduk: number, paguRkpd: number, paguPerubahan: number, realisasi: number }> = {};
+    const subKegiatanListMap: Record<number, { id: number, kode: string, nama: string, paguInduk: number, paguRkpd: number, paguPerubahan: number, realisasi: number }> = {};
+
     // Helper to determine if BOSP Reguler or Kinerja based on sumberDana
     const getBospType = (sdNama: string) => {
       const upper = sdNama.toUpperCase();
@@ -107,6 +120,24 @@ const getCachedLaporan = unstable_cache(
       paguIndukTotal += nilaiInduk;
       paguRkpdTotal += nilaiRkpd;
       paguPerubahanTotal += nilaiPerubahan;
+
+      // Populate Program, Kegiatan, SubKegiatan maps for Dashboard
+      const keg = sub.kegiatan;
+
+      if (!programListMap[prog.id]) programListMap[prog.id] = { id: prog.id, kode: prog.kode, nama: prog.nama, paguInduk: 0, paguRkpd: 0, paguPerubahan: 0, realisasi: 0 };
+      programListMap[prog.id].paguInduk += nilaiInduk;
+      programListMap[prog.id].paguRkpd += nilaiRkpd;
+      programListMap[prog.id].paguPerubahan += nilaiPerubahan;
+
+      if (!kegiatanListMap[keg.id]) kegiatanListMap[keg.id] = { id: keg.id, kode: keg.kode, nama: keg.nama, paguInduk: 0, paguRkpd: 0, paguPerubahan: 0, realisasi: 0 };
+      kegiatanListMap[keg.id].paguInduk += nilaiInduk;
+      kegiatanListMap[keg.id].paguRkpd += nilaiRkpd;
+      kegiatanListMap[keg.id].paguPerubahan += nilaiPerubahan;
+
+      if (!subKegiatanListMap[sub.id]) subKegiatanListMap[sub.id] = { id: sub.id, kode: sub.kode, nama: sub.nama, paguInduk: 0, paguRkpd: 0, paguPerubahan: 0, realisasi: 0 };
+      subKegiatanListMap[sub.id].paguInduk += nilaiInduk;
+      subKegiatanListMap[sub.id].paguRkpd += nilaiRkpd;
+      subKegiatanListMap[sub.id].paguPerubahan += nilaiPerubahan;
 
       if (!subKegRealisasiMap[sub.id]) {
         subKegRealisasiMap[sub.id] = { nama: sub.nama, kode: sub.kode, paguInduk: 0, paguRkpd: 0, paguPerubahan: 0, realisasi: 0 };
@@ -242,6 +273,14 @@ const getCachedLaporan = unstable_cache(
 
       realisasiTotal += nilai;
 
+      // Populate realisasi for Dashboard lists
+      const progId = sub.kegiatan?.program?.id;
+      const kegId = sub.kegiatan?.id;
+      
+      if (progId && programListMap[progId]) programListMap[progId].realisasi += nilai;
+      if (kegId && kegiatanListMap[kegId]) kegiatanListMap[kegId].realisasi += nilai;
+      if (sub.id && subKegiatanListMap[sub.id]) subKegiatanListMap[sub.id].realisasi += nilai;
+
       const sdNama = r.sumberDana?.nama || 'Tidak Ada Sumber Dana';
       if (!sumDanaMap[sdNama]) sumDanaMap[sdNama] = { induk: 0, rkpd: 0, perubahan: 0, realisasi: 0 };
       sumDanaMap[sdNama].realisasi += nilai;
@@ -374,25 +413,28 @@ const getCachedLaporan = unstable_cache(
       .filter(r => r.realisasi > 0)
       .sort((a, b) => b.paguPerubahan - a.paguPerubahan);
 
-    return {
-      summary: {
-        pagu: { induk: paguIndukTotal, rkpd: paguRkpdTotal, perubahan: paguPerubahanTotal, realisasi: realisasiTotal },
-        gajiPns: { induk: gajiPnsInduk, rkpd: gajiPnsRkpd, perubahan: gajiPnsPerubahan, realisasi: gajiPnsRealisasi },
-        gajiPppk: { induk: gajiPppkInduk, rkpd: gajiPppkRkpd, perubahan: gajiPppkPerubahan, realisasi: gajiPppkRealisasi },
-        gajiPppkParuhWaktu: { induk: pppkParuhWaktuInduk, rkpd: pppkParuhWaktuRkpd, perubahan: pppkParuhWaktuPerubahan, realisasi: pppkParuhWaktuRealisasi },
-        tpp: { induk: tppInduk, rkpd: tppRkpd, perubahan: tppPerubahan, realisasi: tppRealisasi },
-        tpg: { induk: tpgInduk, rkpd: tpgRkpd, perubahan: tpgPerubahan, realisasi: tpgRealisasi },
-        bospSd,
-        bospSmp,
-        bospPaud,
-        bospKesetaraan,
-      },
-      chartData,
-      topPaket,
-      allPaket,
-      topSubKegiatan,
-      topRekening
-    };
+      return {
+        summary: {
+          pagu: { induk: paguIndukTotal, rkpd: paguRkpdTotal, perubahan: paguPerubahanTotal, realisasi: realisasiTotal },
+          gajiPns: { induk: gajiPnsInduk, rkpd: gajiPnsRkpd, perubahan: gajiPnsPerubahan, realisasi: gajiPnsRealisasi },
+          gajiPppk: { induk: gajiPppkInduk, rkpd: gajiPppkRkpd, perubahan: gajiPppkPerubahan, realisasi: gajiPppkRealisasi },
+          gajiPppkParuhWaktu: { induk: pppkParuhWaktuInduk, rkpd: pppkParuhWaktuRkpd, perubahan: pppkParuhWaktuPerubahan, realisasi: pppkParuhWaktuRealisasi },
+          tpp: { induk: tppInduk, rkpd: tppRkpd, perubahan: tppPerubahan, realisasi: tppRealisasi },
+          tpg: { induk: tpgInduk, rkpd: tpgRkpd, perubahan: tpgPerubahan, realisasi: tpgRealisasi },
+          bospSd,
+          bospSmp,
+          bospPaud,
+          bospKesetaraan,
+        },
+        chartData,
+        topPaket,
+        allPaket,
+        topSubKegiatan,
+        topRekening,
+        programList: Object.values(programListMap).sort((a, b) => b.paguPerubahan - a.paguPerubahan),
+        kegiatanList: Object.values(kegiatanListMap).sort((a, b) => b.paguPerubahan - a.paguPerubahan),
+        subKegiatanList: Object.values(subKegiatanListMap).sort((a, b) => b.paguPerubahan - a.paguPerubahan)
+      };
   },
   ['laporan-perbandingan-data'],
   { tags: ['laporanData'], revalidate: false }

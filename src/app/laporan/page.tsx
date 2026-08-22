@@ -4,11 +4,10 @@ import { useState } from 'react';
 import { useYear } from '@/contexts/YearContext';
 import LaporanEksekutif from './LaporanEksekutif';
 import RekapitulasiProgram from './RekapitulasiProgram';
-import LaporanPerbandingan from './LaporanPerbandingan';
-import { FileText, Database, Scale } from 'lucide-react';
+import { FileText, Database } from 'lucide-react';
 
 export default function LaporanPage() {
-  const [activeTab, setActiveTab] = useState<'eksekutif' | 'rekap' | 'perbandingan'>('eksekutif');
+  const [activeTab, setActiveTab] = useState<'eksekutif' | 'rekap'>('eksekutif');
 
   return (
     <div className="space-y-6 pb-12">
@@ -42,23 +41,11 @@ export default function LaporanPage() {
           <Database className="w-4 h-4" />
           Rekapitulasi Program
         </button>
-        <button
-          onClick={() => setActiveTab('perbandingan')}
-          className={`flex items-center gap-2 px-6 py-2.5 rounded-md text-sm font-medium transition-all ${
-            activeTab === 'perbandingan'
-              ? 'bg-primary text-white shadow-md'
-              : 'text-gray-600 hover:text-primary hover:bg-red-50'
-          }`}
-        >
-          <Scale className="w-4 h-4" />
-          Laporan Perbandingan
-        </button>
       </div>
 
       <div className="mt-6">
         {activeTab === 'eksekutif' && <LaporanEksekutif />}
         {activeTab === 'rekap' && <RekapitulasiProgram />}
-        {activeTab === 'perbandingan' && <LaporanPerbandingan />}
       </div>
     </div>
   );
