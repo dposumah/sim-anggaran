@@ -85,12 +85,12 @@ export async function POST(req: Request) {
             let itemLines = [lineObj];
             
             let prevLineObj = rawLines[i-1];
-            if (prevLineObj && !prevLineObj.texts.map(t=>t.text).join(' ').match(/^(\[|^5\.\d+\.\d+\.\d+|Sumber|Sub Kegiatan|Spesifikasi)/)) {
+            if (prevLineObj && !prevLineObj.texts.map(t=>t.text).join(' ').trim().match(/^(\[|^5\.\d+\.\d+\.\d+|Sumber|Sub Kegiatan|Spesifikasi)/)) {
                let hasLeftText = prevLineObj.texts.some(t => t.x < 25 && t.text.match(/[a-zA-Z]/));
                if (hasLeftText) {
                    itemLines.unshift(prevLineObj);
                    let prev2LineObj = rawLines[i-2];
-                   if (prev2LineObj && !prev2LineObj.texts.map(t=>t.text).join(' ').match(/^(\[|^5\.\d+\.\d+\.\d+|Sumber|Sub Kegiatan|Spesifikasi)/)) {
+                   if (prev2LineObj && !prev2LineObj.texts.map(t=>t.text).join(' ').trim().match(/^(\[|^5\.\d+\.\d+\.\d+|Sumber|Sub Kegiatan|Spesifikasi)/)) {
                        if (prev2LineObj.texts.some(t => t.x < 25 && t.text.match(/[a-zA-Z]/))) {
                           itemLines.unshift(prev2LineObj);
                        }
@@ -120,12 +120,7 @@ export async function POST(req: Request) {
                itemLines.push(nextLine);
             }
             
-            let amountTexts = [];
-            let specFound = false;
-            for (let line of itemLines) {
-                if (line.texts.map(t=>t.text).join(' ').includes('Spesifikasi :')) specFound = true;
-                if (specFound) amountTexts.push(...line.texts);
-            }
+            let amountTexts = itemLines.flatMap(l => l.texts);
             
             let jmlText = amountTexts.filter(t => t.x >= 59 && t.x < 67).map(t => t.text).join(' ').trim();
             let jmlMatch = jmlText.match(/(\d{1,3}(?:\.\d{3})*,\d{2}|-)/);
