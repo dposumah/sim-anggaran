@@ -1,14 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import { UploadCloud, CheckCircle, AlertTriangle, Save, Loader2, ArrowLeft } from 'lucide-react';
+import { UploadCloud, FileText, CheckCircle, AlertTriangle, ArrowLeft, Loader2, Save } from 'lucide-react';
 import Link from 'next/link';
+import { formatCurrency } from '@/lib/utils';
 
-const formatCurrency = (number: number) => {
-  return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(number);
-};
-
-export default function UploadPdfRincian() {
+export default function UploadPDFRincian() {
   const [file, setFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [parsedData, setParsedData] = useState<any>(null);
@@ -17,20 +14,19 @@ export default function UploadPdfRincian() {
   const handleUpload = async () => {
     if (!file) return;
     setIsUploading(true);
-    
-    const formData = new FormData();
-    formData.append('file', file);
-    
     try {
+      const formData = new FormData();
+      formData.append('file', file);
+
       const res = await fetch('/api/upload-pdf-rincian', {
         method: 'POST',
-        body: formData
+        body: formData,
       });
+
       const data = await res.json();
       if (data.success) {
         setParsedData(data.data);
         setItems(data.data.items);
-        alert('PDF berhasil dibaca! Silakan review data di bawah.');
       } else {
         alert(data.error || 'Gagal membaca PDF');
       }
@@ -68,10 +64,9 @@ export default function UploadPdfRincian() {
   const updateItem = (index: number, field: string, value: any) => {
     const newItems = [...items];
     newItems[index][field] = value;
-    if (field === 'koefisien' || field === 'hargaSatuan') {
-      const koefNum = parseFloat(String(newItems[index].koefisien).split(' ')[0]) || 1;
-      const harga = parseFloat(newItems[index].hargaSatuan) || 0;
-      newItems[index].jumlah = koefNum * harga;
+    if (field === 'jumlah') {
+      const jumlah = parseFloat(value) || 0;
+      newItems[index].hargaSatuan = jumlah;
     }
     setItems(newItems);
   };
@@ -124,7 +119,7 @@ export default function UploadPdfRincian() {
             <AlertTriangle className="w-5 h-5 text-yellow-600 shrink-0 mt-0.5" />
             <div>
               <h4 className="font-semibold text-yellow-900">Perhatian: Review Data</h4>
-              <p className="text-sm text-yellow-700">Karena format PDF rentan meleset, silakan periksa tabel di bawah. Anda bisa mengedit kolom Harga atau Koefisien langsung di tabel jika ada yang tidak sesuai sebelum menyimpan.</p>
+              <p className="text-sm text-yellow-700">Silakan periksa tabel di bawah. Anda bisa mengedit Uraian atau Jumlah langsung di tabel jika ada yang tidak sesuai sebelum menyimpan.</p>
             </div>
           </div>
 
@@ -136,19 +131,17 @@ export default function UploadPdfRincian() {
                     <th className="px-4 py-3 font-semibold text-gray-700">Rekening</th>
                     <th className="px-4 py-3 font-semibold text-gray-700">Paket</th>
                     <th className="px-4 py-3 font-semibold text-gray-700">Uraian & Spesifikasi</th>
-                    <th className="px-4 py-3 font-semibold text-gray-700">Koefisien</th>
-                    <th className="px-4 py-3 font-semibold text-gray-700 text-right">Harga Satuan</th>
-                    <th className="px-4 py-3 font-semibold text-gray-700 text-right">Jumlah</th>
+                    <th className="px-4 py-3 font-semibold text-gray-700 text-right w-48">Jumlah (Rp)</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
                   {items.map((item, idx) => (
                     <tr key={idx} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 align-top text-xs">
+                      <td className="px-4 py-3 align-top text-xs w-48">
                         <div className="font-medium text-gray-900">{item.rekening}</div>
                         <div className="text-gray-500">{item.namaRekening}</div>
                       </td>
-                      <td className="px-4 py-3 align-top text-xs">
+                      <td className="px-4 py-3 align-top text-xs w-48">
                         <div className="font-medium text-blue-700">{item.paket}</div>
                         <div className="text-gray-500">{item.sumberDana}</div>
                       </td>
@@ -157,14 +150,7 @@ export default function UploadPdfRincian() {
                         <div className="text-xs text-gray-500 mt-1">Spesifikasi: {item.spesifikasi}</div>
                       </td>
                       <td className="px-4 py-3 align-top">
-                        <input type="text" className="w-full bg-transparent border-b border-dashed border-gray-300 focus:outline-none focus:border-blue-500" value={item.koefisien} onChange={e => updateItem(idx, 'koefisien', e.target.value)} />
-                        <div className="text-xs text-gray-500 mt-1">{item.satuan}</div>
-                      </td>
-                      <td className="px-4 py-3 align-top">
-                        <input type="number" className="w-full bg-transparent border-b border-dashed border-gray-300 focus:outline-none focus:border-blue-500 text-right font-medium" value={item.hargaSatuan} onChange={e => updateItem(idx, 'hargaSatuan', e.target.value)} />
-                      </td>
-                      <td className="px-4 py-3 align-top text-right font-bold text-gray-800">
-                        {formatCurrency(item.jumlah)}
+                        <input type="number" className="w-full bg-transparent border-b border-dashed border-gray-300 focus:outline-none focus:border-blue-500 text-right font-medium text-gray-800" value={item.jumlah} onChange={e => updateItem(idx, 'jumlah', e.target.value)} />
                       </td>
                     </tr>
                   ))}
@@ -172,7 +158,7 @@ export default function UploadPdfRincian() {
               </table>
             </div>
             <div className="p-4 bg-gray-50 border-t border-gray-200 flex justify-between items-center">
-              <div className="font-semibold text-gray-800">
+              <div className="font-semibold text-gray-800 text-lg">
                 Total Jumlah: {formatCurrency(items.reduce((acc, curr) => acc + (parseFloat(curr.jumlah)||0), 0))}
               </div>
               <button onClick={handleSave} disabled={isUploading} className="px-6 py-2 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 disabled:opacity-50 flex items-center gap-2">
