@@ -170,40 +170,41 @@ export async function POST(request: Request) {
       // Lookup sumber dana from rincian belanja
       const sdKey = `${skData.id}_${rekId}`;
       let sumberDanaId = sdLookup.get(sdKey);
-      
-      if (!sumberDanaId) {
-        // Try to find any sumber dana for this sub kegiatan
-        const anySD = skSDLookup.get(skData.id);
-        if (anySD) {
-          sumberDanaId = anySD;
-        } else {
-          // Use PAD or DAU as fallback if not cached yet
-          if (!cachedFirstSD) {
-            const fallbackSd = await prisma.sumberDana.findFirst({
-              where: {
-                OR: [
-                  { nama: { contains: 'PENDAPATAN ASLI DAERAH', mode: 'insensitive' } },
-                  { nama: { contains: 'DAU', mode: 'insensitive' } }
-                ]
+            if (!sumberDanaId) {
+          // Try to find any sumber dana for this sub kegiatan
+          const anySD = skSDLookup.get(skData.id);
+          if (anySD) {
+            sumberDanaId = anySD;
+            warnings.push(`Baris ke-${i + 1}: Rekening "${kodeRekening}" pada Sub Kegiatan "${kodeSubKegiatan}" tidak ada di pagu/rincian. Dialihkan ke sumber dana lain di sub kegiatan yang sama.`);
+          } else {
+            // Use PAD or DAU as fallback if not cached yet
+            if (!cachedFirstSD) {
+              const fallbackSd = await prisma.sumberDana.findFirst({
+                where: {
+                  OR: [
+                    { nama: { contains: 'PENDAPATAN ASLI DAERAH', mode: 'insensitive' } },
+                    { nama: { contains: 'DAU', mode: 'insensitive' } }
+                  ]
+                }
+              });
+              if (fallbackSd) {
+                cachedFirstSD = fallbackSd.id;
+              } else {
+                const firstSDFetch = await prisma.sumberDana.findFirst();
+                cachedFirstSD = firstSDFetch ? firstSDFetch.id : null;
               }
-            });
-            if (fallbackSd) {
-              cachedFirstSD = fallbackSd.id;
+            }
+            
+            if (cachedFirstSD) {
+              sumberDanaId = cachedFirstSD;
+              warnings.push(`Baris ke-${i + 1}: Sub Kegiatan "${kodeSubKegiatan}" tidak memiliki pagu sama sekali. Dialihkan ke sumber dana default (PAD/DAU).`);
             } else {
-              const firstSDFetch = await prisma.sumberDana.findFirst();
-              cachedFirstSD = firstSDFetch ? firstSDFetch.id : null;
+              warnings.push(`Baris data ke-${i + 1}: Tidak ditemukan Sumber Dana untuk Sub Kegiatan "${kodeSubKegiatan}"`);
+              errorCount++;
+              continue;
             }
           }
-          
-          if (cachedFirstSD) {
-            sumberDanaId = cachedFirstSD;
-          } else {
-            warnings.push(`Baris data ke-${i + 1}: Tidak ditemukan Sumber Dana untuk Sub Kegiatan "${kodeSubKegiatan}"`);
-            errorCount++;
-            continue;
-          }
         }
-      }
 
       // Combine (sum) duplicates
       const uniqueKey = `${skData.skpdId}_${skData.id}_${sumberDanaId}_${rekId}`;
