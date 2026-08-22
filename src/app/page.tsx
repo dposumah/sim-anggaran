@@ -327,14 +327,25 @@ export default function Dashboard() {
 
   const getChartDataForTabs = () => {
     if (!data) return [];
-    if (activeChartTab === "subkegiatan") return data.topSubKegiatan;
-    if (activeChartTab === "rekening") return data.topRekening;
-    return (data.allPaket || data.topPaket).map((p: any) => ({
+    let rawData = [];
+    if (activeChartTab === "subkegiatan") rawData = data.topSubKegiatan;
+    else if (activeChartTab === "rekening") rawData = data.topRekening;
+    else rawData = (data.allPaket || data.topPaket).map((p: any) => ({
       ...p,
       paguInduk: p.induk,
       paguRkpd: p.rkpd,
       paguPerubahan: p.perubahan,
     }));
+
+    return rawData.filter((item: any) => {
+      const target =
+        compMode === "induk-rkpd"
+          ? item.rkpd || item.paguRkpd || 0
+          : compMode === "rkpd-perubahan"
+            ? item.perubahan || item.paguPerubahan || 0
+            : item.perubahan || item.paguPerubahan || 0;
+      return target > 0 || item.realisasi > 0;
+    });
   };
 
   const handleExportExcel = () => {
@@ -890,7 +901,7 @@ export default function Dashboard() {
           </div>
 
           {isExporting ? (
-            <div className="pr-2 relative mt-4">
+            <div className="pr-2 relative mt-4 overflow-y-auto overflow-x-auto custom-scrollbar" style={{ maxHeight: '500px' }}>
               <table className="min-w-full divide-y divide-gray-100 text-xs">
                 <thead className="bg-gray-50">
                   <tr>
@@ -969,6 +980,7 @@ export default function Dashboard() {
               </table>
             </div>
           ) : (
+            <div className="overflow-y-auto custom-scrollbar pr-2" style={{ maxHeight: '500px' }}>
             <div
               style={{
                 height: `${Math.max(500, getChartDataForTabs().length * 45)}px`,
@@ -1040,6 +1052,7 @@ export default function Dashboard() {
                   />
                 </ComposedChart>
               </ResponsiveContainer>
+            </div>
             </div>
           )}
           {!isExporting && (

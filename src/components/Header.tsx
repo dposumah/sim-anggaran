@@ -30,8 +30,8 @@ export default function Header({ onMenuClick }: { onMenuClick?: () => void }) {
             />
           </div>
           <div>
-            <h2 className="text-sm md:text-base font-semibold text-foreground">Pemkot Tomohon</h2>
-            <p className="hidden md:block text-xs text-secondary">Aplikasi Monitoring Anggaran SKPD</p>
+            <h2 className="text-sm md:text-base font-semibold text-foreground">Dinas Pendidikan dan Kebudayaan Daerah Kota Tomohon</h2>
+            <p className="hidden md:block text-xs text-secondary">Sistem Monitoring Anggaran Dikbud</p>
           </div>
         </div>
       </div>
