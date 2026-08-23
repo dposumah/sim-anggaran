@@ -80,10 +80,7 @@ export async function POST(req: Request) {
       let lineText = lineObj.texts.map(t => t.text).join(' ').trim();
       let hasLeftText = lineObj.texts.some(t => t.x < 25 && t.text.match(/[a-zA-Z]/));
       
-      if (lineText.startsWith('Sub Kegiatan :')) {
-        flushParsingItem();
-        currentSubKegiatan = lineText.replace('Sub Kegiatan :', '').trim();
-      } else if (lineText.match(/^5\.\d+\.\d+\.\d+\.\d+\.\d+\s+/)) {
+      if (lineText.startsWith('Sub Kegiatan :')) { flushParsingItem(); currentSubKegiatan = lineText.replace('Sub Kegiatan :', '').trim(); } else if (lineText.match(/^:\s*\d\.\d\d\.\d\d\.\d\.\d\d\.\d\d\d\d/)) { flushParsingItem(); currentSubKegiatan = lineText.replace(/^:\s*/, '').trim(); } else if (lineText.match(/^5\.\d+\.\d+\.\d+\.\d+\.\d+\s+/)) {
         flushParsingItem();
         let parts = lineText.split(' ');
         currentRekening = parts[0];
@@ -237,5 +234,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
+
 
 
