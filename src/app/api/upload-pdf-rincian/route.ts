@@ -116,33 +116,28 @@ export async function POST(req: Request) {
       } else if (lineText.startsWith('SIPD-RI') || lineText.startsWith('Jumlah Anggaran') || lineText.startsWith('Rincian Anggaran') || lineText.startsWith('Satuan Kerja') || lineText.startsWith('Kode Rekening') || lineText.startsWith('Rincian Perhitungan')) { continue; } else if (currentRekening && !lineText.includes('Satuan Kerja Perangkat Daerah') && !lineText.includes('Koefisien Satuan')) {
         
         if (lineText.includes('Spesifikasi :')) {
+
           let itemLines = [lineObj];
-          let prevLineObj = rawLines[i-1];
-          if (prevLineObj && !prevLineObj.texts.map(t=>t.text).join(' ').trim().match(/^(\[|^5\.\d+\.\d+\.\d+|Sumber|Sub Kegiatan|Spesifikasi)/)) {
-             let hasLeft = prevLineObj.texts.some(t => t.x < 25 && t.text.match(/[a-zA-Z]/));
-             if (hasLeft) {
-                 itemLines.unshift(prevLineObj);
-                 let prev2LineObj = rawLines[i-2];
-                 if (prev2LineObj && !prev2LineObj.texts.map(t=>t.text).join(' ').trim().match(/^(\[|^5\.\d+\.\d+\.\d+|Sumber|Sub Kegiatan|Spesifikasi)/)) {
-                     if (prev2LineObj.texts.some(t => t.x < 25 && t.text.match(/[a-zA-Z]/))) {
-                        itemLines.unshift(prev2LineObj);
-                        let prev3LineObj = rawLines[i-3];
-                        if (prev3LineObj && !prev3LineObj.texts.map(t=>t.text).join(' ').trim().match(/^(\[|^5\.\d+\.\d+\.\d+|Sumber|Sub Kegiatan|Spesifikasi)/)) {
-                            if (prev3LineObj.texts.some(t => t.x < 25 && t.text.match(/[a-zA-Z]/))) {
-                               itemLines.unshift(prev3LineObj);
-                               let prev4LineObj = rawLines[i-4];
-                               if (prev4LineObj && !prev4LineObj.texts.map(t=>t.text).join(' ').trim().match(/^(\[|^5\.\d+\.\d+\.\d+|Sumber|Sub Kegiatan|Spesifikasi)/)) {
-                                   if (prev4LineObj.texts.some(t => t.x < 25 && t.text.match(/[a-zA-Z]/))) {
-                                       itemLines.unshift(prev4LineObj);
-                                   }
-                               }
-                            }
-                        }
-                     }
-                 }
-             }
+          let foundLeftText = false;
+          for (let b = 1; b <= 4; b++) {
+              let pLine = rawLines[i-b];
+              if (!pLine) break;
+              let pText = pLine.texts.map(t=>t.text).join(' ').trim();
+              if (pText.match(/^(\[|^5\.\d+\.\d+\.\d+|Sumber|Sub Kegiatan|Spesifikasi)/)) break;
+              
+              let hasLeft = pLine.texts.some(t => t.x < 25 && t.text.match(/[a-zA-Z]/));
+              if (hasLeft) {
+                  foundLeftText = true;
+                  itemLines.unshift(pLine);
+              } else {
+                  if (foundLeftText) {
+                      break;
+                  } else {
+                      itemLines.unshift(pLine);
+                  }
+              }
           }
-          
+
           for (let j = 1; j <= 5; j++) {
              let nextLine = rawLines[i+j];
              if (!nextLine) break;
@@ -198,9 +193,17 @@ export async function POST(req: Request) {
              jumlah: finalJumlah,
              ppn: 0
           };
-          items.push(finalItem);
-          parsingItem = null;
-        } else if (hasLeftText && !lineText.match(/^5\.\d/) && lineText.length > 2) {
+
+            items.push(finalItem);
+            parsingItem = null;
+            
+            let lastLookaheadLine = itemLines[itemLines.length - 1];
+            let lastIndex = rawLines.indexOf(lastLookaheadLine);
+            if (lastIndex > i) {
+                i = lastIndex;
+            }
+          } else if (hasLeftText && !lineText.match(/^5\.\d/) && lineText.length > 2) {
+
            let leftOnlyTexts = lineObj.texts.filter(t => t.x < 25).map(t => t.text).join(' ').trim();
            
            let rightTexts = lineObj.texts.filter(t => t.x >= 59 && t.x < 67).map(t => t.text).join(' ').trim();
