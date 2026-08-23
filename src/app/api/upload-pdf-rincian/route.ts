@@ -94,9 +94,7 @@ export async function POST(req: Request) {
       } else if (lineText.startsWith('Sumber Dana :')) {
         flushParsingItem();
         currentSumberDana = lineText.replace('Sumber Dana :', '').split(/ \d/)[0].trim() || '-';
-      } else if (lineText.startsWith('[ - ]')) {
-        flushParsingItem();
-      } else if (currentRekening && !lineText.includes('Satuan Kerja Perangkat Daerah') && !lineText.includes('Koefisien Satuan')) {
+      } else if (lineText.startsWith('[ - ]')) { flushParsingItem(); } else if (lineText.startsWith('SIPD-RI') || lineText.startsWith('Jumlah Anggaran') || lineText.startsWith('Rincian Anggaran') || lineText.startsWith('Satuan Kerja') || lineText.startsWith('Kode Rekening') || lineText.startsWith('Rincian Perhitungan')) { flushParsingItem(); continue; } else if (currentRekening && !lineText.includes('Satuan Kerja Perangkat Daerah') && !lineText.includes('Koefisien Satuan')) {
         
         if (lineText.includes('Spesifikasi :')) {
           let itemLines = [lineObj];
@@ -239,4 +237,5 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
+
 
