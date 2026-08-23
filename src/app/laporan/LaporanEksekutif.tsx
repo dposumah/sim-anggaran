@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import * as XLSX from 'xlsx';
 import { useYear } from '@/contexts/YearContext';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, AreaChart, Area, ComposedChart } from 'recharts';
-import { Building, Package, Activity, TrendingUp, TrendingDown, Minus, Briefcase, GraduationCap, Banknote, X, Table, Download } from 'lucide-react';
+import {  Building, Package, Activity, TrendingUp, TrendingDown, Minus, Briefcase, GraduationCap, Banknote, X, Table, Download , ChevronDown, ChevronUp } from 'lucide-react';
 
 const COLORS = ['#dc2626', '#b91c1c', '#f87171', '#fca5a5', '#ef4444', '#991b1b', '#7f1d1d'];
 
@@ -447,7 +447,18 @@ export default function LaporanEksekutif() {
                             onClick={() => setExpandedRows(prev => prev.includes(i) ? prev.filter(idx => idx !== i) : [...prev, i])}
                           >
 
-                          <td className="px-4 py-3 text-gray-800 align-top">{r.subKegiatan}</td>
+                          <td className="px-4 py-3 text-gray-800 align-top">
+                              <div className="flex items-start gap-2">
+                                <div className="mt-0.5">
+                                  {expandedRows.includes(i) ? (
+                                    <ChevronDown className="w-4 h-4 text-blue-600" />
+                                  ) : (
+                                    <ChevronDown className="w-4 h-4 text-gray-400" style={{ transform: 'rotate(-90deg)' }} />
+                                  )}
+                                </div>
+                                <div>{r.subKegiatan}</div>
+                              </div>
+                            </td>
                           <td className="px-4 py-3 text-gray-600 align-top">{r.rekening}</td>
                           <td className="px-4 py-3 text-gray-500 text-xs align-top"><span className="bg-gray-100 px-2 py-1 rounded-md">{r.sumberDana}</span></td>
                           <td className="px-4 py-3 text-right font-semibold text-primary align-top whitespace-nowrap">{formatCurrency(r.paguPerubahan)}</td>

@@ -16,7 +16,7 @@ import {
   Area,
   ComposedChart,
 } from "recharts";
-import {
+import { 
   Building,
   Package,
   Activity,
@@ -29,8 +29,7 @@ import {
   X,
   Table,
   Download,
-  FileText,
-} from "lucide-react";
+  FileText, ChevronDown, ChevronUp } from 'lucide-react';
 import { jsPDF } from "jspdf";
 
 const COLORS = [
@@ -1240,8 +1239,17 @@ export default function LaporanPerbandingan() {
                           >
 
                           <td className="px-4 py-3 text-gray-800 align-top">
-                            {r.subKegiatan}
-                          </td>
+                              <div className="flex items-start gap-2">
+                                <div className="mt-0.5">
+                                  {expandedRows.includes(i) ? (
+                                    <ChevronDown className="w-4 h-4 text-blue-600" />
+                                  ) : (
+                                    <ChevronDown className="w-4 h-4 text-gray-400" style={{ transform: 'rotate(-90deg)' }} />
+                                  )}
+                                </div>
+                                <div>{r.subKegiatan}</div>
+                              </div>
+                            </td>
                           <td className="px-4 py-3 text-gray-600 align-top">
                             {r.rekening}
                           </td>
@@ -1740,3 +1748,4 @@ export default function LaporanPerbandingan() {
     </div>
   );
 }
+
