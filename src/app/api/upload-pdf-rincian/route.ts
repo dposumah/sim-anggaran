@@ -63,22 +63,27 @@ export async function POST(req: Request) {
     let currentPaket = '-';
     let currentSumberDana = '-';
     
-    let parsingItem = null;
+    let parsingItem: any = null;
 
     for (let i = 0; i < rawLines.length; i++) {
       let lineObj = rawLines[i];
       let lineText = lineObj.texts.map(t => t.text).join(' ').trim();
+      let hasLeftText = lineObj.texts.some(t => t.x < 25 && t.text.match(/[a-zA-Z]/));
       
       if (lineText.startsWith('Sub Kegiatan :')) {
         currentSubKegiatan = lineText.replace('Sub Kegiatan :', '').trim();
+        parsingItem = null;
       } else if (lineText.match(/^5\.\d+\.\d+\.\d+\.\d+\.\d+\s+/)) {
         let parts = lineText.split(' ');
         currentRekening = parts[0];
         currentNamaRekening = parts.slice(1).join(' ').split(/ \d/)[0].trim();
+        parsingItem = null;
       } else if (lineText.startsWith('[ # ]')) {
         currentPaket = lineText.replace('[ # ]', '').trim() || '-';
+        parsingItem = null;
       } else if (lineText.startsWith('Sumber Dana :')) {
         currentSumberDana = lineText.replace('Sumber Dana :', '').split(/ \d/)[0].trim() || '-';
+        parsingItem = null;
       } else if (currentRekening && !lineText.includes('Satuan Kerja Perangkat Daerah') && !lineText.includes('Koefisien Satuan') && !lineText.startsWith('[ - ]')) {
         
         if (lineText.includes('Spesifikasi :')) {
@@ -87,13 +92,25 @@ export async function POST(req: Request) {
             
             let prevLineObj = rawLines[i-1];
             if (prevLineObj && !prevLineObj.texts.map(t=>t.text).join(' ').trim().match(/^(\[|^5\.\d+\.\d+\.\d+|Sumber|Sub Kegiatan|Spesifikasi)/)) {
-               let hasLeftText = prevLineObj.texts.some(t => t.x < 25 && t.text.match(/[a-zA-Z]/));
-               if (hasLeftText) {
+               let hasLeft = prevLineObj.texts.some(t => t.x < 25 && t.text.match(/[a-zA-Z]/));
+               if (hasLeft) {
                    itemLines.unshift(prevLineObj);
                    let prev2LineObj = rawLines[i-2];
                    if (prev2LineObj && !prev2LineObj.texts.map(t=>t.text).join(' ').trim().match(/^(\[|^5\.\d+\.\d+\.\d+|Sumber|Sub Kegiatan|Spesifikasi)/)) {
                        if (prev2LineObj.texts.some(t => t.x < 25 && t.text.match(/[a-zA-Z]/))) {
                           itemLines.unshift(prev2LineObj);
+                          let prev3LineObj = rawLines[i-3];
+                          if (prev3LineObj && !prev3LineObj.texts.map(t=>t.text).join(' ').trim().match(/^(\[|^5\.\d+\.\d+\.\d+|Sumber|Sub Kegiatan|Spesifikasi)/)) {
+                              if (prev3LineObj.texts.some(t => t.x < 25 && t.text.match(/[a-zA-Z]/))) {
+                                 itemLines.unshift(prev3LineObj);
+                                 let prev4LineObj = rawLines[i-4];
+                                 if (prev4LineObj && !prev4LineObj.texts.map(t=>t.text).join(' ').trim().match(/^(\[|^5\.\d+\.\d+\.\d+|Sumber|Sub Kegiatan|Spesifikasi)/)) {
+                                     if (prev4LineObj.texts.some(t => t.x < 25 && t.text.match(/[a-zA-Z]/))) {
+                                         itemLines.unshift(prev4LineObj);
+                                     }
+                                 }
+                              }
+                          }
                        }
                    }
                }
@@ -106,8 +123,8 @@ export async function POST(req: Request) {
                if (nextLineText.match(/^(\[|^5\.\d+\.\d+\.\d+|Sumber|Sub Kegiatan|Spesifikasi|Jumlah Anggaran)/)) break;
                
                let isNewUraian = false;
-               let hasLeftText = nextLine.texts.some(t => t.x < 25 && t.text.match(/[a-zA-Z]/));
-               if (hasLeftText) {
+               let hasLeft = nextLine.texts.some(t => t.x < 25 && t.text.match(/[a-zA-Z]/));
+               if (hasLeft) {
                    for (let k = 1; k <= 2; k++) {
                        let checkLine = rawLines[i+j+k];
                        if (checkLine && checkLine.texts.map(t=>t.text).join(' ').includes('Spesifikasi :')) {
@@ -137,7 +154,10 @@ export async function POST(req: Request) {
             
             let leftTexts = itemLines.flatMap(l => l.texts.filter(t => t.x < 25)).map(t => t.text).join(' ').trim();
             let parts = leftTexts.split('Spesifikasi :');
-            let extractedUraian = parts[0].trim() || parsingItem.uraian;
+            
+            let extractedUraian = parts[0].trim();
+            if (!extractedUraian) extractedUraian = parsingItem.uraian;
+            
             let extractedSpesifikasi = parts[1] ? parts[1].trim() : '-';
             
             parsingItem.uraian = extractedUraian;
@@ -151,20 +171,25 @@ export async function POST(req: Request) {
             items.push(parsingItem);
             parsingItem = null;
           }
-        } else if (!lineText.startsWith('[') && !lineText.match(/^5\.\d/) && lineText.length > 2) {
-           parsingItem = {
-             rekening: currentRekening,
-             namaRekening: currentNamaRekening,
-             paket: currentPaket,
-             sumberDana: currentSumberDana,
-             uraian: lineText.split(/ \d/)[0].trim(),
-             spesifikasi: '-',
-             koefisien: '1',
-             satuan: 'Ls',
-             hargaSatuan: 0,
-             ppn: 0,
-             jumlah: 0
-           };
+        } else if (hasLeftText && !lineText.startsWith('[') && !lineText.match(/^5\.\d/) && lineText.length > 2) {
+           let leftOnlyTexts = lineObj.texts.filter(t => t.x < 25).map(t => t.text).join(' ').trim();
+           if (parsingItem) {
+               parsingItem.uraian += ' ' + leftOnlyTexts;
+           } else {
+               parsingItem = {
+                 rekening: currentRekening,
+                 namaRekening: currentNamaRekening,
+                 paket: currentPaket,
+                 sumberDana: currentSumberDana,
+                 uraian: leftOnlyTexts,
+                 spesifikasi: '-',
+                 koefisien: '1',
+                 satuan: 'Ls',
+                 hargaSatuan: 0,
+                 ppn: 0,
+                 jumlah: 0
+               };
+           }
         }
       }
     }
