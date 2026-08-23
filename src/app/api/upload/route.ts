@@ -96,7 +96,7 @@ export async function POST(request: Request) {
       if (!progMap.has(key)) {
         progMap.set(key, { 
           kode, 
-          nama: String(r['NAMA PROGRAM']).trim(), 
+          nama: String(r['NAMA PROGRAM']).replace(/\r?\n|\r/g, ' ').replace(/\s+/g, ' ').trim(), 
           kodeBidangUrusan: String(r['KODE BIDANG URUSAN']).trim(),
           namaBidangUrusan: String(r['NAMA BIDANG URUSAN']).trim(),
           skpdId: sId 
@@ -116,7 +116,7 @@ export async function POST(request: Request) {
       if (!pId) return;
       const kode = String(r['KODE KEGIATAN']).trim();
       const key = `${kode}_${pId}`;
-      if (!kegMap.has(key)) kegMap.set(key, { kode, nama: String(r['NAMA KEGIATAN']).trim(), programId: pId });
+      if (!kegMap.has(key)) kegMap.set(key, { kode, nama: String(r['NAMA KEGIATAN']).replace(/\r?\n|\r/g, ' ').replace(/\s+/g, ' ').trim(), programId: pId });
     });
     await prisma.kegiatan.createMany({ data: Array.from(kegMap.values()), skipDuplicates: true });
     const kegiatans = await prisma.kegiatan.findMany({ where: { programId: { in: Array.from(pIdMap.values()) } } });
@@ -313,4 +313,5 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
+
 
