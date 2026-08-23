@@ -202,7 +202,7 @@ export default function UploadPDFRincian() {
               const existingPagu = result.data?.existingPagu || 0;
 
               return (
-                <div key={result.id} className={lex flex-col }>
+                <div key={result.id} className={`flex flex-col ${result.expanded ? 'bg-gray-50' : 'bg-white hover:bg-gray-50'}`}>
                   {/* Row Header */}
                   <div className="flex items-center justify-between p-4 cursor-pointer" onClick={() => (isWarning || isSuccess) && toggleExpand(result.id)}>
                     <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -301,4 +301,3 @@ export default function UploadPDFRincian() {
     </div>
   );
 }
-
