@@ -89,7 +89,7 @@ export async function POST(req: Request) {
         flushParsingItem();
         currentPaket = lineText.replace('[ # ]', '').trim() || '-';
       } else if (lineText.startsWith('Sumber Dana :')) {
-        flushParsingItem();
+        parsingItem = null;
         currentSumberDana = lineText.replace('Sumber Dana :', '').split(/ \d/)[0].trim() || '-';
       } else if (lineText.startsWith('[ - ]')) {
         flushParsingItem();
@@ -113,7 +113,7 @@ export async function POST(req: Request) {
             };
           }
         }
-      } else if (lineText.startsWith('SIPD-RI') || lineText.startsWith('Jumlah Anggaran') || lineText.startsWith('Rincian Anggaran') || lineText.startsWith('Satuan Kerja') || lineText.startsWith('Kode Rekening') || lineText.startsWith('Rincian Perhitungan')) { flushParsingItem(); continue; } else if (currentRekening && !lineText.includes('Satuan Kerja Perangkat Daerah') && !lineText.includes('Koefisien Satuan')) {
+      } else if (lineText.startsWith('SIPD-RI') || lineText.startsWith('Jumlah Anggaran') || lineText.startsWith('Rincian Anggaran') || lineText.startsWith('Satuan Kerja') || lineText.startsWith('Kode Rekening') || lineText.startsWith('Rincian Perhitungan')) { continue; } else if (currentRekening && !lineText.includes('Satuan Kerja Perangkat Daerah') && !lineText.includes('Koefisien Satuan')) {
         
         if (lineText.includes('Spesifikasi :')) {
           let itemLines = [lineObj];
@@ -208,7 +208,7 @@ export async function POST(req: Request) {
            let amountOnLine = jmlMatch ? cleanNumber(jmlMatch[0]) : 0;
 
            if (parsingItem) {
-                 if (amountOnLine > 0 && parsingItem.tempJumlah > 0) {
+                 if (parsingItem.tempJumlah > 0) {
                      flushParsingItem();
                      parsingItem = {
                          rekening: currentRekening,
@@ -237,14 +237,6 @@ export async function POST(req: Request) {
                  tempJumlah: amountOnLine,
                  ppn: 0
                };
-           }
-        } else if (!hasLeftText && parsingItem) {
-           // Line has no left text but may have amounts - assign to pending item
-           let rightTexts = lineObj.texts.filter(t => t.x >= 59 && t.x < 67).map(t => t.text).join(' ').trim();
-           let jmlMatch = rightTexts.match(/(\d{1,3}(?:\.\d{3})*,\d{2})/);
-           if (jmlMatch) {
-               let amountOnLine = cleanNumber(jmlMatch[0]);
-               if (amountOnLine > 0) parsingItem.tempJumlah = amountOnLine;
            }
         }
       }
