@@ -186,9 +186,23 @@ export async function POST(req: Request) {
            let amountOnLine = jmlMatch ? cleanNumber(jmlMatch[0]) : 0;
 
            if (parsingItem) {
-               parsingItem.uraian += ' ' + leftOnlyTexts;
-               if (amountOnLine > 0) parsingItem.tempJumlah = amountOnLine;
-           } else {
+                 if (amountOnLine > 0 && parsingItem.tempJumlah > 0) {
+                     flushParsingItem();
+                     parsingItem = {
+                         rekening: currentRekening,
+                         namaRekening: currentNamaRekening,
+                         paket: currentPaket,
+                         sumberDana: currentSumberDana,
+                         uraian: leftOnlyTexts,
+                         spesifikasi: '',
+                         jumlah: 0,
+                         tempJumlah: amountOnLine
+                     };
+                 } else {
+                     parsingItem.uraian += ' ' + leftOnlyTexts;
+                     if (amountOnLine > 0) parsingItem.tempJumlah = amountOnLine;
+                 }
+             } else {
                parsingItem = {
                  rekening: currentRekening,
                  namaRekening: currentNamaRekening,
