@@ -93,27 +93,25 @@ export async function POST(req: Request) {
         currentSumberDana = lineText.replace('Sumber Dana :', '').split(/ \d/)[0].trim() || '-';
       } else if (lineText.startsWith('[ - ]')) {
         flushParsingItem();
-        // For BOS/BOP items: [ - ] line may contain a school name with amount
-        let bracketContent = lineText.replace('[ - ]', '').trim();
-        let nameMatch = bracketContent.match(/^([A-Za-z][A-Za-z\s./]+)/);
-        if (nameMatch && currentRekening) {
-          let schoolName = nameMatch[1].trim();
-          // Get amount from the "Jumlah Sesudah" column (x 59-67)
-          let rightTexts = lineObj.texts.filter(t => t.x >= 59 && t.x < 67).map(t => t.text).join(' ').trim();
-          let jmlMatch = rightTexts.match(/(\d{1,3}(?:\.\d{3})*,\d{2})/);
-          let amountOnLine = jmlMatch ? cleanNumber(jmlMatch[0]) : 0;
-          parsingItem = {
-            rekening: currentRekening,
-            namaRekening: currentNamaRekening,
-            paket: currentPaket,
-            sumberDana: currentSumberDana,
-            uraian: schoolName,
-            spesifikasi: '-',
-            koefisien: '1',
-            satuan: 'Ls',
-            tempJumlah: amountOnLine,
-            ppn: 0
-          };
+        // Extract school/item name from left side of [ - ] line (x < 25)
+        // but do NOT capture the subtotal amount — let the detail line below set the amount
+        if (currentRekening) {
+          let bracketLeftTexts = lineObj.texts.filter(t => t.x < 25).map(t => t.text).join(' ').trim();
+          let schoolName = bracketLeftTexts.replace(/^\[\s*-\s*\]\s*/, '').trim();
+          if (schoolName && schoolName.length > 1) {
+            parsingItem = {
+              rekening: currentRekening,
+              namaRekening: currentNamaRekening,
+              paket: currentPaket,
+              sumberDana: currentSumberDana,
+              uraian: schoolName,
+              spesifikasi: '-',
+              koefisien: '1',
+              satuan: 'Ls',
+              tempJumlah: 0,
+              ppn: 0
+            };
+          }
         }
       } else if (lineText.startsWith('SIPD-RI') || lineText.startsWith('Jumlah Anggaran') || lineText.startsWith('Rincian Anggaran') || lineText.startsWith('Satuan Kerja') || lineText.startsWith('Kode Rekening') || lineText.startsWith('Rincian Perhitungan')) { flushParsingItem(); continue; } else if (currentRekening && !lineText.includes('Satuan Kerja Perangkat Daerah') && !lineText.includes('Koefisien Satuan')) {
         
