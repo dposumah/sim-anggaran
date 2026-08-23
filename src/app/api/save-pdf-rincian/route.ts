@@ -10,7 +10,7 @@ export async function POST(req: Request) {
     }
 
     // Extract Kode Sub Kegiatan
-    const kodeSubKeg = subKegiatan.split(' ')[0];
+    const kodeSubKeg = subKegiatan.trim().split(' ')[0].replace(/[^0-9.]/g, '');
 
     // Cari Sub Kegiatan di DB
     let subKeg = await prisma.subKegiatan.findFirst({
@@ -117,3 +117,4 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
+

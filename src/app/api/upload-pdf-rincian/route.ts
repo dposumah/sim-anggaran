@@ -213,7 +213,7 @@ export async function POST(req: Request) {
     flushParsingItem();
 
     let existingPagu = 0;
-    const kodeSubKeg = currentSubKegiatan.split(' ')[0];
+    const kodeSubKeg = currentSubKegiatan.trim().split(' ')[0].replace(/[^0-9.]/g, '');
     if (kodeSubKeg) {
        const subKeg = await prisma.subKegiatan.findFirst({
          where: { kode: kodeSubKeg },
@@ -239,3 +239,4 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
+
