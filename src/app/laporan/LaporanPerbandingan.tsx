@@ -59,6 +59,7 @@ export default function LaporanPerbandingan() {
     type: "subkegiatan" | "rekening" | "sumberdana" | "paket";
     data: any;
   } | null>(null);
+  const [expandedRows, setExpandedRows] = useState<number[]>([]);
   const [selectedPaket, setSelectedPaket] = useState<{
     title: string;
     rincian: any[];
@@ -1231,10 +1232,13 @@ export default function LaporanPerbandingan() {
                       </tr>
                     ) : (
                       selectedPaket.rincian.map((r, i) => (
-                        <tr
-                          key={i}
-                          className="hover:bg-gray-50 transition-colors"
-                        >
+                        
+                        <React.Fragment key={i}>
+                          <tr
+                            className="hover:bg-blue-50/30 transition-colors cursor-pointer"
+                            onClick={() => setExpandedRows(prev => prev.includes(i) ? prev.filter(idx => idx !== i) : [...prev, i])}
+                          >
+
                           <td className="px-4 py-3 text-gray-800 align-top">
                             {r.subKegiatan}
                           </td>
@@ -1264,9 +1268,46 @@ export default function LaporanPerbandingan() {
                           <td className="px-4 py-3 text-right font-bold text-green-600 align-top whitespace-nowrap">
                             {formatCurrency(r.realisasi)}
                           </td>
-                        </tr>
-                      ))
-                    )}
+</tr>
+                          {expandedRows.includes(i) && r.items && r.items.length > 0 && (
+                            <tr className="bg-gray-50/80">
+                              <td colSpan={7} className="px-8 py-4">
+                                <div className="bg-white border border-gray-200 rounded-md shadow-sm overflow-hidden">
+                                  <table className="min-w-full divide-y divide-gray-200 text-xs">
+                                    <thead className="bg-gray-100 text-gray-700">
+                                      <tr>
+                                        <th className="px-4 py-2 text-left font-semibold">Uraian / Spesifikasi</th>
+                                        <th className="px-4 py-2 text-center font-semibold">Koefisien</th>
+                                        <th className="px-4 py-2 text-center font-semibold">Satuan</th>
+                                        <th className="px-4 py-2 text-right font-semibold">Harga Satuan</th>
+                                        <th className="px-4 py-2 text-right font-semibold">Jumlah</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-100">
+                                      {r.items.map((item: any) => (
+                                        <tr key={item.id} className="hover:bg-gray-50">
+                                          <td className="px-4 py-2 text-gray-800">
+                                            <div className="font-medium">{item.uraian}</div>
+                                            {item.spesifikasi && item.spesifikasi !== '-' && (
+                                              <div className="text-gray-500 mt-0.5">{item.spesifikasi}</div>
+                                            )}
+                                          </td>
+                                          <td className="px-4 py-2 text-center text-gray-600">{item.koefisien}</td>
+                                          <td className="px-4 py-2 text-center text-gray-600">{item.satuan}</td>
+                                          <td className="px-4 py-2 text-right text-gray-600">{formatCurrency(Number(item.hargaSatuan))}</td>
+                                          <td className="px-4 py-2 text-right font-semibold text-blue-700">{formatCurrency(Number(item.jumlah))}</td>
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                        </React.Fragment>
+
+                        ))
+                      )}
                   </tbody>
                   {selectedPaket.rincian.length > 0 && (
                     <tfoot className="bg-gray-50 border-t-2 border-gray-200 font-bold">

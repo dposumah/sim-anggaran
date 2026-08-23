@@ -1,4 +1,4 @@
 const fs = require('fs');
 let content = fs.readFileSync('src/app/upload/pdf-rincian/page.tsx', 'utf8');
-content = content.replace('className={"flex flex-col " + (result.expanded ? "bg-gray-50" : "bg-white hover:bg-gray-50")}', "className={\lex flex-col \\}");
+content = content.replace(/className=\{\f.*?lex flex-col \}/, 'className={lex flex-col }');
 fs.writeFileSync('src/app/upload/pdf-rincian/page.tsx', content);
