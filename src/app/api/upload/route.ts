@@ -132,7 +132,7 @@ export async function POST(request: Request) {
       if (!kId) return;
       const kode = String(r['KODE SUB KEGIATAN']).trim();
       const key = `${kode}_${kId}`;
-      if (!subMap.has(key)) subMap.set(key, { kode, nama: String(r['NAMA SUB KEGIATAN']).trim(), kegiatanId: kId });
+      if (!subMap.has(key)) subMap.set(key, { kode, nama: String(r['NAMA SUB KEGIATAN']).replace(/\r?\n|\r/g, ' ').replace(/\s+/g, ' ').trim(), kegiatanId: kId });
     });
     await prisma.subKegiatan.createMany({ data: Array.from(subMap.values()), skipDuplicates: true });
     const subkegs = await prisma.subKegiatan.findMany({ where: { kegiatanId: { in: Array.from(kIdMap.values()) } } });
@@ -313,3 +313,4 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
+
