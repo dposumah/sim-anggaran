@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import PDFParser from 'pdf2json';
+import { prisma } from '@/lib/prisma';
 
 function cleanNumber(str: string) {
   if (!str || str.trim() === '-') return 0;
@@ -168,10 +169,26 @@ export async function POST(req: Request) {
       }
     }
 
+    let existingPagu = 0;
+    const kodeSubKeg = currentSubKegiatan.split(' ')[0];
+    if (kodeSubKeg) {
+       const subKeg = await prisma.subKegiatan.findFirst({
+         where: { kode: kodeSubKeg },
+         include: { rincianBelanjas: true }
+       });
+       if (subKeg) {
+          existingPagu = subKeg.rincianBelanjas.reduce((sum, r) => {
+             const val = r.paguPerubahan ?? r.paguRkpd ?? r.paguInduk ?? 0;
+             return sum + Number(val);
+          }, 0);
+       }
+    }
+
     return NextResponse.json({ 
       success: true, 
       data: {
         subKegiatan: currentSubKegiatan,
+        existingPagu,
         items
       } 
     });

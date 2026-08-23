@@ -82,6 +82,10 @@ export default function UploadPDFRincian() {
     setItems(newItems);
   };
 
+  const totalPdf = items.reduce((sum, item) => sum + (parseFloat(item.jumlah) || 0), 0);
+  const existingPagu = parsedData?.existingPagu || 0;
+  const isPaguMatch = totalPdf === existingPagu;
+
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
       <div className="flex items-center gap-4 mb-6">
@@ -93,6 +97,43 @@ export default function UploadPDFRincian() {
           <p className="text-gray-500 text-sm">Unggah Cetak RKA Rincian Belanja (PDF) dari SIPD untuk mengekstrak standar harga.</p>
         </div>
       </div>
+
+      {parsedData && existingPagu > 0 && !isPaguMatch && (
+        <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-r-lg flex items-start gap-3 mb-6">
+          <AlertTriangle className="w-5 h-5 text-red-500 mt-0.5" />
+          <div>
+            <h3 className="text-red-800 font-semibold">Peringatan: Pagu Tidak Sesuai!</h3>
+            <p className="text-red-700 text-sm mt-1">
+              Total Rincian Belanja di PDF (<strong>{formatCurrency(totalPdf)}</strong>) berbeda dengan Pagu Sub Kegiatan yang ada di sistem (<strong>{formatCurrency(existingPagu)}</strong>).
+              <br/>Mohon pastikan Anda mengunggah file PDF yang benar atau perbarui Pagu Excel Anda.
+            </p>
+          </div>
+        </div>
+      )}
+      
+      {parsedData && existingPagu > 0 && isPaguMatch && (
+        <div className="bg-green-50 border-l-4 border-green-500 p-4 rounded-r-lg flex items-start gap-3 mb-6">
+          <CheckCircle className="w-5 h-5 text-green-500 mt-0.5" />
+          <div>
+            <h3 className="text-green-800 font-semibold">Pagu Sesuai</h3>
+            <p className="text-green-700 text-sm mt-1">
+              Total Rincian Belanja di PDF (<strong>{formatCurrency(totalPdf)}</strong>) sama dengan Pagu di sistem.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {parsedData && existingPagu === 0 && (
+        <div className="bg-yellow-50 border-l-4 border-yellow-500 p-4 rounded-r-lg flex items-start gap-3 mb-6">
+          <AlertTriangle className="w-5 h-5 text-yellow-600 mt-0.5" />
+          <div>
+            <h3 className="text-yellow-800 font-semibold">Informasi</h3>
+            <p className="text-yellow-700 text-sm mt-1">
+              Pagu Sub Kegiatan ini belum terdaftar di sistem atau bernilai Rp 0. Total Rincian Belanja di PDF (<strong>{formatCurrency(totalPdf)}</strong>).
+            </p>
+          </div>
+        </div>
+      )}
 
       {!parsedData ? (
         <div className="bg-white p-8 rounded-2xl border border-dashed border-gray-300 text-center flex flex-col items-center justify-center space-y-4">
