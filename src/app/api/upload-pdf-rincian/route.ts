@@ -238,6 +238,14 @@ export async function POST(req: Request) {
                  ppn: 0
                };
            }
+        } else if (!hasLeftText && parsingItem) {
+           // Line has no left text but may have amounts - assign to pending item
+           let rightTexts = lineObj.texts.filter(t => t.x >= 59 && t.x < 67).map(t => t.text).join(' ').trim();
+           let jmlMatch = rightTexts.match(/(\d{1,3}(?:\.\d{3})*,\d{2})/);
+           if (jmlMatch) {
+               let amountOnLine = cleanNumber(jmlMatch[0]);
+               if (amountOnLine > 0) parsingItem.tempJumlah = amountOnLine;
+           }
         }
       }
     }
