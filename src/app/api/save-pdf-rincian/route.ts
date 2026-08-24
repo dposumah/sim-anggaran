@@ -98,6 +98,12 @@ export async function POST(req: Request) {
         jumlah: parseFloat(it.jumlah) || 0,
       }));
 
+      const oldPagu = oldPaguMap.get(key) || { paguInduk: 0, paguRkpd: 0, paguPerubahan: 0 };
+      
+      let finalPaguInduk = tahapan === 'induk' ? totalPagu : oldPagu.paguInduk;
+      let finalPaguRkpd = tahapan === 'rkpd' ? totalPagu : oldPagu.paguRkpd;
+      let finalPaguPerubahan = tahapan === 'perubahan' ? totalPagu : oldPagu.paguPerubahan;
+
       txs.push(
         prisma.rincianBelanja.create({
           data: {
@@ -107,10 +113,10 @@ export async function POST(req: Request) {
             namaPaket: group.namaPaket,
             tipePaket: '-',
             volumeInduk: 1,
-            hargaSatuanInduk: totalPagu,
-            paguInduk: totalPagu, 
-            paguRkpd: totalPagu,
-            paguPerubahan: totalPagu,
+            hargaSatuanInduk: finalPaguInduk,
+            paguInduk: finalPaguInduk, 
+            paguRkpd: finalPaguRkpd,
+            paguPerubahan: finalPaguPerubahan,
             rincianItemBelanjas: {
               create: itemCreates
             }

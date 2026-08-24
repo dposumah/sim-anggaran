@@ -62,6 +62,7 @@ export default function UploadPDFRincian() {
       try {
         const formData = new FormData();
         formData.append('file', file);
+        formData.append('tahapan', tahapan);
 
         const res = await fetch('/api/upload-pdf-rincian', {
           method: 'POST',
@@ -229,12 +230,26 @@ export default function UploadPDFRincian() {
           </div>
           <h3 className="text-lg font-semibold text-gray-800">Pilih Beberapa File PDF</h3>
           <p className="text-sm text-gray-500 max-w-md">Anda dapat memilih lebih dari satu file PDF sekaligus (Ctrl+A atau tarik kotak).</p>
+          
+          <div className="flex items-center gap-2 mt-2">
+            <label className="text-sm font-medium text-gray-700">Pilih Tahapan:</label>
+            <select 
+              value={tahapan}
+              onChange={(e) => setTahapan(e.target.value)}
+              className="text-sm border border-gray-300 rounded-md px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            >
+              <option value="induk">Induk</option>
+              <option value="rkpd">RKPD</option>
+              <option value="perubahan">Perubahan</option>
+            </select>
+          </div>
+
           <input 
             type="file" 
             accept=".pdf" 
             multiple
             onChange={handleFilesChange}
-            className="block w-full max-w-sm text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer"
+            className="block w-full max-w-sm text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer mt-4"
           />
           <button 
             onClick={handleBatchUpload}

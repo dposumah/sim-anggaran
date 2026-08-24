@@ -11,6 +11,7 @@ export async function POST(req: Request) {
   try {
     const formData = await req.formData();
     const file = formData.get('file') as File;
+    const tahapan = (formData.get('tahapan') as string) || 'perubahan';
     if (!file) return NextResponse.json({ success: false, error: 'No file provided' }, { status: 400 });
 
     const buffer = Buffer.from(await file.arrayBuffer());
@@ -263,7 +264,16 @@ export async function POST(req: Request) {
        });
        if (subKeg) {
           existingPagu = subKeg.rincianBelanjas.reduce((sum, r) => {
-             const val = r.paguPerubahan ?? r.paguRkpd ?? r.paguInduk ?? 0;
+             let val = 0;
+             if (tahapan === 'induk') val = r.paguInduk ?? 0;
+             else if (tahapan === 'rkpd') val = r.paguRkpd ?? 0;
+             else val = r.paguPerubahan ?? 0;
+             
+             // Fallback if the specific pagu is somehow empty but others exist
+             if (Number(val) === 0) {
+                 val = r.paguPerubahan ?? r.paguRkpd ?? r.paguInduk ?? 0;
+             }
+             
              return sum + Number(val);
           }, 0);
        }
