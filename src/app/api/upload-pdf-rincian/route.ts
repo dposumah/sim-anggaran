@@ -163,8 +163,10 @@ export async function POST(req: Request) {
           
           let amountTexts = itemLines.flatMap(l => l.texts);
           
-          let jmlText = amountTexts.filter(t => t.x >= 59 && t.x < 67).map(t => t.text).join(' ').trim();
-          let jmlMatch = jmlText.match(/(\d{1,3}(?:\.\d{3})*,\d{2}|-)/);
+          let rightTexts = amountTexts.filter(t => t.x >= 45).sort((a,b) => a.x - b.x).map(t => t.text).join(' ').trim();
+          let jmlMatches = rightTexts.match(/(\d{1,3}(?:\.\d{3})*,\d{2})/g);
+          let jmlMatch = jmlMatches ? [jmlMatches[jmlMatches.length - 1]] : null;
+          if (!jmlMatch && rightTexts.endsWith('-')) jmlMatch = ['-'];
           let finalJumlah = jmlMatch ? cleanNumber(jmlMatch[0]) : 0;
           if (!jmlMatch) {
               let fallbackMatches = amountTexts.map(t=>t.text).join(' ').match(/(\d{1,3}(?:\.\d{3})*,\d{2}|-)/g);
@@ -207,8 +209,10 @@ export async function POST(req: Request) {
 
            let leftOnlyTexts = lineObj.texts.filter(t => t.x < 25).map(t => t.text).join(' ').trim();
            
-           let rightTexts = lineObj.texts.filter(t => t.x >= 59 && t.x < 67).map(t => t.text).join(' ').trim();
-           let jmlMatch = rightTexts.match(/(\d{1,3}(?:\.\d{3})*,\d{2}|-)/);
+           let rightTexts = lineObj.texts.filter(t => t.x >= 45).sort((a,b) => a.x - b.x).map(t => t.text).join(' ').trim();
+           let jmlMatches = rightTexts.match(/(\d{1,3}(?:\.\d{3})*,\d{2})/g);
+           let jmlMatch = jmlMatches ? [jmlMatches[jmlMatches.length - 1]] : null;
+           if (!jmlMatch && rightTexts.endsWith('-')) jmlMatch = ['-'];
            let amountOnLine = jmlMatch ? cleanNumber(jmlMatch[0]) : 0;
 
            if (parsingItem) {
@@ -243,9 +247,10 @@ export async function POST(req: Request) {
                };
            }
         } else if (!hasLeftText && parsingItem) {
-           // Line has no left text but may have amounts - assign to pending item
-           let rightTexts = lineObj.texts.filter(t => t.x >= 59 && t.x < 67).map(t => t.text).join(' ').trim();
-           let jmlMatch = rightTexts.match(/(\d{1,3}(?:\.\d{3})*,\d{2})/);
+           let rightTexts = lineObj.texts.filter(t => t.x >= 45).sort((a,b) => a.x - b.x).map(t => t.text).join(' ').trim();
+           let jmlMatches = rightTexts.match(/(\d{1,3}(?:\.\d{3})*,\d{2})/g);
+           let jmlMatch = jmlMatches ? [jmlMatches[jmlMatches.length - 1]] : null;
+           if (!jmlMatch && rightTexts.endsWith('-')) jmlMatch = ['-'];
            if (jmlMatch) {
                let amountOnLine = cleanNumber(jmlMatch[0]);
                if (amountOnLine > 0) parsingItem.tempJumlah = amountOnLine;
