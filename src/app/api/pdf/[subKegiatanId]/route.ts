@@ -29,7 +29,7 @@ export async function GET(
     }
 
     // Serve the file as application/pdf
-    return new NextResponse(pdfRecord.fileData, {
+    return new NextResponse(pdfRecord.fileData as any, {
       status: 200,
       headers: {
         'Content-Type': 'application/pdf',
