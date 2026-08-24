@@ -15,6 +15,6 @@ export const config = {
      * - auth/callback (OAuth callback route)
      * Feel free to modify this pattern to include more paths.
      */
-    '/((?!_next/static|_next/image|favicon.ico|auth/callback|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!_next/static|_next/image|favicon.ico|auth/callback|api/upload.*|api/save-pdf-rincian|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 }
