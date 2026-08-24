@@ -264,7 +264,7 @@ export async function POST(req: Request) {
        });
        if (subKeg) {
           existingPagu = subKeg.rincianBelanjas.reduce((sum, r) => {
-             let val = 0;
+             let val: any = 0;
              if (tahapan === 'induk') val = r.paguInduk ?? 0;
              else if (tahapan === 'rkpd') val = r.paguRkpd ?? 0;
              else val = r.paguPerubahan ?? 0;
