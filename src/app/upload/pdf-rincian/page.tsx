@@ -106,7 +106,6 @@ export default function UploadPDFRincian() {
               newResults[resIdx].saveStatus = 'error';
               newResults[resIdx].errorMessage = err.message;
             }
-          }
         } else {
           newResults[resIdx].status = 'error';
           newResults[resIdx].errorMessage = data.error || 'Gagal membaca PDF';
