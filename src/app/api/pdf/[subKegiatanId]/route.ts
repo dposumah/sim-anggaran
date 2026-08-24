@@ -3,10 +3,11 @@ import { prisma } from '@/lib/prisma';
 
 export async function GET(
   req: Request,
-  { params }: { params: { subKegiatanId: string } }
+  { params }: { params: Promise<{ subKegiatanId: string }> }
 ) {
   try {
-    const subKegiatanId = parseInt(params.subKegiatanId);
+    const { subKegiatanId: idStr } = await params;
+    const subKegiatanId = parseInt(idStr);
     if (isNaN(subKegiatanId)) {
       return new NextResponse('Invalid ID', { status: 400 });
     }
