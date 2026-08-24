@@ -7,6 +7,86 @@ function cleanNumber(str: string) {
   return parseFloat(str.replace(/\./g, '').replace(/,/g, '.'));
 }
 
+/**
+ * Dynamically detect the x-position of the "Jumlah" column header.
+ * Scans allTexts for a text element containing "Jumlah" that appears
+ * in the header area (typically first few lines of a page).
+ * Returns the x-coordinate so we can use it to extract amounts.
+ */
+function detectJumlahColumnX(allTexts: any[]): number {
+  // Look for "Jumlah" text that's on the right side of the page (x > 30)
+  // and appears in the table header context
+  for (const t of allTexts) {
+    const text = t.text.trim();
+    // Match "Jumlah" but not "Jumlah Anggaran" (which is a total row)
+    if ((text === 'Jumlah' || text === 'Jumlah (Rp)') && t.x > 30) {
+      return t.x;
+    }
+  }
+  // Default fallback to the original known position
+  return -1;
+}
+
+/**
+ * Extract the "Jumlah" amount from text elements on a line/block.
+ * Uses the detected jumlahX position with tolerance, with progressive fallbacks.
+ */
+function extractJumlah(texts: any[], jumlahX: number): number {
+  const tolerance = 5; // Allow some variance in x-position
+  
+  // Strategy 1: Use detected column position (if available)
+  if (jumlahX > 0) {
+    let colTexts = texts.filter(t => Math.abs(t.x - jumlahX) <= tolerance);
+    let colStr = colTexts.map(t => t.text).join(' ').trim();
+    let match = colStr.match(/(\d{1,3}(?:\.\d{3})*,\d{2})/);
+    if (match) return cleanNumber(match[0]);
+    if (colStr === '-') return 0;
+  }
+  
+  // Strategy 2: Try original hardcoded range (x >= 59, x < 67)
+  {
+    let colTexts = texts.filter(t => t.x >= 59 && t.x < 67);
+    let colStr = colTexts.map(t => t.text).join(' ').trim();
+    let match = colStr.match(/(\d{1,3}(?:\.\d{3})*,\d{2})/);
+    if (match) return cleanNumber(match[0]);
+    if (colStr === '-') return 0;
+  }
+
+  // Strategy 3: Slightly wider range (x >= 55, x < 72)
+  {
+    let colTexts = texts.filter(t => t.x >= 55 && t.x < 72);
+    let colStr = colTexts.map(t => t.text).join(' ').trim();
+    let match = colStr.match(/(\d{1,3}(?:\.\d{3})*,\d{2})/);
+    if (match) return cleanNumber(match[0]);
+  }
+
+  // Strategy 4: Take the LAST number from right side (x >= 50), 
+  // which should be "Jumlah" as the rightmost numeric column
+  {
+    let rightTexts = texts.filter(t => t.x >= 50).sort((a, b) => a.x - b.x);
+    let allStr = rightTexts.map(t => t.text).join(' ').trim();
+    let matches = allStr.match(/(\d{1,3}(?:\.\d{3})*,\d{2})/g);
+    if (matches && matches.length > 0) {
+      return cleanNumber(matches[matches.length - 1]);
+    }
+  }
+
+  // Strategy 5: Final fallback - scan ALL text for numbers, take second-to-last
+  // (last is often a page total, second-to-last is the item jumlah)
+  {
+    let allStr = texts.map(t => t.text).join(' ');
+    let matches = allStr.match(/(\d{1,3}(?:\.\d{3})*,\d{2})/g);
+    if (matches && matches.length >= 6) {
+      return cleanNumber(matches[matches.length - 2]);
+    }
+    if (matches && matches.length > 0) {
+      return cleanNumber(matches[matches.length - 1]);
+    }
+  }
+
+  return 0;
+}
+
 export async function POST(req: Request) {
   try {
     const formData = await req.formData();
@@ -38,6 +118,9 @@ export async function POST(req: Request) {
       });
       allTexts.push(...pageTexts);
     });
+
+    // Detect "Jumlah" column position dynamically
+    const jumlahX = detectJumlahColumnX(allTexts);
 
     let rawLines: { y: number, texts: any[] }[] = [];
     let currentLineTexts: any[] = [];
@@ -162,18 +245,7 @@ export async function POST(req: Request) {
           }
           
           let amountTexts = itemLines.flatMap(l => l.texts);
-          
-          let rightTexts = amountTexts.filter(t => t.x >= 45).sort((a,b) => a.x - b.x).map(t => t.text).join(' ').trim();
-          let jmlMatches = rightTexts.match(/(\d{1,3}(?:\.\d{3})*,\d{2})/g);
-          let jmlMatch = jmlMatches ? [jmlMatches[jmlMatches.length - 1]] : null;
-          if (!jmlMatch && rightTexts.endsWith('-')) jmlMatch = ['-'];
-          let finalJumlah = jmlMatch ? cleanNumber(jmlMatch[0]) : 0;
-          if (!jmlMatch) {
-              let fallbackMatches = amountTexts.map(t=>t.text).join(' ').match(/(\d{1,3}(?:\.\d{3})*,\d{2}|-)/g);
-              if (fallbackMatches && fallbackMatches.length >= 6) {
-                  finalJumlah = cleanNumber(fallbackMatches[fallbackMatches.length - 2]);
-              }
-          }
+          let finalJumlah = extractJumlah(amountTexts, jumlahX);
           
           let leftTexts = itemLines.flatMap(l => l.texts.filter(t => t.x < 25)).map(t => t.text).join(' ').trim();
           let parts = leftTexts.split('Spesifikasi :');
@@ -208,12 +280,7 @@ export async function POST(req: Request) {
           } else if (hasLeftText && !lineText.match(/^5\.\d/) && lineText.length > 2) {
 
            let leftOnlyTexts = lineObj.texts.filter(t => t.x < 25).map(t => t.text).join(' ').trim();
-           
-           let rightTexts = lineObj.texts.filter(t => t.x >= 45).sort((a,b) => a.x - b.x).map(t => t.text).join(' ').trim();
-           let jmlMatches = rightTexts.match(/(\d{1,3}(?:\.\d{3})*,\d{2})/g);
-           let jmlMatch = jmlMatches ? [jmlMatches[jmlMatches.length - 1]] : null;
-           if (!jmlMatch && rightTexts.endsWith('-')) jmlMatch = ['-'];
-           let amountOnLine = jmlMatch ? cleanNumber(jmlMatch[0]) : 0;
+           let amountOnLine = extractJumlah(lineObj.texts, jumlahX);
 
            if (parsingItem) {
                  if (parsingItem.tempJumlah > 0) {
@@ -247,14 +314,8 @@ export async function POST(req: Request) {
                };
            }
         } else if (!hasLeftText && parsingItem) {
-           let rightTexts = lineObj.texts.filter(t => t.x >= 45).sort((a,b) => a.x - b.x).map(t => t.text).join(' ').trim();
-           let jmlMatches = rightTexts.match(/(\d{1,3}(?:\.\d{3})*,\d{2})/g);
-           let jmlMatch = jmlMatches ? [jmlMatches[jmlMatches.length - 1]] : null;
-           if (!jmlMatch && rightTexts.endsWith('-')) jmlMatch = ['-'];
-           if (jmlMatch) {
-               let amountOnLine = cleanNumber(jmlMatch[0]);
-               if (amountOnLine > 0) parsingItem.tempJumlah = amountOnLine;
-           }
+           let amountOnLine = extractJumlah(lineObj.texts, jumlahX);
+           if (amountOnLine > 0) parsingItem.tempJumlah = amountOnLine;
         }
       }
     }
@@ -296,6 +357,3 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
-
-
-
