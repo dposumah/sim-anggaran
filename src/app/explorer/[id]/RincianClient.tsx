@@ -130,7 +130,7 @@ export default function RincianClient({ subKegiatanId, isLocked, parentInfo }: {
         <nav className="flex -mb-px px-6 space-x-6" aria-label="Tabs">
           {[
             { id: 'rincian', label: 'Daftar Rincian', icon: Layers },
-            { id: 'detail', label: 'Rincian Detail (Spesifikasi)', icon: FileText },
+            { id: 'detail', label: 'PDF Rincian Belanja', icon: FileText },
             { id: 'sd', label: 'Rekap Sumber Dana', icon: Folder },
             { id: 'rekening', label: 'Rekap Rekening', icon: FileText },
             { id: 'paket', label: 'Rekap Uraian Paket', icon: CheckSquare },
@@ -162,51 +162,12 @@ export default function RincianClient({ subKegiatanId, isLocked, parentInfo }: {
           />
         )}
         {activeTab === 'detail' && (
-          <div className="p-6">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Rincian Detail (Spesifikasi)</h3>
-            <div className="bg-white rounded-lg border border-gray-200 overflow-x-auto shadow ring-1 ring-black ring-opacity-5">
-              <table className="min-w-full divide-y divide-gray-300 text-sm">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-4 py-3 text-left font-semibold text-gray-900">Uraian / Rekening</th>
-                    <th className="px-4 py-3 text-left font-semibold text-gray-900">Spesifikasi Item</th>
-                    <th className="px-4 py-3 text-center font-semibold text-gray-900">Koefisien</th>
-                    <th className="px-4 py-3 text-center font-semibold text-gray-900">Satuan</th>
-                    <th className="px-4 py-3 text-right font-semibold text-gray-900">Harga Satuan</th>
-                    <th className="px-4 py-3 text-right font-semibold text-blue-700">Jumlah</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200 bg-white">
-                  {rincianList.flatMap((r) => 
-                    (r.rincianItemBelanjas || []).map((item: any) => (
-                      <tr key={item.id} className="hover:bg-blue-50/30 transition-colors">
-                        <td className="px-4 py-3 text-gray-700 max-w-xs truncate" title={r.namaPaket || r.rekening?.nama}>
-                          <div className="font-medium text-xs">{r.rekening?.kode}</div>
-                          <div className="text-xs text-gray-500">{r.namaPaket || r.rekening?.nama}</div>
-                        </td>
-                        <td className="px-4 py-3 text-gray-800">
-                          <div className="font-medium">{item.uraian}</div>
-                          {item.spesifikasi && item.spesifikasi !== '-' && (
-                            <div className="text-gray-500 text-xs mt-0.5">{item.spesifikasi}</div>
-                          )}
-                        </td>
-                        <td className="px-4 py-3 text-center text-gray-600">{item.koefisien}</td>
-                        <td className="px-4 py-3 text-center text-gray-600">{item.satuan}</td>
-                        <td className="px-4 py-3 text-right text-gray-600">{formatRupiah(Number(item.hargaSatuan))}</td>
-                        <td className="px-4 py-3 text-right font-bold text-blue-700">{formatRupiah(Number(item.jumlah))}</td>
-                      </tr>
-                    ))
-                  )}
-                  {rincianList.every(r => !r.rincianItemBelanjas || r.rincianItemBelanjas.length === 0) && (
-                    <tr>
-                      <td colSpan={6} className="px-4 py-8 text-center text-gray-500 italic">
-                        Belum ada data rincian spesifikasi untuk sub kegiatan ini.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
+          <div className="p-0 h-[800px]">
+            <iframe 
+              src={`/api/pdf/${subKegiatanId}?tahapan=perubahan`} 
+              className="w-full h-full border-0 rounded-lg shadow-sm"
+              title="PDF Rincian Belanja"
+            />
           </div>
         )}
 
@@ -366,78 +327,12 @@ export default function RincianClient({ subKegiatanId, isLocked, parentInfo }: {
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <div className="p-0 overflow-y-auto">
-               <table className="min-w-full divide-y divide-gray-200 text-sm">
-                  <thead className="bg-white sticky top-0 shadow-sm">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-gray-700 font-semibold bg-gray-50">Sumber Dana</th>
-                      <th className="px-6 py-3 text-left text-gray-700 font-semibold bg-gray-50">Rekening</th>
-                      <th className="px-6 py-3 text-left text-gray-700 font-semibold bg-gray-50">Spesifikasi</th>
-                      <th className="px-6 py-3 text-center text-gray-700 font-semibold bg-gray-50">Koefisien</th>
-                      <th className="px-6 py-3 text-right text-gray-700 font-semibold bg-gray-50">Harga Satuan</th>
-                      <th className="px-6 py-3 text-right text-gray-700 font-semibold bg-gray-50">Total</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {rincianForSelectedPaket.map((r: any, i: number) => {
-                      if (r.rincianItemBelanjas && r.rincianItemBelanjas.length > 0) {
-                        return r.rincianItemBelanjas.map((item: any, idx: number) => (
-                          <tr key={`${i}-${idx}`} className="hover:bg-blue-50/50 transition-colors">
-                            <td className="px-6 py-4 text-gray-600 align-top max-w-[150px] truncate" title={r.sumberDana?.nama}>{r.sumberDana?.nama || '-'}</td>
-                            <td className="px-6 py-4 text-gray-600 align-top max-w-[200px]">
-                              <div className="font-medium">{r.rekening?.kode}</div>
-                              <div className="text-xs text-gray-500 mt-1">{r.rekening?.nama}</div>
-                            </td>
-                            <td className="px-6 py-4 text-gray-600 align-top max-w-[200px] whitespace-normal">
-                              <div className="font-medium text-gray-900">{item.uraian}</div>
-                              {item.spesifikasi && item.spesifikasi !== '-' && (
-                                <div className="text-xs text-gray-500 mt-1 italic">{item.spesifikasi}</div>
-                              )}
-                            </td>
-                            <td className="px-6 py-4 text-center text-gray-700 align-top whitespace-nowrap">
-                              {item.koefisien} {item.satuan}
-                            </td>
-                            <td className="px-6 py-4 text-right text-gray-600 align-top whitespace-nowrap">{formatRupiah(item.hargaSatuan)}</td>
-                            <td className="px-6 py-4 text-right font-bold text-blue-700 align-top whitespace-nowrap">{formatRupiah(item.jumlah)}</td>
-                          </tr>
-                        ));
-                      }
-                      return (
-                        <tr key={i} className="hover:bg-blue-50/50 transition-colors">
-                          <td className="px-6 py-4 text-gray-600 align-top max-w-[150px] truncate" title={r.sumberDana?.nama}>{r.sumberDana?.nama || '-'}</td>
-                          <td className="px-6 py-4 text-gray-600 align-top max-w-[200px]">
-                            <div className="font-medium">{r.rekening?.kode}</div>
-                            <div className="text-xs text-gray-500 mt-1">{r.rekening?.nama}</div>
-                          </td>
-                          <td className="px-6 py-4 text-gray-600 align-top max-w-[200px] whitespace-normal">
-                            <div className="font-medium text-gray-900">{r.sshSbu?.uraianBarang || r.namaPaket}</div>
-                            {r.sshSbu?.spesifikasi && (
-                              <div className="text-xs text-gray-500 mt-1 italic">{r.sshSbu.spesifikasi}</div>
-                            )}
-                          </td>
-                          <td className="px-6 py-4 text-center text-gray-700 align-top whitespace-nowrap">
-                            {r.volumePerubahan} {r.sshSbu?.satuan}
-                          </td>
-                          <td className="px-6 py-4 text-right text-gray-600 align-top whitespace-nowrap">{formatRupiah(r.hargaSatuanPerubahan)}</td>
-                          <td className="px-6 py-4 text-right font-bold text-blue-700 align-top whitespace-nowrap">{formatRupiah(r.paguPerubahan)}</td>
-                        </tr>
-                      );
-                    })}
-                    {rincianForSelectedPaket.length === 0 && (
-                      <tr><td colSpan={6} className="px-6 py-8 text-center text-gray-500 italic">Data rincian tidak ditemukan.</td></tr>
-                    )}
-                  </tbody>
-                  {rincianForSelectedPaket.length > 0 && (
-                    <tfoot className="bg-gray-50 sticky bottom-0 border-t border-gray-200">
-                      <tr>
-                        <th colSpan={5} className="px-6 py-4 text-right font-bold text-gray-900 uppercase tracking-wider text-xs">Total Keseluruhan</th>
-                        <th className="px-6 py-4 text-right font-bold text-blue-800 text-base">
-                          {formatRupiah(rincianForSelectedPaket.reduce((acc, curr) => acc + Number(curr.paguPerubahan || 0), 0))}
-                        </th>
-                      </tr>
-                    </tfoot>
-                  )}
-               </table>
+            <div className="p-0 overflow-hidden h-[80vh]">
+              <iframe 
+                src={`/api/pdf/${subKegiatanId}?tahapan=perubahan`} 
+                className="w-full h-full border-0"
+                title="PDF Rincian Belanja"
+              />
             </div>
           </div>
         </div>

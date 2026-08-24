@@ -100,8 +100,21 @@ model SubKegiatan {
   rincianBelanjas        RincianBelanja[]
   subKegiatanSumberDanas SubKegiatanSumberDana[]
   realisasiBelanjas      RealisasiBelanja[]
+  fileRincianPdfs        FileRincianPdf[]
 
   @@unique([kode, kegiatanId])
+}
+
+model FileRincianPdf {
+  id            Int         @id @default(autoincrement())
+  subKegiatanId Int
+  subKegiatan   SubKegiatan @relation(fields: [subKegiatanId], references: [id], onDelete: Cascade)
+  tahapan       String      @default("perubahan")
+  fileData      Bytes
+  fileName      String?
+  uploadedAt    DateTime    @default(now())
+
+  @@unique([subKegiatanId, tahapan])
 }
 
 model SumberDana {

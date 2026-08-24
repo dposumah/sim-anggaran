@@ -22,6 +22,7 @@ type ParsedResult = {
   data?: any;
   items?: any[];
   expanded?: boolean;
+  file?: File;
 };
 
 export default function UploadPDFRincian() {
@@ -40,7 +41,8 @@ export default function UploadPDFRincian() {
         fileName: file.name,
         status: 'idle',
         saveStatus: 'idle',
-        expanded: false
+        expanded: false,
+        file: file
       })));
     }
   };
@@ -72,29 +74,26 @@ export default function UploadPDFRincian() {
         const data = await res.json();
         if (data.success) {
           const parsedData = data.data;
-          const totalPdf = parsedData.items.reduce((sum: number, r: any) => sum + (parseFloat(r.jumlah) || 0), 0);
-          const existingPagu = parsedData.existingPagu || 0;
-          const isMatch = totalPdf === existingPagu;
 
-          newResults[resIdx].status = existingPagu === 0 ? 'error' : (isMatch ? 'success' : 'warning');
-          newResults[resIdx].errorMessage = existingPagu === 0 ? 'Belum terdaftar atau Rp 0' : undefined;
+          newResults[resIdx].status = 'success';
+          newResults[resIdx].errorMessage = '';
           newResults[resIdx].data = parsedData;
           newResults[resIdx].items = parsedData.items;
 
-          if (existingPagu > 0 && isMatch) {
-            newResults[resIdx].saveStatus = 'saving';
-            // Wait a moment so UI can render 'saving' state
+            setResults([...newResults]);
             setResults([...newResults]);
             
             try {
+              const formData = new FormData();
+              formData.append('tahapan', tahapan);
+              formData.append('subKegiatan', parsedData.subKegiatan);
+              if (newResults[resIdx].file) {
+                formData.append('file', newResults[resIdx].file as Blob);
+              }
+              
               const saveRes = await fetch('/api/save-pdf-rincian', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    tahapan: tahapan,
-                    subKegiatan: parsedData.subKegiatan,
-                  items: parsedData.items
-                }),
+                body: formData,
               });
               const saveData = await saveRes.json();
               if (saveData.success) {
@@ -146,14 +145,16 @@ export default function UploadPDFRincian() {
     setResults([...newResults]);
 
     try {
+      const formData = new FormData();
+      formData.append('tahapan', tahapan);
+      formData.append('subKegiatan', newResults[resIdx].data.subKegiatan);
+      if (newResults[resIdx].file) {
+        formData.append('file', newResults[resIdx].file as Blob);
+      }
+
       const res = await fetch('/api/save-pdf-rincian', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-                    tahapan: tahapan,
-                    subKegiatan: newResults[resIdx].data.subKegiatan,
-          items: newResults[resIdx].items
-        }),
+        body: formData,
       });
       const data = await res.json();
       if (data.success) {
@@ -181,14 +182,16 @@ export default function UploadPDFRincian() {
         setResults([...newResults]);
 
         try {
+          const formData = new FormData();
+          formData.append('tahapan', tahapan);
+          formData.append('subKegiatan', result.data.subKegiatan);
+          if (result.file) {
+            formData.append('file', result.file as Blob);
+          }
+
           const res = await fetch('/api/save-pdf-rincian', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                    tahapan: tahapan,
-                    subKegiatan: result.data.subKegiatan,
-              items: result.items
-            }),
+            body: formData,
           });
           const data = await res.json();
           if (data.success) {
