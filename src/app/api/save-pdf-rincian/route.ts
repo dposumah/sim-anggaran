@@ -21,116 +21,134 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: 'Sub Kegiatan dengan kode ' + kodeSubKeg + ' tidak ditemukan di database. Pastikan Anda sudah mengupload Pagu Excel atau mendaftarkan Kegiatan/SubKegiatannya.' }, { status: 404 });
     }
 
-    // Fast resolution of Rekening and Sumber Dana (reduce DB trips)
-    // 1. Rekening
+    // Resolve Rekening and Sumber Dana IDs
     const uniqueRekenings = Array.from(new Set(items.map((i: any) => i.rekening)));
     const existingReks = await prisma.rekening.findMany({ where: { kode: { in: uniqueRekenings as string[] } } });
     const rekMap = new Map(existingReks.map((r: any) => [r.kode, r.id]));
     
-    // 2. Sumber Dana
     const uniqueSD = Array.from(new Set(items.map((i: any) => i.sumberDana)));
     const existingSD = await prisma.sumberDana.findMany({ where: { nama: { in: uniqueSD as string[] } } });
     const sdMap = new Map(existingSD.map((s: any) => [s.nama, s.id]));
 
-    // Resolve or create missing items sequentially (usually very few)
+    // Resolve IDs for each item (don't create missing ones - they must exist from Excel upload)
     for (let item of items) {
-      if (!rekMap.has(item.rekening)) {
-        let newRek = await prisma.rekening.create({ data: { kode: item.rekening, nama: item.namaRekening }});
-        rekMap.set(item.rekening, newRek.id);
-      }
-      item.rekeningId = rekMap.get(item.rekening);
-
-      if (!sdMap.has(item.sumberDana)) {
-        let newSd = await prisma.sumberDana.create({ data: { kode: 'SD-' + Math.floor(Math.random()*10000), nama: item.sumberDana }});
-        sdMap.set(item.sumberDana, newSd.id);
-      }
-      item.sumberDanaId = sdMap.get(item.sumberDana);
+      item.rekeningId = rekMap.get(item.rekening) || null;
+      item.sumberDanaId = sdMap.get(item.sumberDana) || null;
     }
 
-    // Fetch existing RincianBelanja to preserve other pagus
+    // Fetch existing RincianBelanja for this sub kegiatan (these hold the pagu - DO NOT touch them)
     const existingRincian = await prisma.rincianBelanja.findMany({
-      where: { subKegiatanId: subKeg.id }
+      where: { subKegiatanId: subKeg.id },
+      include: { rekening: true, sumberDana: true }
     });
-    const oldPaguMap = new Map();
+
+    // Build a lookup map: rekeningId_sumberDanaId_namaPaket -> RincianBelanja.id
+    const rincianMap = new Map<string, number>();
     existingRincian.forEach(r => {
       const key = r.rekeningId + '_' + r.sumberDanaId + '_' + r.namaPaket;
-      oldPaguMap.set(key, { paguInduk: r.paguInduk, paguRkpd: r.paguRkpd, paguPerubahan: r.paguPerubahan });
+      rincianMap.set(key, r.id);
     });
 
-    // Prepare transaction array
-    const txs: any[] = [];
-
-    // Delete old RincianBelanja
-    txs.push(
-      prisma.rincianBelanja.deleteMany({
-        where: { subKegiatanId: subKeg.id }
-      })
-    );
-
-    // Grouping
-    const paketGroups = new Map();
+    // Group PDF items by paket (same logic as before)
+    const paketGroups = new Map<string, { rekeningId: number | null, sumberDanaId: number | null, namaPaket: string, items: any[] }>();
     items.forEach((item: any) => {
       const key = item.rekeningId + '_' + item.sumberDanaId + '_' + item.paket;
       if (!paketGroups.has(key)) {
         paketGroups.set(key, {
-          subKegiatanId: subKeg?.id,
           rekeningId: item.rekeningId,
           sumberDanaId: item.sumberDanaId,
           namaPaket: item.paket,
-          tipePaket: '-',
           items: []
         });
       }
-      paketGroups.get(key).items.push(item);
+      paketGroups.get(key)!.items.push(item);
     });
 
-    // Build Nested Create Queries
+    // Build transaction: ONLY delete old RincianItemBelanja and create new ones
+    const txs: any[] = [];
+    let matchedCount = 0;
+    let unmatchedPakets: string[] = [];
+
     for (const [key, group] of paketGroups.entries()) {
-      let totalPagu = group.items.reduce((acc: number, curr: any) => acc + (parseFloat(curr.jumlah) || 0), 0);
+      const parentId = rincianMap.get(key);
       
-      const itemCreates = group.items.map((it: any) => ({
-        uraian: it.uraian,
-        spesifikasi: it.spesifikasi || '-',
-        koefisien: String(it.koefisien),
-        satuan: String(it.satuan),
-        hargaSatuan: parseFloat(it.hargaSatuan) || 0,
-        ppn: parseFloat(it.ppn) || 0,
-        jumlah: parseFloat(it.jumlah) || 0,
-      }));
+      if (!parentId) {
+        // No matching RincianBelanja found - try fuzzy match by namaPaket alone
+        const fuzzyMatch = existingRincian.find(r => 
+          r.namaPaket === group.namaPaket && 
+          r.rekeningId === group.rekeningId
+        );
+        
+        if (fuzzyMatch) {
+          // Delete old items for this parent
+          txs.push(
+            prisma.rincianItemBelanja.deleteMany({
+              where: { rincianBelanjaId: fuzzyMatch.id }
+            })
+          );
+          // Create new items
+          txs.push(
+            ...group.items.map((it: any) =>
+              prisma.rincianItemBelanja.create({
+                data: {
+                  rincianBelanjaId: fuzzyMatch.id,
+                  uraian: it.uraian,
+                  spesifikasi: it.spesifikasi || '-',
+                  koefisien: String(it.koefisien || '1'),
+                  satuan: String(it.satuan || 'Ls'),
+                  hargaSatuan: parseFloat(it.hargaSatuan) || 0,
+                  ppn: parseFloat(it.ppn) || 0,
+                  jumlah: parseFloat(it.jumlah) || 0,
+                  tahapan: tahapan || 'perubahan',
+                }
+              })
+            )
+          );
+          matchedCount++;
+        } else {
+          unmatchedPakets.push(group.namaPaket);
+        }
+        continue;
+      }
 
-      const oldPagu = oldPaguMap.get(key) || { paguInduk: 0, paguRkpd: 0, paguPerubahan: 0 };
-      
-      let finalPaguInduk = tahapan === 'induk' ? totalPagu : oldPagu.paguInduk;
-      let finalPaguRkpd = tahapan === 'rkpd' ? totalPagu : oldPagu.paguRkpd;
-      let finalPaguPerubahan = tahapan === 'perubahan' ? totalPagu : oldPagu.paguPerubahan;
-
+      // Delete old RincianItemBelanja for this parent
       txs.push(
-        prisma.rincianBelanja.create({
+        prisma.rincianItemBelanja.deleteMany({
+          where: { rincianBelanjaId: parentId }
+        })
+      );
+
+      // Create new RincianItemBelanja under the existing parent
+      const itemCreates = group.items.map((it: any) =>
+        prisma.rincianItemBelanja.create({
           data: {
-            subKegiatanId: group.subKegiatanId,
-            rekeningId: group.rekeningId,
-            sumberDanaId: group.sumberDanaId,
-            namaPaket: group.namaPaket,
-            tipePaket: '-',
-            volumeInduk: 1,
-            hargaSatuanInduk: finalPaguInduk,
-            paguInduk: finalPaguInduk, 
-            paguRkpd: finalPaguRkpd,
-            paguPerubahan: finalPaguPerubahan,
-            rincianItemBelanjas: {
-              create: itemCreates
-            }
+            rincianBelanjaId: parentId,
+            uraian: it.uraian,
+            spesifikasi: it.spesifikasi || '-',
+            koefisien: String(it.koefisien || '1'),
+            satuan: String(it.satuan || 'Ls'),
+            hargaSatuan: parseFloat(it.hargaSatuan) || 0,
+            ppn: parseFloat(it.ppn) || 0,
+            jumlah: parseFloat(it.jumlah) || 0,
+            tahapan: tahapan || 'perubahan',
           }
         })
       );
+      txs.push(...itemCreates);
+      matchedCount++;
     }
 
-    // Execute all database operations in a single fast transaction!
-    await prisma.$transaction(txs);
+    if (txs.length > 0) {
+      await prisma.$transaction(txs);
+    }
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ 
+      success: true,
+      matched: matchedCount,
+      unmatched: unmatchedPakets.length,
+      unmatchedPakets: unmatchedPakets.length > 0 ? unmatchedPakets : undefined
+    });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
-
