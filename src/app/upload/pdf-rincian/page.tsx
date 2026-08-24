@@ -29,6 +29,7 @@ export default function UploadPDFRincian() {
   const [results, setResults] = useState<ParsedResult[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [tahapan, setTahapan] = useState("perubahan");
 
   const handleFilesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -89,7 +90,8 @@ export default function UploadPDFRincian() {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                  subKegiatan: parsedData.subKegiatan,
+                    tahapan: tahapan,
+                    subKegiatan: parsedData.subKegiatan,
                   items: parsedData.items
                 }),
               });
@@ -147,7 +149,8 @@ export default function UploadPDFRincian() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          subKegiatan: newResults[resIdx].data.subKegiatan,
+                    tahapan: tahapan,
+                    subKegiatan: newResults[resIdx].data.subKegiatan,
           items: newResults[resIdx].items
         }),
       });
@@ -181,7 +184,8 @@ export default function UploadPDFRincian() {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              subKegiatan: result.data.subKegiatan,
+                    tahapan: tahapan,
+                    subKegiatan: result.data.subKegiatan,
               items: result.items
             }),
           });

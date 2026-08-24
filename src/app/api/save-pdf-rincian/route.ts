@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma';
 
 export async function POST(req: Request) {
   try {
-    const { subKegiatan, items } = await req.json();
+    const { tahapan, subKegiatan, items } = await req.json();
 
     if (!subKegiatan || !items || items.length === 0) {
       return NextResponse.json({ success: false, error: 'Data tidak lengkap' }, { status: 400 });
@@ -46,6 +46,16 @@ export async function POST(req: Request) {
       }
       item.sumberDanaId = sdMap.get(item.sumberDana);
     }
+
+    // Fetch existing RincianBelanja to preserve other pagus
+    const existingRincian = await prisma.rincianBelanja.findMany({
+      where: { subKegiatanId: subKeg.id }
+    });
+    const oldPaguMap = new Map();
+    existingRincian.forEach(r => {
+      const key = r.rekeningId + '_' + r.sumberDanaId + '_' + r.namaPaket;
+      oldPaguMap.set(key, { paguInduk: r.paguInduk, paguRkpd: r.paguRkpd, paguPerubahan: r.paguPerubahan });
+    });
 
     // Prepare transaction array
     const txs: any[] = [];
