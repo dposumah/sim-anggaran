@@ -11,6 +11,8 @@ export default function RealisasiPage() {
   
   const [realisasi, setRealisasi] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [subKegiatanOptions, setSubKegiatanOptions] = useState<any[]>([]);
+  const [rekeningOptions, setRekeningOptions] = useState<any[]>([]);
 
   // Upload states
   const [uploadFile, setUploadFile] = useState<File | null>(null);
@@ -330,11 +332,17 @@ export default function RealisasiPage() {
             <form onSubmit={handleManualSubmit} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">Sub Kegiatan ID</label>
-                <input required type="number" value={formData.subKegiatanId} onChange={e => setFormData({...formData, subKegiatanId: e.target.value})} className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm" placeholder="ID Sub Kegiatan" />
+                <select required value={formData.subKegiatanId} onChange={e => setFormData({...formData, subKegiatanId: e.target.value})} className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm">
+                  <option value="">Pilih Sub Kegiatan</option>
+                  {subKegiatanOptions.map(sk => (<option key={sk.id} value={sk.id}>{sk.kode} - {sk.nama}</option>))}
+                </select>
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">Rekening ID</label>
-                <input required type="number" value={formData.rekeningId} onChange={e => setFormData({...formData, rekeningId: e.target.value})} className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm" placeholder="ID Rekening" />
+                <select required value={formData.rekeningId} onChange={e => setFormData({...formData, rekeningId: e.target.value})} className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm">
+                  <option value="">Pilih Rekening</option>
+                  {rekeningOptions.map(rek => (<option key={rek.id} value={rek.id}>{rek.kode} - {rek.nama}</option>))}
+                </select>
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">Sumber Dana</label>
