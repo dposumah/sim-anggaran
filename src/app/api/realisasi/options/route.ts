@@ -6,7 +6,7 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const skpdId = searchParams.get('skpdId');
   
-  if (!skpdId) return NextResponse.json({ subKegiatans: [], rekenings: [] });
+  if (!skpdId) return NextResponse.json({ subKegiatans: [], rekenings: [], pakets: [] });
 
   try {
     const subKegiatans = await prisma.subKegiatan.findMany({
@@ -34,7 +34,27 @@ export async function GET(request: Request) {
       orderBy: { kode: 'asc' }
     });
 
-    return NextResponse.json({ subKegiatans, rekenings });
+    const pakets = await prisma.rincianBelanja.findMany({
+      where: {
+        subKegiatan: {
+          kegiatan: {
+            program: {
+              skpdId: parseInt(skpdId)
+            }
+          }
+        }
+      },
+      select: {
+        id: true,
+        namaPaket: true,
+        subKegiatanId: true,
+        rekeningId: true,
+        sumberDanaId: true
+      },
+      orderBy: { namaPaket: 'asc' }
+    });
+
+    return NextResponse.json({ subKegiatans, rekenings, pakets });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }

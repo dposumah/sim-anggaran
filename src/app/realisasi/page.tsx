@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Plus, Trash2, Check, X, FileSpreadsheet, Upload, AlertTriangle, CheckCircle2, BarChart3 } from 'lucide-react';
+import { Plus, Trash2, Edit2, Check, X, FileSpreadsheet, Upload, AlertTriangle, CheckCircle2, BarChart3 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
 export default function RealisasiPage() {
@@ -13,6 +13,9 @@ export default function RealisasiPage() {
   const [loading, setLoading] = useState(false);
   const [subKegiatanOptions, setSubKegiatanOptions] = useState<any[]>([]);
   const [rekeningOptions, setRekeningOptions] = useState<any[]>([]);
+  const [paketOptions, setPaketOptions] = useState<any[]>([]);
+  const [selectedPaketId, setSelectedPaketId] = useState<string>('');
+  const [editId, setEditId] = useState<number | null>(null);
 
   // Upload states
   const [uploadFile, setUploadFile] = useState<File | null>(null);
@@ -55,6 +58,22 @@ export default function RealisasiPage() {
       if (data.data) setRealisasi(data.data);
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
+  };
+
+  
+  const handlePaketChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const pid = e.target.value;
+    setSelectedPaketId(pid);
+    if (pid) {
+      const pkt = paketOptions.find(p => p.id.toString() === pid);
+      if (pkt) {
+        setFormData(prev => ({
+          ...prev,
+          rekeningId: pkt.rekeningId.toString(),
+          sumberDanaId: pkt.sumberDanaId.toString()
+        }));
+      }
+    }
   };
 
   const handleUpload = async () => {
@@ -148,6 +167,23 @@ export default function RealisasiPage() {
     } catch (e) { console.error(e); }
   };
 
+  
+  const handleEdit = (r: any) => {
+    setEditId(r.id);
+    setFormData({
+      subKegiatanId: r.subKegiatanId.toString(),
+      sumberDanaId: r.sumberDanaId.toString(),
+      rekeningId: r.rekeningId.toString(),
+      bulan: r.bulan.toString(),
+      nominal: r.nominal.toString(),
+      keterangan: r.keterangan || ''
+    });
+    setSelectedPaketId(''); // Reset paket select on edit
+    setShowForm(true);
+    // scroll to top
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   const handleManualSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -155,10 +191,10 @@ export default function RealisasiPage() {
       const res = await fetch('/api/realisasi', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...formData, skpdId: selectedSkpd, tahun })
+        body: JSON.stringify({ ...formData, skpdId: selectedSkpd, tahun, id: editId })
       });
       if (res.ok) {
-        setFormData({ subKegiatanId: '', sumberDanaId: '', rekeningId: '', bulan: '', nominal: '', keterangan: '' });
+        setFormData({ subKegiatanId: "", sumberDanaId: "", rekeningId: "", bulan: "", nominal: "", keterangan: "" }); setEditId(null); setSelectedPaketId("");
         setShowForm(false);
         loadRealisasi();
       } else {
@@ -319,7 +355,7 @@ export default function RealisasiPage() {
       {/* Data Table */}
       <div className="bg-white rounded-xl shadow-sm border border-border overflow-hidden">
         <div className="p-4 border-b border-border flex justify-between items-center bg-gray-50/50">
-          <h3 className="font-medium text-gray-700">Data Realisasi</h3>
+          <h3 className="font-medium text-gray-700">{editId ? "Edit Realisasi" : "Data Realisasi"}</h3>
           <button onClick={() => setShowForm(!showForm)}
             className="text-sm text-primary hover:text-primary-hover font-medium flex items-center gap-1">
             <Plus className="w-4 h-4" /> Input Manual
@@ -364,9 +400,9 @@ export default function RealisasiPage() {
                 <input type="text" value={formData.keterangan} onChange={e => setFormData({...formData, keterangan: e.target.value})} className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm" />
               </div>
               <div className="col-span-full flex justify-end gap-2 mt-1">
-                <button type="button" onClick={() => setShowForm(false)} className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md">Batal</button>
+                <button type="button" onClick={() => { setShowForm(false); setEditId(null); setFormData({ subKegiatanId: "", sumberDanaId: "", rekeningId: "", bulan: "", nominal: "", keterangan: "" }); setSelectedPaketId(""); }} className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md">Batal</button>
                 <button type="submit" disabled={loading} className="px-4 py-2 text-sm font-medium text-white bg-primary hover:bg-primary-hover rounded-md flex items-center gap-2">
-                  <Check className="w-4 h-4" /> Simpan
+                  <Check className="w-4 h-4" /> {editId ? "Update" : "Simpan"}
                 </button>
               </div>
             </form>
@@ -432,7 +468,7 @@ export default function RealisasiPage() {
                             <span className="font-medium text-gray-600 w-10 text-right">{pct.toFixed(1)}%</span>
                           </div>
                         </td>
-                        <td className="px-3 py-2.5 text-center">
+                        <td className="px-3 py-2.5 text-center flex justify-center gap-3">
                           <button onClick={() => handleDelete(r.id)} className="text-gray-400 hover:text-red-500">
                             <Trash2 className="w-4 h-4" />
                           </button>
