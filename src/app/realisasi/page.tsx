@@ -35,7 +35,7 @@ export default function RealisasiPage() {
   const [sumberDanas, setSumberDanas] = useState<any[]>([]);
 
   useEffect(() => {
-    fetch('/api/dashboard?tahun=' + tahun)
+    fetch('/api/skpd')
       .then(r => r.json())
       .then(data => {
         if (data.data) {
