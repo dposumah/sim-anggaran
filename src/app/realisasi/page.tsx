@@ -373,7 +373,14 @@ export default function RealisasiPage() {
                   {subKegiatanOptions.map(sk => (<option key={sk.id} value={sk.id}>{sk.kode} - {sk.nama}</option>))}
                 </select>
               </div>
-              <div>
+                            <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Pilih dari Paket (Opsional)</label>
+                <select value={selectedPaketId} onChange={handlePaketChange} className="w-full rounded-md border border-blue-300 bg-blue-50 px-3 py-2 text-sm" disabled={!formData.subKegiatanId}>
+                  <option value="">-- Pilih Paket untuk Auto-Isi --</option>
+                  {paketOptions.filter(p => p.subKegiatanId.toString() === formData.subKegiatanId).map(p => (<option key={p.id} value={p.id}>{p.namaPaket}</option>))}
+                </select>
+              </div>
+<div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">Rekening ID</label>
                 <select required value={formData.rekeningId} onChange={e => setFormData({...formData, rekeningId: e.target.value})} className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm">
                   <option value="">Pilih Rekening</option>
@@ -469,6 +476,9 @@ export default function RealisasiPage() {
                           </div>
                         </td>
                         <td className="px-3 py-2.5 text-center flex justify-center gap-3">
+                          <button onClick={() => handleEdit(r)} className="text-gray-400 hover:text-blue-500 mr-2">
+                            <Edit2 className="w-4 h-4" />
+                          </button>
                           <button onClick={() => handleDelete(r.id)} className="text-gray-400 hover:text-red-500">
                             <Trash2 className="w-4 h-4" />
                           </button>
